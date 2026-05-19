@@ -9,7 +9,9 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !key) {
-  console.error('❌ NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY manquant.');
+  console.error(
+    '❌ NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY manquant.',
+  );
   process.exit(1);
 }
 
@@ -23,13 +25,15 @@ const TEST_USERNAME = 'tactua_tester';
 
 async function main() {
   console.log(`▶ Création du user ${TEST_EMAIL}…`);
-  const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
-    email_confirm: true,
-    user_metadata: { username: TEST_USERNAME },
-  });
-  if (createErr || !created.user) throw createErr ?? new Error('No user returned');
+  const { data: created, error: createErr } =
+    await supabase.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      user_metadata: { username: TEST_USERNAME },
+    });
+  if (createErr || !created.user)
+    throw createErr ?? new Error('No user returned');
   const userId = created.user.id;
   console.log('  user.id =', userId);
 
@@ -60,7 +64,9 @@ async function main() {
     .select('id')
     .eq('id', userId);
   if (stillThere && stillThere.length > 0) {
-    throw new Error('La cascade de delete depuis auth.users vers profiles n\'a pas marché.');
+    throw new Error(
+      "La cascade de delete depuis auth.users vers profiles n'a pas marché.",
+    );
   }
   console.log('  OK, profiles row supprimée par cascade.');
 
