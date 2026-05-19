@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 type Team = {
   id: number | null;
@@ -54,8 +55,8 @@ function statusLabel(status: MatchHeaderProps['status']): {
 }
 
 function TeamBlock({ team }: { team: Team }) {
-  return (
-    <div className="flex flex-col items-center gap-3 text-center">
+  const inner = (
+    <>
       <div className="bg-muted relative size-16 overflow-hidden rounded-full sm:size-20">
         {team.logo_url ? (
           <Image
@@ -74,7 +75,22 @@ function TeamBlock({ team }: { team: Team }) {
       <span className="line-clamp-2 max-w-[10rem] text-sm font-semibold sm:max-w-[14rem] sm:text-base">
         {team.name || 'À déterminer'}
       </span>
-    </div>
+    </>
+  );
+
+  if (team.id != null) {
+    return (
+      <Link
+        href={`/teams/${team.id}`}
+        className="hover:text-primary group flex flex-col items-center gap-3 text-center transition-colors"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 text-center">{inner}</div>
   );
 }
 
