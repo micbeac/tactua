@@ -14,13 +14,46 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const SITE_URL = 'https://tactua.vercel.app';
+const SITE_NAME = 'Tactua';
+const SITE_DESCRIPTION =
+  "Tout ce qu'il faut comprendre avant le match : compositions, analyses tactiques IA, classements, stats joueurs et équipes.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Tactua — Analyse foot augmentée par l'IA",
-    template: '%s · Tactua',
+    default: `${SITE_NAME} — Analyse foot augmentée par l'IA`,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    "Tout ce qu'il faut comprendre avant le match : compositions, analyses tactiques IA, classements, stats joueurs et équipes.",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  keywords: [
+    'coupe du monde 2026',
+    'analyse foot',
+    'compositions',
+    'compositions probables',
+    'classement',
+    'IA football',
+    'stats joueurs',
+  ],
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Analyse foot augmentée par l'IA`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — Analyse foot augmentée par l'IA`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

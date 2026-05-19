@@ -93,7 +93,6 @@ function TeamSide({
             fill
             sizes="32px"
             className="object-contain p-1"
-            unoptimized
           />
         ) : (
           <span className="text-muted-foreground flex h-full w-full items-center justify-center text-[10px] font-semibold">

@@ -20,10 +20,10 @@ export async function Header() {
           <span className="text-base font-semibold tracking-tight">Tactua</span>
         </Link>
 
-        <nav className="flex items-center gap-2 text-sm">
+        <nav className="flex items-center gap-1 text-sm sm:gap-2">
           <Link
             href="/"
-            className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5"
+            className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
           >
             Matchs
           </Link>

@@ -1,7 +1,12 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      // Logos d'équipes Football-Data.org
+      { protocol: 'https', hostname: 'crests.football-data.org' },
+    ],
+  },
 };
 
 export default nextConfig;
