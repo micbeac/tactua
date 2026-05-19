@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 type LineupPlayer = {
   player_id: number;
   player_name: string | null;
@@ -21,18 +23,23 @@ export type MatchLineupSectionProps = {
 
 function PlayerRow({ p }: { p: LineupPlayer }) {
   return (
-    <li className="border-border/60 flex items-center gap-3 border-b py-1.5 last:border-b-0">
-      <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">
-        {p.shirt_number ?? '—'}
-      </span>
-      <span className="flex-1 truncate text-sm">
-        {p.player_name ?? `Joueur #${p.player_id}`}
-      </span>
-      {p.position && (
-        <span className="text-muted-foreground hidden text-xs sm:inline">
-          {p.position}
+    <li className="border-border/60 border-b last:border-b-0">
+      <Link
+        href={`/players/${p.player_id}`}
+        className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
+      >
+        <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">
+          {p.shirt_number ?? '—'}
         </span>
-      )}
+        <span className="flex-1 truncate text-sm">
+          {p.player_name ?? `Joueur #${p.player_id}`}
+        </span>
+        {p.position && (
+          <span className="text-muted-foreground hidden text-xs sm:inline">
+            {p.position}
+          </span>
+        )}
+      </Link>
     </li>
   );
 }
