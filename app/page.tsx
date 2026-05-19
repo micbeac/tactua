@@ -1,48 +1,202 @@
 import Link from 'next/link';
-import { signOut } from '@/app/(auth)/actions';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
+import { buttonVariants } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/server';
 
-// Page d'accueil minimale orientée vérification d'auth.
-// Sera retravaillée Jour 6 (vrai dashboard + matchs CDM).
-export default async function Home() {
+export const revalidate = 60; // ISR : la home se rafraîchit toutes les 60s
+
+const WC_COMPETITION_ID = 2000;
+const TOP5_COMPETITION_IDS = [
+  2021, // Premier League
+  2014, // La Liga
+  2002, // Bundesliga
+  2019, // Serie A
+  2015, // Ligue 1
+];
+
+type TeamEmbed = {
+  id: number;
+  name: string;
+  tla: string | null;
+  logo_url: string | null;
+} | null;
+
+type MatchRow = {
+  id: number;
+  kickoff_at: string;
+  status: MatchCardProps['status'];
+  stage: string | null;
+  matchday: number | null;
+  score_home: number | null;
+  score_away: number | null;
+  home_team_id: number | null;
+  away_team_id: number | null;
+  home_team: TeamEmbed;
+  away_team: TeamEmbed;
+};
+
+const SELECT_FRAGMENT = `
+  id, kickoff_at, status, stage, matchday, score_home, score_away,
+  home_team_id, away_team_id,
+  home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
+  away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)
+`;
+
+function toCardProps(m: MatchRow): MatchCardProps {
+  return {
+    id: m.id,
+    kickoff_at: m.kickoff_at,
+    status: m.status,
+    stage: m.stage,
+    matchday: m.matchday,
+    score_home: m.score_home,
+    score_away: m.score_away,
+    home: {
+      id: m.home_team?.id ?? m.home_team_id,
+      name: m.home_team?.name ?? 'À déterminer',
+      tla: m.home_team?.tla ?? null,
+      logo_url: m.home_team?.logo_url ?? null,
+    },
+    away: {
+      id: m.away_team?.id ?? m.away_team_id,
+      name: m.away_team?.name ?? 'À déterminer',
+      tla: m.away_team?.tla ?? null,
+      logo_url: m.away_team?.logo_url ?? null,
+    },
+  };
+}
+
+async function getWcUpcoming(): Promise<MatchRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('matches')
+    .select(SELECT_FRAGMENT)
+    .eq('competition_id', WC_COMPETITION_ID)
+    .eq('status', 'scheduled')
+    .gte('kickoff_at', new Date().toISOString())
+    .order('kickoff_at', { ascending: true })
+    .limit(10);
+  if (error) {
+    console.error('[home] wc query error', error);
+    return [];
+  }
+  return (data ?? []) as unknown as MatchRow[];
+}
+
+async function getTop5Upcoming(): Promise<MatchRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('matches')
+    .select(SELECT_FRAGMENT)
+    .in('competition_id', TOP5_COMPETITION_IDS)
+    .eq('status', 'scheduled')
+    .gte('kickoff_at', new Date().toISOString())
+    .order('kickoff_at', { ascending: true })
+    .limit(6);
+  if (error) {
+    console.error('[home] top5 query error', error);
+    return [];
+  }
+  return (data ?? []) as unknown as MatchRow[];
+}
+
+export default async function HomePage() {
+  const [wcMatches, top5Matches] = await Promise.all([
+    getWcUpcoming(),
+    getTop5Upcoming(),
+  ]);
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-10">
+      <section className="mb-10">
+        <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
+          Coupe du Monde 2026
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Tout ce qu&apos;il faut comprendre avant le match.
+        </h1>
+        <p className="text-muted-foreground mt-3 max-w-2xl text-sm">
+          Compositions probables, classements en direct, et analyses tactiques
+          générées par l&apos;IA. Suivez vos équipes et joueurs préférés et
+          recevez les notifs essentielles.
+        </p>
+      </section>
+
+      <section className="mb-12">
+        <header className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold">Prochains matchs CDM</h2>
+          <Link
+            href={`/competitions/wc`}
+            className="text-muted-foreground hover:text-foreground text-xs underline"
+          >
+            Voir tout
+          </Link>
+        </header>
+        {wcMatches.length === 0 ? (
+          <EmptyState label="Aucun match CDM programmé pour l'instant." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {wcMatches.map((m) => (
+              <MatchCard key={m.id} {...toCardProps(m)} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-12">
+        <header className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold">
+            Top 5 européen — Prochains matchs
+          </h2>
+        </header>
+        {top5Matches.length === 0 ? (
+          <EmptyState label="Aucun match à venir dans le top 5 européen." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {top5Matches.map((m) => (
+              <MatchCard key={m.id} {...toCardProps(m)} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <SignupCta />
+    </main>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="bg-card text-muted-foreground border-border rounded-xl border p-6 text-center text-sm">
+      {label}
+    </div>
+  );
+}
+
+async function SignupCta() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (user) return null;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Tactua</h1>
-
-      {user ? (
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-muted-foreground text-sm">
-            Connecté en tant que{' '}
-            <span className="text-foreground font-medium">{user.email}</span>
-          </p>
-          <form action={signOut}>
-            <Button type="submit" variant="outline">
-              Se déconnecter
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-muted-foreground text-sm">Pas connecté.</p>
-          <div className="flex gap-3">
-            <Link href="/login" className={buttonVariants()}>
-              Se connecter
-            </Link>
-            <Link
-              href="/signup"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              S&apos;inscrire
-            </Link>
-          </div>
-        </div>
-      )}
-    </main>
+    <section className="bg-card border-border mt-6 rounded-xl border p-6 sm:p-8">
+      <h3 className="text-lg font-semibold">
+        Crée ton compte pour suivre la CDM
+      </h3>
+      <p className="text-muted-foreground mt-1 text-sm">
+        Ajoute tes équipes et joueurs favoris, reçois les compos officielles dès
+        leur sortie, et l&apos;analyse IA pré-match avant le coup d&apos;envoi.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Link href="/signup" className={buttonVariants()}>
+          Créer mon compte
+        </Link>
+        <Link href="/login" className={buttonVariants({ variant: 'outline' })}>
+          Se connecter
+        </Link>
+      </div>
+    </section>
   );
 }
