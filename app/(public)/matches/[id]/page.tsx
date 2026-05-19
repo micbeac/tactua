@@ -1,11 +1,19 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { MatchFormSection } from '@/components/match/MatchFormSection';
+import { MatchH2HSection } from '@/components/match/MatchH2HSection';
 import { MatchHeader } from '@/components/match/MatchHeader';
 import { MatchInfoCard } from '@/components/match/MatchInfoCard';
 import {
   MatchLineupSection,
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
+import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import {
+  getHeadToHead,
+  getMatchTeamStats,
+  getTeamForm,
+} from '@/lib/data/match';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -146,6 +154,27 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const lineupRows = await getLineups(matchId);
   const anyConfirmed = lineupRows.some((r) => r.is_confirmed);
 
+  const supabase = await createClient();
+  const homeId = match.home_team?.id ?? match.home_team_id;
+  const awayId = match.away_team?.id ?? match.away_team_id;
+
+  const [h2h, formHome, formAway, teamStats] = await Promise.all([
+    homeId != null && awayId != null
+      ? getHeadToHead(supabase, homeId, awayId, matchId, 5)
+      : Promise.resolve([]),
+    homeId != null
+      ? getTeamForm(supabase, homeId, matchId, 5)
+      : Promise.resolve([]),
+    awayId != null
+      ? getTeamForm(supabase, awayId, matchId, 5)
+      : Promise.resolve([]),
+    getMatchTeamStats(supabase, matchId),
+  ]);
+
+  const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
+  const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
+  const showStats = match.status === 'live' || match.status === 'finished';
+
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <MatchHeader
@@ -183,6 +212,54 @@ export default async function MatchPage({ params }: MatchPageParams) {
         home={buildTeamLineup(match.home_team, lineupRows)}
         away={buildTeamLineup(match.away_team, lineupRows)}
       />
+
+      <MatchFormSection
+        home={{
+          team_id: homeId,
+          team_name: match.home_team?.name ?? 'À déterminer',
+          matches: formHome,
+        }}
+        away={{
+          team_id: awayId,
+          team_name: match.away_team?.name ?? 'À déterminer',
+          matches: formAway,
+        }}
+      />
+
+      <MatchH2HSection
+        teamA={{
+          id: homeId,
+          name: match.home_team?.name ?? 'À déterminer',
+        }}
+        teamB={{
+          id: awayId,
+          name: match.away_team?.name ?? 'À déterminer',
+        }}
+        matches={h2h.map((m) => ({
+          id: m.id,
+          kickoff_at: m.kickoff_at,
+          competition_name: m.competition?.name ?? null,
+          home_team_id: m.home_team_id,
+          away_team_id: m.away_team_id,
+          score_home: m.score_home,
+          score_away: m.score_away,
+        }))}
+      />
+
+      {showStats && (
+        <MatchStatsSection
+          home={{
+            team_id: homeId,
+            team_name: match.home_team?.name ?? 'Domicile',
+          }}
+          away={{
+            team_id: awayId,
+            team_name: match.away_team?.name ?? 'Extérieur',
+          }}
+          home_stats={homeStats}
+          away_stats={awayStats}
+        />
+      )}
     </main>
   );
 }
