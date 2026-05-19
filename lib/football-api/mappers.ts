@@ -92,8 +92,10 @@ export function mapMatch(m: FdMatch): MatchInsert {
   return {
     id: m.id,
     competition_id: m.competition.id,
-    home_team_id: m.homeTeam.id,
-    away_team_id: m.awayTeam.id,
+    // home/away_team_id peuvent être null pour les matchs avec équipes TBD
+    // (knockouts CDM, barrages, etc.) — la migration 004 permet ces null.
+    home_team_id: m.homeTeam?.id ?? null,
+    away_team_id: m.awayTeam?.id ?? null,
     kickoff_at: m.utcDate,
     venue: m.venue ?? null,
     referee: m.referees?.[0]?.name ?? null,
