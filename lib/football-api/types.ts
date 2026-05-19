@@ -89,6 +89,20 @@ export type FdReferee = {
   nationality?: string | null;
 };
 
+export type FdLineupPlayer = {
+  id: number;
+  name: string;
+  position?: string | null;
+  shirtNumber?: number | null;
+};
+
+export type FdMatchTeamDetail = FdTeamSummary & {
+  formation?: string | null;
+  coach?: { id?: number; name: string } | null;
+  lineup?: FdLineupPlayer[];
+  bench?: FdLineupPlayer[];
+};
+
 export type FdMatch = {
   id: number;
   competition: { id: number; name: string; code?: string };
@@ -97,8 +111,8 @@ export type FdMatch = {
   matchday: number | null;
   stage?: string | null;
   group?: string | null;
-  homeTeam: FdTeamSummary;
-  awayTeam: FdTeamSummary;
+  homeTeam: FdMatchTeamDetail;
+  awayTeam: FdMatchTeamDetail;
   score: FdMatchScore;
   referees?: FdReferee[];
   venue?: string | null;

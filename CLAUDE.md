@@ -57,6 +57,7 @@ Les cron jobs Vercel alimentent la base selon les rythmes suivants :
 - **Compositions probables** : refresh horaire pendant J-1
 - **Compositions officielles + scores** : refresh toutes les 2-3 min de H-2 à H+2
   ⚠️ Vercel Hobby limite à **2 cron jobs maximum**. `vercel.json` ne déclare donc que `refresh-structures` (hebdo) et `refresh-rankings` (quotidien). La route `refresh-matchday` existe (`app/api/cron/refresh-matchday/route.ts`) mais sans schedule auto tant qu'on n'est pas passé Vercel Pro. À réactiver dans `vercel.json` après upgrade.
+  ⚠️ **Football-Data.org free tier ne fournit PAS les lineups** (champs `homeTeam.lineup`/`bench` absents, gated par TIER_ONE+). La fiche match (`/matches/[id]`) affiche un empty state "Compositions à venir". Pour avoir les compos il faudra : soit upgrade Football-Data, soit ajouter une seconde source (API-Football a un free tier généreux sur ce point). À trancher avant Jour 17 (affichage analyses IA, qui se basent sur les lineups officielles).
 - **Analyses IA** : générées 1 fois, déclenchées par l'arrivée de la compo officielle (pré-match) ou le passage du match en `finished` (post-match). **Jamais régénérées.**
 
 ## Couverture compétitions au lancement

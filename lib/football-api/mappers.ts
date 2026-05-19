@@ -4,8 +4,10 @@
 import type { Database } from '@/types/database';
 import type {
   FdCompetition,
+  FdLineupPlayer,
   FdMatch,
   FdMatchStatus,
+  FdMatchTeamDetail,
   FdPerson,
   FdStandingsResponse,
   FdTeam,
@@ -15,6 +17,8 @@ type CompetitionInsert = Database['public']['Tables']['competitions']['Insert'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
 type PlayerInsert = Database['public']['Tables']['players']['Insert'];
 type MatchInsert = Database['public']['Tables']['matches']['Insert'];
+type MatchLineupInsert =
+  Database['public']['Tables']['match_lineups']['Insert'];
 type TeamSeasonStatsInsert =
   Database['public']['Tables']['team_season_stats']['Insert'];
 type MatchStatus = MatchInsert['status'];
@@ -107,6 +111,48 @@ export function mapMatch(m: FdMatch): MatchInsert {
     matchday: m.matchday,
     stage: m.stage ?? null,
     last_updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Aplatit les lineups d'un match (XI + bench, pour chaque équipe) en lignes
+ * match_lineups. `is_confirmed = true` car Football-Data ne fournit ces
+ * lineups qu'à partir du moment où elles sont officielles (statut IN_PLAY
+ * ou FINISHED). Pour les compos probables on aurait besoin d'une autre source.
+ */
+export function mapLineupsFromMatch(m: FdMatch): MatchLineupInsert[] {
+  const rows: MatchLineupInsert[] = [];
+  for (const [team, isHome] of [
+    [m.homeTeam, true],
+    [m.awayTeam, false],
+  ] as Array<[FdMatchTeamDetail, boolean]>) {
+    void isHome; // home/away n'est pas un champ DB ici, on stocke juste team_id
+    const teamId = team.id;
+    if (!teamId) continue;
+    for (const p of team.lineup ?? []) {
+      rows.push(buildLineupRow(m.id, teamId, p, true));
+    }
+    for (const p of team.bench ?? []) {
+      rows.push(buildLineupRow(m.id, teamId, p, false));
+    }
+  }
+  return rows;
+}
+
+function buildLineupRow(
+  matchId: number,
+  teamId: number,
+  p: FdLineupPlayer,
+  isStarter: boolean,
+): MatchLineupInsert {
+  return {
+    match_id: matchId,
+    team_id: teamId,
+    player_id: p.id,
+    position: p.position ?? null,
+    shirt_number: p.shirtNumber ?? null,
+    is_starter: isStarter,
+    is_confirmed: true,
   };
 }
 
