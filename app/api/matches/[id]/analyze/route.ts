@@ -263,6 +263,29 @@ export async function POST(
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
 
+        // Charge les narratifs récents (scrapés via Apify) pour chaque équipe.
+        // Permet d'ancrer l'analyse dans l'actu (transferts, blessures, etc.).
+        const { data: narrativesRaw } = await supabase
+          .from('team_narratives')
+          .select('team_id, title, snippet')
+          .in('team_id', [m.home_team_id, m.away_team_id])
+          .order('scraped_at', { ascending: false })
+          .limit(10);
+        type NarrRow = {
+          team_id: number;
+          title: string;
+          snippet: string | null;
+        };
+        const narrList = (narrativesRaw ?? []) as NarrRow[];
+        const homeNarrs = narrList
+          .filter((n) => n.team_id === m.home_team_id)
+          .slice(0, 5)
+          .map((n) => ({ title: n.title, snippet: n.snippet ?? '' }));
+        const awayNarrs = narrList
+          .filter((n) => n.team_id === m.away_team_id)
+          .slice(0, 5)
+          .map((n) => ({ title: n.title, snippet: n.snippet ?? '' }));
+
         const deepCtx: DeepPreMatchContext = {
           competition: m.competition?.name ?? 'Compétition',
           stage_or_matchday:
@@ -278,6 +301,10 @@ export async function POST(
             score_home: h.score_home,
             score_away: h.score_away,
           })),
+          recent_narratives:
+            homeNarrs.length > 0 || awayNarrs.length > 0
+              ? { home: homeNarrs, away: awayNarrs }
+              : undefined,
         };
 
         const { analysis, model } = await generateDeepPreMatchAnalysis(deepCtx);

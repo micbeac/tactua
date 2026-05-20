@@ -6,6 +6,10 @@ import {
   TeamMatchesList,
   type TeamMatchItem,
 } from '@/components/team/TeamMatchesList';
+import {
+  TeamNarrativesSection,
+  type TeamNarrativeItem,
+} from '@/components/team/TeamNarrativesSection';
 import { TeamSeasonStats } from '@/components/team/TeamSeasonStats';
 import { TeamSquadSection } from '@/components/team/TeamSquadSection';
 import {
@@ -77,14 +81,24 @@ export default async function TeamPage({ params }: TeamPageParams) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [seasonStatsRows, upcoming, recent, squad, favorite] =
+  const [seasonStatsRows, upcoming, recent, squad, favorite, narrativesRes] =
     await Promise.all([
       getTeamSeasonStats(supabase, teamId),
       getTeamUpcomingMatches(supabase, teamId, 5),
       getTeamRecentMatches(supabase, teamId, 5),
       getTeamSquad(supabase, teamId),
       isFavorite(supabase, user?.id ?? null, 'team', teamId),
+      supabase
+        .from('team_narratives')
+        .select('title, url, snippet, scraped_at')
+        .eq('team_id', teamId)
+        .order('scraped_at', { ascending: false })
+        .limit(5),
     ]);
+
+  const narratives = ((narrativesRes.data ?? []) as TeamNarrativeItem[]).filter(
+    (n) => Boolean(n.title),
+  );
 
   // Compétition principale : la 1re du tri (points DESC, position ASC).
   const main = seasonStatsRows[0] ?? null;
@@ -169,6 +183,8 @@ export default async function TeamPage({ params }: TeamPageParams) {
           rows={standingRows}
         />
       )}
+
+      <TeamNarrativesSection team_name={team.name} items={narratives} />
 
       <TeamMatchesList
         title="Prochains matchs"

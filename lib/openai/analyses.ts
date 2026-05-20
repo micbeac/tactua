@@ -178,6 +178,11 @@ export type DeepTeamContext = {
   starting_eleven: string[];
 };
 
+export type RecentNarrative = {
+  title: string;
+  snippet: string;
+};
+
 export type DeepPreMatchContext = {
   competition: string;
   stage_or_matchday: string | null;
@@ -192,6 +197,11 @@ export type DeepPreMatchContext = {
     score_home: number | null;
     score_away: number | null;
   }>;
+  /** Narratifs récents par équipe (news scrapées via Apify). Facultatif. */
+  recent_narratives?: {
+    home: RecentNarrative[];
+    away: RecentNarrative[];
+  };
 };
 
 const DEEP_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
@@ -215,6 +225,7 @@ Règles :
 - "prediction.over_2_5" : "yes" si la moyenne combinée des buts pour des 2 équipes > 2.5. Justifie.
 - "prediction.scoreline_guess" : score plausible cohérent avec les probas et les moyennes de buts (ex "1-1", "2-1", "0-2").
 - "prediction.confidence" : "high" si les indicateurs convergent, "medium" si mixtes, "low" si chaos.
+- Si une section "Actu récente" est fournie, intègre les éléments d'actualité PERTINENTS (transferts, blessures fraîches, déclarations marquantes, dynamique de saison) dans tes narratifs et scénarios — sans inventer, en restant fidèle au contenu cité. Cela ancre l'analyse dans le contexte du moment, pas juste les stats.
 
 Reste mesuré, c'est de l'analyse pas du pari sportif.`;
 
@@ -281,6 +292,23 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
           )
           .join('\n');
 
+  const fmtNarratives = (
+    list: RecentNarrative[] | undefined,
+    teamName: string,
+  ) => {
+    if (!list || list.length === 0) return '';
+    const lines = list
+      .slice(0, 5)
+      .map((n) => `  - "${n.title.trim()}" → ${n.snippet.trim()}`)
+      .join('\n');
+    return `\nActu récente ${teamName} :\n${lines}`;
+  };
+
+  const narratives = ctx.recent_narratives
+    ? fmtNarratives(ctx.recent_narratives.home, ctx.home.name) +
+      fmtNarratives(ctx.recent_narratives.away, ctx.away.name)
+    : '';
+
   return `Contexte du match à venir :
 
 Compétition : ${ctx.competition}${ctx.stage_or_matchday ? ` (${ctx.stage_or_matchday})` : ''}
@@ -292,6 +320,7 @@ ${fmtTeam(ctx.away, 'Extérieur')}
 
 Confrontations directes récentes :
 ${h2hLines}
+${narratives}
 
 Génère l'analyse pré-match enrichie en JSON selon le schéma fourni.`;
 }

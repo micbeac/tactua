@@ -515,6 +515,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_narratives: {
+        Row: {
+          id: number
+          published_at: string | null
+          scraped_at: string
+          snippet: string | null
+          source: string
+          team_id: number
+          title: string
+          url: string | null
+          url_hash: string | null
+        }
+        Insert: {
+          id?: number
+          published_at?: string | null
+          scraped_at?: string
+          snippet?: string | null
+          source: string
+          team_id: number
+          title: string
+          url?: string | null
+          url_hash?: string | null
+        }
+        Update: {
+          id?: number
+          published_at?: string | null
+          scraped_at?: string
+          snippet?: string | null
+          source?: string
+          team_id?: number
+          title?: string
+          url?: string | null
+          url_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_narratives_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_season_stats: {
         Row: {
           competition_id: number
