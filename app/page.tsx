@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { buttonVariants } from '@/components/ui/button';
+import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60; // ISR : la home se rafraîchit toutes les 60s
@@ -100,10 +101,21 @@ async function getTop5Upcoming(): Promise<MatchRow[]> {
   return (data ?? []) as unknown as MatchRow[];
 }
 
+async function getPersonalSection() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const personal = await getPersonalUpcomingMatches(supabase, user.id, 8);
+  return personal.length > 0 ? personal : null;
+}
+
 export default async function HomePage() {
-  const [wcMatches, top5Matches] = await Promise.all([
+  const [wcMatches, top5Matches, personal] = await Promise.all([
     getWcUpcoming(),
     getTop5Upcoming(),
+    getPersonalSection(),
   ]);
 
   return (
@@ -121,6 +133,48 @@ export default async function HomePage() {
           recevez les notifs essentielles.
         </p>
       </section>
+
+      {personal && (
+        <section className="mb-12">
+          <header className="mb-4 flex items-end justify-between">
+            <h2 className="text-lg font-semibold">
+              <span className="text-primary">★</span> Tes matchs
+            </h2>
+            <Link
+              href="/favoris"
+              className="text-muted-foreground hover:text-foreground text-xs underline"
+            >
+              Gérer mes favoris
+            </Link>
+          </header>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {personal.map((m) => (
+              <MatchCard
+                key={m.id}
+                id={m.id}
+                kickoff_at={m.kickoff_at}
+                status={m.status}
+                stage={m.stage}
+                matchday={m.matchday}
+                score_home={m.score_home}
+                score_away={m.score_away}
+                home={{
+                  id: m.home_team?.id ?? m.home_team_id,
+                  name: m.home_team?.name ?? 'À déterminer',
+                  tla: m.home_team?.tla ?? null,
+                  logo_url: m.home_team?.logo_url ?? null,
+                }}
+                away={{
+                  id: m.away_team?.id ?? m.away_team_id,
+                  name: m.away_team?.name ?? 'À déterminer',
+                  tla: m.away_team?.tla ?? null,
+                  logo_url: m.away_team?.logo_url ?? null,
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mb-12">
         <header className="mb-4 flex items-end justify-between">
