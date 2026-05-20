@@ -6,6 +6,7 @@ import {
   type TeamMatchItem,
 } from '@/components/team/TeamMatchesList';
 import { TeamSeasonStats } from '@/components/team/TeamSeasonStats';
+import { TeamSquadSection } from '@/components/team/TeamSquadSection';
 import {
   TeamStandingMini,
   type StandingTeam,
@@ -15,6 +16,7 @@ import {
   getTeam,
   getTeamRecentMatches,
   getTeamSeasonStats,
+  getTeamSquad,
   getTeamUpcomingMatches,
   type ScheduleMatch,
 } from '@/lib/data/team';
@@ -61,10 +63,11 @@ export default async function TeamPage({ params }: TeamPageParams) {
   const team = await getTeam(supabase, teamId);
   if (!team) notFound();
 
-  const [seasonStatsRows, upcoming, recent] = await Promise.all([
+  const [seasonStatsRows, upcoming, recent, squad] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
     getTeamUpcomingMatches(supabase, teamId, 5),
     getTeamRecentMatches(supabase, teamId, 5),
+    getTeamSquad(supabase, teamId),
   ]);
 
   // Compétition principale : la 1re du tri (points DESC, position ASC).
@@ -149,6 +152,8 @@ export default async function TeamPage({ params }: TeamPageParams) {
         empty_label="Aucun match joué récemment."
         matches={recent.map((m) => toMatchItem(teamId, m))}
       />
+
+      <TeamSquadSection players={squad} />
     </main>
   );
 }

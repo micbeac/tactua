@@ -196,6 +196,30 @@ export type StandingsRow = {
   } | null;
 };
 
+export type SquadPlayer = {
+  id: number;
+  name: string;
+  position: string | null;
+  date_of_birth: string | null;
+  nationality: string | null;
+};
+
+export async function getTeamSquad(
+  supabase: Supa,
+  teamId: number,
+): Promise<SquadPlayer[]> {
+  const { data, error } = await supabase
+    .from('players')
+    .select('id, name, position, date_of_birth, nationality')
+    .eq('current_team_id', teamId)
+    .order('name');
+  if (error) {
+    console.error('[data/team] squad', error);
+    return [];
+  }
+  return (data ?? []) as SquadPlayer[];
+}
+
 /**
  * Classement d'une compétition/saison, ordonné par position.
  * Renvoie tout le tableau ; l'appelant décide de tronquer.
