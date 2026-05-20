@@ -5,6 +5,7 @@ import { LandingFAQ } from '@/components/landing/LandingFAQ';
 import { LandingFinalCta } from '@/components/landing/LandingFinalCta';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
+import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
@@ -95,6 +96,7 @@ export default async function HomePage() {
         }}
       >
         <LandingHero />
+        <LandingLogoMarquee />
         <LandingDemo />
         <LandingHowItWorks />
         <LandingCoverage />

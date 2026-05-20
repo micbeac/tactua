@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useInView } from 'motion/react';
+import { motion, useInView, useScroll, useTransform } from 'motion/react';
 import { useRef } from 'react';
 import { Sparkles, TrendingUp, Goal, Shield } from 'lucide-react';
 
@@ -38,8 +38,17 @@ export function LandingDemo() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
+  // Scroll-driven : la carte se redresse en arrivant + parallax léger
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'end start'],
+  });
+  const cardRotate = useTransform(scrollYProgress, [0, 0.4, 1], [12, 0, -8]);
+  const cardY = useTransform(scrollYProgress, [0, 1], [60, -60]);
+
   return (
-    <section id="demo" className="relative py-20 sm:py-28">
+    <section ref={sectionRef} id="demo" className="relative py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -60,7 +69,11 @@ export function LandingDemo() {
           </p>
         </motion.div>
 
-        <div ref={ref} className="relative mx-auto max-w-4xl">
+        <div
+          ref={ref}
+          className="relative mx-auto max-w-4xl"
+          style={{ perspective: '1200px' }}
+        >
           {/* Décor de fond pour la carte */}
           <div className="bg-primary/10 pointer-events-none absolute -inset-4 -z-10 rounded-3xl blur-2xl" />
 
@@ -68,6 +81,11 @@ export function LandingDemo() {
             initial={{ opacity: 0, y: 30 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.7, ease: 'easeOut' }}
+            style={{
+              rotateX: cardRotate,
+              y: cardY,
+              transformStyle: 'preserve-3d',
+            }}
             className="bg-card border-border space-y-6 rounded-2xl border p-6 shadow-2xl sm:p-8"
           >
             {/* Header de la carte démo */}
