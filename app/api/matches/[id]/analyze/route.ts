@@ -20,6 +20,7 @@ import {
   generatePostMatchAnalysis,
   generatePreMatchAnalysis,
 } from '@/lib/openai/analyses';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -104,18 +105,20 @@ export async function POST(
   }
   const force = Boolean(body.force);
 
-  const supabase = await createClient();
-
-  // Auth obligatoire
+  // Vérification d'auth via le client user-scoped (cookie)
+  const authClient = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
   if (!user) {
     return NextResponse.json(
       { error: 'Authentication required' },
       { status: 401 },
     );
   }
+
+  // Ops DB via le client admin (RLS bypass). On a déjà validé l'auth ci-dessus.
+  const supabase = createAdminClient();
 
   // Charge le match
   const { data: match } = await supabase
