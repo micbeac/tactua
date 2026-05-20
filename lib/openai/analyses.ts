@@ -225,7 +225,12 @@ Règles :
 - "prediction.over_2_5" : "yes" si la moyenne combinée des buts pour des 2 équipes > 2.5. Justifie.
 - "prediction.scoreline_guess" : score plausible cohérent avec les probas et les moyennes de buts (ex "1-1", "2-1", "0-2").
 - "prediction.confidence" : "high" si les indicateurs convergent, "medium" si mixtes, "low" si chaos.
-- Si une section "Actu récente" est fournie, intègre les éléments d'actualité PERTINENTS (transferts, blessures fraîches, déclarations marquantes, dynamique de saison) dans tes narratifs et scénarios — sans inventer, en restant fidèle au contenu cité. Cela ancre l'analyse dans le contexte du moment, pas juste les stats.
+- ACTU RÉCENTE — Si une section "Actu récente" est fournie pour une ou les deux équipes :
+  * Tu DOIS citer EXPLICITEMENT au moins 2 éléments d'actualité dans ton analyse, en les paraphrasant fidèlement (pas de copier-coller, pas d'invention).
+  * Place ces références prioritairement dans "data_insight" (1-2 éléments) et dans "tactical_overview.home_approach" ou "away_approach" ou dans la "form_assessment" (1-2 éléments).
+  * Exemples typiques d'usage : "L'élimination récente en Ligue Europa face à Aston Villa pèse sur le moral", "La rumeur du transfert de Bastoni à Barcelone crée une distraction en interne", "L'incertitude autour des internationaux français Bleus de l'Inter…"
+  * Si l'actu mentionne des matchs récents perdus/gagnés, intègre-les dans la lecture de la forme ("La défaite en Ligue Europa s'ajoute aux X défaites de la série…").
+  * Si l'actu n'est PAS pertinente pour ce match précis, ignore-la — mais évite ce cas autant que possible, il y a toujours un angle.
 
 Reste mesuré, c'est de l'analyse pas du pari sportif.`;
 
