@@ -39,7 +39,8 @@ export async function GET(request: Request) {
   };
 
   // ============================================================================
-  // 1. PRÉ-MATCH : matchs imminents sans analyse, avec équipes connues
+  // 1. PRÉ-MATCH : matchs imminents sans analyse OU avec compo officielle
+  //    arrivée APRÈS la dernière analyse (= regen pour intégrer le XI).
   // ============================================================================
   const preUpper = new Date(now.getTime() + PRE_WINDOW_HOURS * 60 * 60 * 1000);
   const { data: preCandidates } = await supabase
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
        competition:competitions(id, name),
        home_team:teams!matches_home_team_id_fkey(id, name, country),
        away_team:teams!matches_away_team_id_fkey(id, name, country),
-       match_analyses!left(type)`,
+       match_analyses!left(type, generated_at)`,
     )
     .in('status', ['scheduled', 'live'])
     .gte('kickoff_at', now.toISOString())
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
     .not('home_team_id', 'is', null)
     .not('away_team_id', 'is', null)
     .order('kickoff_at', { ascending: true })
-    .limit(MAX_PER_RUN * 2); // sur-fetch puis filtre côté JS
+    .limit(MAX_PER_RUN * 2);
 
   type PreCandidate = {
     id: number;
@@ -70,11 +71,38 @@ export async function GET(request: Request) {
     competition: { id: number; name: string } | null;
     home_team: { id: number; name: string; country: string | null } | null;
     away_team: { id: number; name: string; country: string | null } | null;
-    match_analyses: Array<{ type: 'pre_match' | 'post_match' }>;
+    match_analyses: Array<{
+      type: 'pre_match' | 'post_match';
+      generated_at: string;
+    }>;
   };
 
+  // Pour chaque candidat, charger la date max de lineup confirmé.
+  const candidateIds = (preCandidates ?? []).map((m) => m.id);
+  const lineupsByMatch = new Map<number, string>(); // match_id → max created_at
+  if (candidateIds.length > 0) {
+    const { data: lineupAggs } = await supabase
+      .from('match_lineups')
+      .select('match_id, created_at')
+      .in('match_id', candidateIds)
+      .eq('is_confirmed', true)
+      .order('created_at', { ascending: false });
+    for (const row of lineupAggs ?? []) {
+      if (!lineupsByMatch.has(row.match_id)) {
+        lineupsByMatch.set(row.match_id, row.created_at);
+      }
+    }
+  }
+
   const preList = ((preCandidates ?? []) as unknown as PreCandidate[])
-    .filter((m) => !m.match_analyses?.some((a) => a.type === 'pre_match'))
+    .filter((m) => {
+      const existing = m.match_analyses?.find((a) => a.type === 'pre_match');
+      if (!existing) return true; // pas encore d'analyse
+      const lineupAt = lineupsByMatch.get(m.id);
+      if (!lineupAt) return false; // analyse déjà là + pas de lineup nouvelle
+      // Regen si lineup confirmé arrivé après l'analyse existante.
+      return new Date(lineupAt).getTime() > new Date(existing.generated_at).getTime();
+    })
     .slice(0, MAX_PER_RUN);
 
   for (const m of preList) {
