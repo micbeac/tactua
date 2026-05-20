@@ -80,15 +80,27 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    // Landing forcée en thème sombre (le design est conçu pour le dark).
+    // `dark` redéfinit les CSS vars (--background, --foreground, --primary…)
+    // pour tous les descendants, peu importe la préférence OS.
+    // Le style inline garantit la couleur de fond même si une extension
+    // navigateur tente d'imposer un autre thème.
     return (
-      <>
+      <div
+        className="dark bg-background text-foreground"
+        style={{
+          // Dark navy explicite — équivalent oklch(0.16 0.025 255).
+          backgroundColor: 'oklch(0.16 0.025 255)',
+          color: 'oklch(0.985 0 0)',
+        }}
+      >
         <LandingHero />
         <LandingDemo />
         <LandingHowItWorks />
         <LandingCoverage />
         <LandingFAQ />
         <LandingFinalCta />
-      </>
+      </div>
     );
   }
 

@@ -9,8 +9,8 @@ export function LandingFinalCta() {
   return (
     <section className="relative overflow-hidden py-20 sm:py-28">
       {/* Décor */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="bg-primary/10 absolute top-1/2 left-1/2 size-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-70">
+        <div className="bg-primary/10 absolute top-1/2 left-1/2 size-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" />
       </div>
 
       <motion.div

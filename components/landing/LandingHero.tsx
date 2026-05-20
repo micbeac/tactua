@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 export function LandingHero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Décor de fond : gradient + orbes floutées */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="bg-primary/20 absolute top-[-20%] left-[10%] size-[500px] rounded-full blur-3xl" />
-        <div className="bg-primary/10 absolute right-[-10%] bottom-[-30%] size-[600px] rounded-full blur-3xl" />
+      {/* Décor de fond : orbes floutées discrètes */}
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-60">
+        <div className="bg-primary/15 absolute top-[-10%] left-[5%] size-[400px] rounded-full blur-3xl" />
+        <div className="bg-primary/10 absolute right-[-5%] bottom-[-20%] size-[450px] rounded-full blur-3xl" />
       </div>
 
       <div className="mx-auto max-w-6xl px-4 pt-20 pb-16 sm:pt-28 sm:pb-24">
@@ -31,7 +31,7 @@ export function LandingHero() {
             Analyses augmentées par l’IA · Coupe du Monde 2026
           </motion.div>
 
-          <h1 className="mb-5 text-4xl font-semibold tracking-tight sm:text-6xl">
+          <h1 className="text-foreground mb-5 text-4xl font-semibold tracking-tight sm:text-6xl">
             Comprends chaque match{' '}
             <span className="from-primary relative inline-block bg-gradient-to-r to-emerald-400 bg-clip-text text-transparent">
               avant le coup d’envoi.
