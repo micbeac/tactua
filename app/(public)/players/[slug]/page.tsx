@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import {
   PlayerRecentPerformances,
@@ -50,7 +50,7 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
 
   const canonical = playerHref(player.id, player.name);
   if (`/players/${slug}` !== canonical) {
-    redirect(canonical);
+    permanentRedirect(canonical);
   }
 
   const [seasonStatsRaw, performancesRaw] = await Promise.all([

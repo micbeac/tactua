@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { TeamHeader } from '@/components/team/TeamHeader';
 import {
   TeamMatchesList,
@@ -68,8 +68,10 @@ export default async function TeamPage({ params }: TeamPageParams) {
 
   // Redirige vers l'URL canonique si on est arrivé via id pur ou slug obsolète.
   const canonical = teamHref(team.id, team.name);
-  if (`/teams/${slug}` !== canonical) {
-    redirect(canonical);
+  const currentPath = `/teams/${slug}`;
+  console.log('[teams page] slug check', { currentPath, canonical });
+  if (currentPath !== canonical) {
+    permanentRedirect(canonical);
   }
 
   const [seasonStatsRows, upcoming, recent, squad] = await Promise.all([
