@@ -419,9 +419,12 @@ export type Database = {
       };
       players: {
         Row: {
+          birth_country: string | null;
+          birth_place: string | null;
           current_team_id: number | null;
           date_of_birth: string | null;
           first_name: string | null;
+          height: number | null;
           id: number;
           last_name: string | null;
           last_updated_at: string;
@@ -430,11 +433,16 @@ export type Database = {
           photo_url: string | null;
           position: string | null;
           shirt_number: number | null;
+          transfers_json: Json | null;
+          weight: number | null;
         };
         Insert: {
+          birth_country?: string | null;
+          birth_place?: string | null;
           current_team_id?: number | null;
           date_of_birth?: string | null;
           first_name?: string | null;
+          height?: number | null;
           id: number;
           last_name?: string | null;
           last_updated_at?: string;
@@ -443,11 +451,16 @@ export type Database = {
           photo_url?: string | null;
           position?: string | null;
           shirt_number?: number | null;
+          transfers_json?: Json | null;
+          weight?: number | null;
         };
         Update: {
+          birth_country?: string | null;
+          birth_place?: string | null;
           current_team_id?: number | null;
           date_of_birth?: string | null;
           first_name?: string | null;
+          height?: number | null;
           id?: number;
           last_name?: string | null;
           last_updated_at?: string;
@@ -456,6 +469,8 @@ export type Database = {
           photo_url?: string | null;
           position?: string | null;
           shirt_number?: number | null;
+          transfers_json?: Json | null;
+          weight?: number | null;
         };
         Relationships: [
           {

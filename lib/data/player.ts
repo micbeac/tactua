@@ -3,6 +3,15 @@ import type { Database } from '@/types/database';
 
 type Supa = SupabaseClient<Database>;
 
+export type CareerTransfer = {
+  date: string;
+  type: string | null;
+  from_team: string;
+  from_team_logo: string | null;
+  to_team: string;
+  to_team_logo: string | null;
+};
+
 export type PlayerRow = {
   id: number;
   name: string;
@@ -14,6 +23,11 @@ export type PlayerRow = {
   current_team_id: number | null;
   photo_url: string | null;
   shirt_number: number | null;
+  height: number | null;
+  weight: number | null;
+  birth_place: string | null;
+  birth_country: string | null;
+  transfers_json: CareerTransfer[] | null;
   current_team: {
     id: number;
     name: string;
@@ -32,6 +46,7 @@ export async function getPlayer(
     .select(
       `id, name, first_name, last_name, position, nationality, date_of_birth,
        current_team_id, photo_url, shirt_number,
+       height, weight, birth_place, birth_country, transfers_json,
        current_team:teams!players_current_team_id_fkey(id, name, tla, logo_url, country)`,
     )
     .eq('id', id)

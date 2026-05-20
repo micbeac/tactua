@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { PlayerCareerSection } from '@/components/player/PlayerCareerSection';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import { buildPersonJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import {
@@ -149,6 +150,14 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
               }
             : null
         }
+      />
+
+      <PlayerCareerSection
+        transfers={player.transfers_json ?? []}
+        height_cm={player.height}
+        weight_kg={player.weight}
+        birth_place={player.birth_place}
+        birth_country={player.birth_country}
       />
 
       <PlayerSeasonStatsCard stats={seasonStats} />

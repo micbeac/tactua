@@ -179,6 +179,107 @@ export async function fetchH2H(
 }
 
 // ============================================================================
+// Player profile — /players/profiles (bio physique)
+// ============================================================================
+
+type ProfileResponse = {
+  response: Array<{
+    player: {
+      id: number;
+      name: string;
+      firstname: string | null;
+      lastname: string | null;
+      age: number | null;
+      birth: {
+        date: string | null;
+        place: string | null;
+        country: string | null;
+      };
+      nationality: string | null;
+      height: string | null; // "174 cm"
+      weight: string | null; // "72 kg"
+      number: number | null;
+      position: string | null;
+      photo: string | null;
+    };
+  }>;
+};
+
+export type PlayerProfile = {
+  height_cm: number | null;
+  weight_kg: number | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  birth_country: string | null;
+};
+
+function parseUnit(s: string | null): number | null {
+  if (!s) return null;
+  const m = s.match(/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+export async function fetchPlayerProfile(
+  playerId: number,
+): Promise<PlayerProfile | null> {
+  const d = await af<ProfileResponse>(`/players/profiles?player=${playerId}`);
+  const p = d.response[0]?.player;
+  if (!p) return null;
+  return {
+    height_cm: parseUnit(p.height),
+    weight_kg: parseUnit(p.weight),
+    birth_date: p.birth.date,
+    birth_place: p.birth.place,
+    birth_country: p.birth.country,
+  };
+}
+
+// ============================================================================
+// Transferts — /transfers?player=X
+// ============================================================================
+
+type TransfersResponse = {
+  response: Array<{
+    player: { id: number; name: string };
+    transfers: Array<{
+      date: string;
+      type: string | null; // "€ 23M", "Loan", "Free", null
+      teams: {
+        in: { id: number | null; name: string; logo: string | null };
+        out: { id: number | null; name: string; logo: string | null };
+      };
+    }>;
+  }>;
+};
+
+export type CareerTransfer = {
+  date: string;
+  type: string | null;
+  from_team: string;
+  from_team_logo: string | null;
+  to_team: string;
+  to_team_logo: string | null;
+};
+
+export async function fetchPlayerTransfers(
+  playerId: number,
+): Promise<CareerTransfer[]> {
+  const d = await af<TransfersResponse>(`/transfers?player=${playerId}`);
+  const list = d.response[0]?.transfers ?? [];
+  // Tri du plus ancien au plus récent (= ordre carrière naturel)
+  return list
+    .map((t) => ({
+      date: t.date,
+      type: t.type,
+      from_team: t.teams.out.name,
+      from_team_logo: t.teams.out.logo,
+      to_team: t.teams.in.name,
+      to_team_logo: t.teams.in.logo,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ============================================================================
 // Squad complet — /players/squads (photos + numéros)
 // ============================================================================
 
