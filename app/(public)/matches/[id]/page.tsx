@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { MatchAnalysisOnDemand } from '@/components/match/MatchAnalysisOnDemand';
 import { MatchFormSection } from '@/components/match/MatchFormSection';
 import { MatchH2HSection } from '@/components/match/MatchH2HSection';
 import { MatchHeader } from '@/components/match/MatchHeader';
@@ -9,8 +10,6 @@ import {
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
-import { PostMatchAnalysisSection } from '@/components/match/PostMatchAnalysisSection';
-import { PreMatchAnalysisSection } from '@/components/match/PreMatchAnalysisSection';
 import { buildSportsEventJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { getAnalysis } from '@/lib/data/analysis';
 import { isFavorite } from '@/lib/data/favorites';
@@ -20,7 +19,11 @@ import {
   getTeamForm,
 } from '@/lib/data/match';
 import { createClient } from '@/lib/supabase/server';
-import type { PostMatchAnalysis, PreMatchAnalysis } from '@/lib/openai/types';
+import type {
+  DeepPreMatchAnalysis,
+  PostMatchAnalysis,
+  PreMatchAnalysis,
+} from '@/lib/openai/types';
 
 export const revalidate = 60;
 
@@ -255,27 +258,36 @@ export default async function MatchPage({ params }: MatchPageParams) {
       />
 
       {match.status === 'finished' && (
-        <PostMatchAnalysisSection
-          analysis={
+        <MatchAnalysisOnDemand
+          match_id={match.id}
+          type="post_match"
+          is_logged_in={Boolean(user)}
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          initial_analysis={
             (postAnalysis?.content_json as PostMatchAnalysis | undefined) ??
             null
           }
-          home_team_name={match.home_team?.name ?? 'Domicile'}
-          away_team_name={match.away_team?.name ?? 'Extérieur'}
-          generated_at={postAnalysis?.generated_at}
+          initial_generated_at={postAnalysis?.generated_at ?? null}
         />
       )}
 
       {(match.status === 'scheduled' ||
         match.status === 'live' ||
         match.status === 'finished') && (
-        <PreMatchAnalysisSection
-          analysis={
-            (preAnalysis?.content_json as PreMatchAnalysis | undefined) ?? null
-          }
+        <MatchAnalysisOnDemand
+          match_id={match.id}
+          type="pre_match"
+          is_logged_in={Boolean(user)}
           home_team_name={match.home_team?.name ?? 'Domicile'}
           away_team_name={match.away_team?.name ?? 'Extérieur'}
-          generated_at={preAnalysis?.generated_at}
+          initial_analysis={
+            (preAnalysis?.content_json as
+              | PreMatchAnalysis
+              | DeepPreMatchAnalysis
+              | undefined) ?? null
+          }
+          initial_generated_at={preAnalysis?.generated_at ?? null}
         />
       )}
 
