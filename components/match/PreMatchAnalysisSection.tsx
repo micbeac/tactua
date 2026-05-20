@@ -534,181 +534,22 @@ export function PreMatchAnalysisSection({
         </div>
       </header>
 
-      {/* === Comparaison statistique (rich) === */}
-      {rich && (
-        <RichStatsCompareTable
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
+      {/* ========================================================== */}
+      {/* === 1. VERDICT EN TÊTE (résumé + scénarios + probas) === */}
+      {/* ========================================================== */}
 
-      {/* === Radar comparatif (rich) === */}
-      {rich && (
-        <RichRadarChart
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === Forme récente (rich) === */}
-      {rich && (
-        <RichForm
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === H2H summary (rich) === */}
-      {rich && (
-        <RichH2HSummary
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === Formations (rich) === */}
-      {rich && (
-        <RichFormations
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === Ce que disent les chiffres (IA, deep only) === */}
-      {deep && (
-        <div className="bg-muted/40 rounded-lg p-4">
-          <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-            Ce que disent les chiffres
-          </h3>
-          <p className="text-sm">{analysis.data_insight}</p>
-        </div>
-      )}
-
-      {/* === Tactique (IA) === */}
-      <div>
-        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-          Tactique
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {home_team_name} (dom.)
-            </p>
-            <p className="text-sm">{analysis.tactical_overview.home_approach}</p>
-          </div>
-          <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {away_team_name} (ext.)
-            </p>
-            <p className="text-sm">{analysis.tactical_overview.away_approach}</p>
-          </div>
-        </div>
-        <p className="text-foreground mt-3 text-sm">
-          <span className="text-primary font-semibold">Duel clé : </span>
-          {analysis.tactical_overview.key_battle}
+      {/* Prédiction synthétique */}
+      <div className="border-primary/30 rounded-lg border border-dashed p-4">
+        <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
+          Prédiction
+        </p>
+        <p className="text-sm">{analysis.prediction.summary}</p>
+        <p className="text-primary mt-2 text-sm font-semibold tabular-nums">
+          Score plausible : {analysis.prediction.scoreline_guess}
         </p>
       </div>
 
-      {/* === Top joueurs détaillés (rich) === */}
-      {rich && (
-        <RichTopPlayers
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === Forme assessment (IA) === */}
-      <div>
-        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-          Lecture de la forme
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="border-border rounded-lg border p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {home_team_name}
-            </p>
-            <p className="text-sm">{analysis.form_assessment.home_form}</p>
-          </div>
-          <div className="border-border rounded-lg border p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {away_team_name}
-            </p>
-            <p className="text-sm">{analysis.form_assessment.away_form}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* === Joueurs clés (IA — pourquoi ils comptent pour CE match) === */}
-      {analysis.key_players.length > 0 && (
-        <div>
-          <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-            <Users className="mr-1 inline size-3.5" aria-hidden />
-            Joueurs à surveiller
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { label: home_team_name, list: keyHome },
-              { label: away_team_name, list: keyAway },
-            ].map(({ label, list }) =>
-              list.length > 0 ? (
-                <div key={label}>
-                  <p className="text-muted-foreground mb-2 text-[10px] uppercase truncate">
-                    {label}
-                  </p>
-                  <ul className="space-y-2">
-                    {list.map((p) => (
-                      <li key={p.name} className="text-sm">
-                        <span className="text-primary font-semibold">
-                          {p.name}
-                        </span>{' '}
-                        — {p.why}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null,
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* === Indisponibles (rich) === */}
-      {rich && (
-        <RichAbsents
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* === Points faibles (IA) === */}
-      <div>
-        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-          Points faibles
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {home_team_name}
-            </p>
-            <p className="text-sm">{analysis.weak_points.home}</p>
-          </div>
-          <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
-            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
-              {away_team_name}
-            </p>
-            <p className="text-sm">{analysis.weak_points.away}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* === Scénarios (IA, deep only) === */}
+      {/* Scénarios (IA, deep only) */}
       {deep && analysis.scenarios.length > 0 && (
         <div>
           <h3 className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
@@ -718,10 +559,7 @@ export function PreMatchAnalysisSection({
             {analysis.scenarios.map((s, i) => {
               const style = LIKELIHOOD_STYLES[s.likelihood];
               return (
-                <div
-                  key={i}
-                  className={`rounded-lg border p-4 ${style.bg}`}
-                >
+                <div key={i} className={`rounded-lg border p-4 ${style.bg}`}>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold">
                       Scénario #{i + 1} — {s.title}
@@ -740,18 +578,7 @@ export function PreMatchAnalysisSection({
         </div>
       )}
 
-      {/* === Prédiction (IA) === */}
-      <div className="border-primary/30 rounded-lg border border-dashed p-4">
-        <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
-          Prédiction
-        </p>
-        <p className="text-sm">{analysis.prediction.summary}</p>
-        <p className="text-primary mt-2 text-sm font-semibold tabular-nums">
-          Score plausible : {analysis.prediction.scoreline_guess}
-        </p>
-      </div>
-
-      {/* === Probabilités + BTTS + Over + Confiance (IA, deep only) === */}
+      {/* Probabilités + BTTS + Over + Confiance (IA, deep only) */}
       {deep && (
         <>
           <div>
@@ -850,6 +677,195 @@ export function PreMatchAnalysisSection({
           </div>
         </>
       )}
+
+      {/* Ce que disent les chiffres (IA, deep only) */}
+      {deep && (
+        <div className="bg-muted/40 rounded-lg p-4">
+          <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+            Ce que disent les chiffres
+          </h3>
+          <p className="text-sm">{analysis.data_insight}</p>
+        </div>
+      )}
+
+      {/* === Séparateur visuel avant les stats === */}
+      <div className="border-border border-t pt-1">
+        <p className="text-muted-foreground/60 -mb-1 text-center text-[10px] tracking-widest uppercase">
+          ◆ Données détaillées ◆
+        </p>
+      </div>
+
+      {/* ============================================ */}
+      {/* === 2. STATISTIQUES (calculées, rich) === */}
+      {/* ============================================ */}
+
+      {/* Comparaison statistique */}
+      {rich && (
+        <RichStatsCompareTable
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Radar comparatif */}
+      {rich && (
+        <RichRadarChart
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Forme récente */}
+      {rich && (
+        <RichForm
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* H2H summary */}
+      {rich && (
+        <RichH2HSummary
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Formations */}
+      {rich && (
+        <RichFormations
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Top joueurs détaillés */}
+      {rich && (
+        <RichTopPlayers
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Indisponibles */}
+      {rich && (
+        <RichAbsents
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* === 3. NARRATIFS IA (tactique, forme, joueurs, faib.) === */}
+      {/* ========================================================= */}
+
+      {/* Tactique */}
+      <div>
+        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+          Tactique
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {home_team_name} (dom.)
+            </p>
+            <p className="text-sm">{analysis.tactical_overview.home_approach}</p>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {away_team_name} (ext.)
+            </p>
+            <p className="text-sm">{analysis.tactical_overview.away_approach}</p>
+          </div>
+        </div>
+        <p className="text-foreground mt-3 text-sm">
+          <span className="text-primary font-semibold">Duel clé : </span>
+          {analysis.tactical_overview.key_battle}
+        </p>
+      </div>
+
+      {/* Lecture de la forme */}
+      <div>
+        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+          Lecture de la forme
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="border-border rounded-lg border p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {home_team_name}
+            </p>
+            <p className="text-sm">{analysis.form_assessment.home_form}</p>
+          </div>
+          <div className="border-border rounded-lg border p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {away_team_name}
+            </p>
+            <p className="text-sm">{analysis.form_assessment.away_form}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Joueurs à surveiller (IA) */}
+      {analysis.key_players.length > 0 && (
+        <div>
+          <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+            <Users className="mr-1 inline size-3.5" aria-hidden />
+            Joueurs à surveiller
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { label: home_team_name, list: keyHome },
+              { label: away_team_name, list: keyAway },
+            ].map(({ label, list }) =>
+              list.length > 0 ? (
+                <div key={label}>
+                  <p className="text-muted-foreground mb-2 text-[10px] uppercase truncate">
+                    {label}
+                  </p>
+                  <ul className="space-y-2">
+                    {list.map((p) => (
+                      <li key={p.name} className="text-sm">
+                        <span className="text-primary font-semibold">
+                          {p.name}
+                        </span>{' '}
+                        — {p.why}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null,
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Points faibles */}
+      <div>
+        <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+          Points faibles
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {home_team_name}
+            </p>
+            <p className="text-sm">{analysis.weak_points.home}</p>
+          </div>
+          <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
+            <p className="text-muted-foreground mb-1 text-[10px] uppercase truncate">
+              {away_team_name}
+            </p>
+            <p className="text-sm">{analysis.weak_points.away}</p>
+          </div>
+        </div>
+      </div>
 
       {generated_at && (
         <p className="text-muted-foreground/70 text-right text-[10px]">
