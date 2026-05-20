@@ -29,10 +29,13 @@ export async function runActorSync<TItem = unknown>(
   actorId: string,
   input: Record<string, unknown>,
   timeout = 60,
+  memoryMbytes = 1024,
 ): Promise<TItem[]> {
   // Le slug doit être URL-encodé : "apify/rag-web-browser" → "apify~rag-web-browser"
   const slug = actorId.replace('/', '~');
-  const url = `${APIFY_BASE}/acts/${slug}/run-sync-get-dataset-items?token=${token()}&timeout=${timeout}`;
+  // memory=1024 (1 GB) au lieu du défaut 4096 (4 GB) pour économiser le quota
+  // mémoire cumulé du plan Apify free (8 GB max).
+  const url = `${APIFY_BASE}/acts/${slug}/run-sync-get-dataset-items?token=${token()}&timeout=${timeout}&memory=${memoryMbytes}`;
 
   const res = await fetch(url, {
     method: 'POST',

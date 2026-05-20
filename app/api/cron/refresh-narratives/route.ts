@@ -136,9 +136,10 @@ export async function GET(request: Request) {
     errors: [] as CronError[],
   };
 
-  // Traitement en parallèle par batches de 3 équipes simultanées.
-  // Apify gère bien la concurrence, ce qui divise par ~3 le temps total.
-  const CONCURRENCY = 3;
+  // Concurrence à 1 : le plan Apify free a une limite de 8 GB de mémoire
+  // cumulée. rag-web-browser alloue ~2-3 GB par run → 3 en parallèle dépasse.
+  // À passer à 3-5 quand on upgrade en plan Personal ($49/mois).
+  const CONCURRENCY = 1;
   async function processTeam(team: TeamRow) {
     try {
       const results = await ragWebSearch(buildQuery(team.name), 5);
