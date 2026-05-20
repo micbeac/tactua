@@ -83,13 +83,31 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   // Permet de limiter le run à N équipes (utile pour tester sans burn le quota)
-  const limit = Number(url.searchParams.get('limit') ?? '50');
+  const limit = Number(url.searchParams.get('limit') ?? '15');
   // Permet de cibler 1 équipe spécifique
   const teamIdFilter = url.searchParams.get('team_id')
     ? Number(url.searchParams.get('team_id'))
     : null;
+  // Force le re-scraping même pour les équipes déjà fraîchement scrapées
+  const force = url.searchParams.get('force') === '1';
+  // Démarre après ce team_id (pagination simple)
+  const afterTeamId = Number(url.searchParams.get('after') ?? '0');
 
   const supabase = createAdminClient();
+
+  // Pré-filtre : on récupère les team_ids ayant été scrapés dans les 7 derniers
+  // jours pour les exclure (sauf si force=1).
+  let alreadyScrapedIds = new Set<number>();
+  if (!force && !teamIdFilter) {
+    const sevenDaysAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const { data: recent } = await supabase
+      .from('team_narratives')
+      .select('team_id')
+      .gte('scraped_at', sevenDaysAgo);
+    alreadyScrapedIds = new Set((recent ?? []).map((r) => r.team_id));
+  }
 
   // Équipes ciblées : celles avec api_football_id (= équipes des compétitions
   // trackées), pour ne pas gaspiller le quota sur des équipes non utilisées.
@@ -97,19 +115,24 @@ export async function GET(request: Request) {
     .from('teams')
     .select('id, name')
     .not('api_football_id', 'is', null)
+    .gt('id', afterTeamId)
     .order('id', { ascending: true });
   if (teamIdFilter) query = query.eq('id', teamIdFilter);
-  query = query.limit(limit);
+  query = query.limit(limit * 3); // on récupère plus, on filtrera ensuite
 
-  const { data: teams } = await query;
+  const { data: allTeams } = await query;
+  const teams = (allTeams ?? [])
+    .filter((t) => !alreadyScrapedIds.has(t.id))
+    .slice(0, limit);
 
   type TeamRow = { id: number; name: string };
-  const list = (teams ?? []) as TeamRow[];
+  const list = teams as TeamRow[];
 
   type CronError = { team: string; message: string };
   const stats = {
     teams_processed: 0,
     narratives_inserted: 0,
+    skipped_recent: alreadyScrapedIds.size,
     errors: [] as CronError[],
   };
 

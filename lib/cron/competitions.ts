@@ -15,6 +15,8 @@ export const TRACKED_COMPETITIONS = [
   { code: 'BL1', label: 'Bundesliga', fd_id: 2002, af_league_id: 78 },
   { code: 'SA', label: 'Serie A', fd_id: 2019, af_league_id: 135 },
   { code: 'FL1', label: 'Ligue 1', fd_id: 2015, af_league_id: 61 },
+  // Jupiler Pro League — uniquement via API-Football (FD ne la couvre pas en free)
+  { code: 'BJL', label: 'Jupiler Pro League', fd_id: 9001, af_league_id: 144 },
 ] as const;
 
 export type TrackedCompetitionCode =

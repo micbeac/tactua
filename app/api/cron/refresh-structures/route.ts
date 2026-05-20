@@ -35,6 +35,9 @@ export async function GET(request: Request) {
   };
 
   for (const { code } of TRACKED_COMPETITIONS) {
+    // Football-Data ne couvre pas la JPL (free tier) — l'import est manuel
+    // via scripts/import-jupiler-pro-league.ts.
+    if (code === 'BJL') continue;
     try {
       const c = await football.getCompetition(code);
       const { error: cErr } = await supabase
