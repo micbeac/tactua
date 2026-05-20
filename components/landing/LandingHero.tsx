@@ -17,21 +17,22 @@ import { AnimatedCounter } from './AnimatedCounter';
 function StadiumBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      {/* Photo de fond — stade vu de l'intérieur, ambiance nuit/projecteurs */}
+      {/* Photo de fond — 3 ballons sur gazon, immédiatement reconnaissable foot */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/landing/stadium-hero.jpg"
         alt=""
         aria-hidden
-        className="absolute inset-0 size-full object-cover opacity-45"
+        className="absolute inset-0 size-full object-cover opacity-60"
         loading="eager"
       />
-      {/* Overlay sombre vertical pour préserver la lisibilité du texte */}
+      {/* Overlay assombri pour préserver la lisibilité, plus léger en haut
+       * pour bien voir la photo, plus marqué en bas pour fondre dans la suite */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.65) 0%, oklch(0.16 0.025 255 / 0.55) 40%, oklch(0.16 0.025 255 / 0.85) 80%, oklch(0.16 0.025 255) 100%)',
+            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.45) 0%, oklch(0.16 0.025 255 / 0.55) 40%, oklch(0.16 0.025 255 / 0.85) 80%, oklch(0.16 0.025 255) 100%)',
         }}
       />
 
