@@ -81,11 +81,33 @@ export async function GET(request: Request) {
     try {
       if (!m.home_team_id || !m.away_team_id || !m.home_team || !m.away_team)
         continue;
-      const [homeForm, awayForm, h2h] = await Promise.all([
+      const [homeForm, awayForm, h2h, lineupRows] = await Promise.all([
         getTeamForm(supabase, m.home_team_id, m.id, 5),
         getTeamForm(supabase, m.away_team_id, m.id, 5),
         getHeadToHead(supabase, m.home_team_id, m.away_team_id, m.id, 5),
+        supabase
+          .from('match_lineups')
+          .select('team_id, is_starter, is_confirmed, players(name)')
+          .eq('match_id', m.id)
+          .eq('is_confirmed', true)
+          .eq('is_starter', true),
       ]);
+      type LineupRow = {
+        team_id: number;
+        is_starter: boolean;
+        is_confirmed: boolean;
+        players: { name: string } | null;
+      };
+      const rows = (lineupRows.data ?? []) as unknown as LineupRow[];
+      const homeXI = rows
+        .filter((r) => r.team_id === m.home_team_id)
+        .map((r) => r.players?.name)
+        .filter((n): n is string => Boolean(n));
+      const awayXI = rows
+        .filter((r) => r.team_id === m.away_team_id)
+        .map((r) => r.players?.name)
+        .filter((n): n is string => Boolean(n));
+
       const { analysis, model } = await generatePreMatchAnalysis({
         competition: m.competition?.name ?? 'Compétition',
         stage_or_matchday:
@@ -96,13 +118,13 @@ export async function GET(request: Request) {
           name: m.home_team.name,
           country: m.home_team.country,
           recent_form: homeForm.map((f) => f.result),
-          starting_eleven: [],
+          starting_eleven: homeXI,
         },
         away: {
           name: m.away_team.name,
           country: m.away_team.country,
           recent_form: awayForm.map((f) => f.result),
-          starting_eleven: [],
+          starting_eleven: awayXI,
         },
         head_to_head: h2h
           .filter((h) => h.home_team_id != null && h.away_team_id != null)
@@ -181,6 +203,28 @@ export async function GET(request: Request) {
 
   for (const m of postList) {
     try {
+      const { data: lineupRows } = await supabase
+        .from('match_lineups')
+        .select('team_id, is_starter, is_confirmed, players(name)')
+        .eq('match_id', m.id)
+        .eq('is_confirmed', true)
+        .eq('is_starter', true);
+      type LineupRow = {
+        team_id: number;
+        is_starter: boolean;
+        is_confirmed: boolean;
+        players: { name: string } | null;
+      };
+      const rows = (lineupRows ?? []) as unknown as LineupRow[];
+      const homeXI = rows
+        .filter((r) => r.team_id === m.home_team!.id)
+        .map((r) => r.players?.name)
+        .filter((n): n is string => Boolean(n));
+      const awayXI = rows
+        .filter((r) => r.team_id === m.away_team!.id)
+        .map((r) => r.players?.name)
+        .filter((n): n is string => Boolean(n));
+
       const { analysis, model } = await generatePostMatchAnalysis({
         competition: m.competition?.name ?? 'Compétition',
         stage_or_matchday:
@@ -192,14 +236,14 @@ export async function GET(request: Request) {
           country: m.home_team!.country,
           score: m.score_home!,
           half_time_score: m.half_time_home,
-          starting_eleven: [],
+          starting_eleven: homeXI,
         },
         away: {
           name: m.away_team!.name,
           country: m.away_team!.country,
           score: m.score_away!,
           half_time_score: m.half_time_away,
-          starting_eleven: [],
+          starting_eleven: awayXI,
         },
       });
       await upsertAnalysis(supabase, m.id, 'post_match', analysis, model);
