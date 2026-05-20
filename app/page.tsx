@@ -1,11 +1,16 @@
 import Link from 'next/link';
+import { LandingCoverage } from '@/components/landing/LandingCoverage';
+import { LandingDemo } from '@/components/landing/LandingDemo';
+import { LandingFAQ } from '@/components/landing/LandingFAQ';
+import { LandingFinalCta } from '@/components/landing/LandingFinalCta';
+import { LandingHero } from '@/components/landing/LandingHero';
+import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
-import { buttonVariants } from '@/components/ui/button';
 import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 
-export const revalidate = 60; // ISR : la home se rafraîchit toutes les 60s
+export const revalidate = 60;
 
 const WC_COMPETITION_ID = 2000;
 const TOP5_COMPETITION_IDS = [
@@ -68,56 +73,48 @@ function toCardProps(m: MatchRow): MatchCardProps {
   };
 }
 
-async function getWcUpcoming(): Promise<MatchRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('matches')
-    .select(SELECT_FRAGMENT)
-    .eq('competition_id', WC_COMPETITION_ID)
-    .eq('status', 'scheduled')
-    .gte('kickoff_at', new Date().toISOString())
-    .order('kickoff_at', { ascending: true })
-    .limit(10);
-  if (error) {
-    console.error('[home] wc query error', error);
-    return [];
-  }
-  return (data ?? []) as unknown as MatchRow[];
-}
-
-async function getTop5Upcoming(): Promise<MatchRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('matches')
-    .select(SELECT_FRAGMENT)
-    .in('competition_id', TOP5_COMPETITION_IDS)
-    .eq('status', 'scheduled')
-    .gte('kickoff_at', new Date().toISOString())
-    .order('kickoff_at', { ascending: true })
-    .limit(6);
-  if (error) {
-    console.error('[home] top5 query error', error);
-    return [];
-  }
-  return (data ?? []) as unknown as MatchRow[];
-}
-
-async function getPersonalSection() {
+export default async function HomePage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
-  const personal = await getPersonalUpcomingMatches(supabase, user.id, 8);
-  return personal.length > 0 ? personal : null;
-}
 
-export default async function HomePage() {
-  const [wcMatches, top5Matches, personal] = await Promise.all([
-    getWcUpcoming(),
-    getTop5Upcoming(),
-    getPersonalSection(),
+  if (!user) {
+    return (
+      <>
+        <LandingHero />
+        <LandingDemo />
+        <LandingHowItWorks />
+        <LandingCoverage />
+        <LandingFAQ />
+        <LandingFinalCta />
+      </>
+    );
+  }
+
+  // === Dashboard utilisateur connecté ===
+  const [wcRes, top5Res, personal] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(SELECT_FRAGMENT)
+      .eq('competition_id', WC_COMPETITION_ID)
+      .eq('status', 'scheduled')
+      .gte('kickoff_at', new Date().toISOString())
+      .order('kickoff_at', { ascending: true })
+      .limit(10),
+    supabase
+      .from('matches')
+      .select(SELECT_FRAGMENT)
+      .in('competition_id', TOP5_COMPETITION_IDS)
+      .eq('status', 'scheduled')
+      .gte('kickoff_at', new Date().toISOString())
+      .order('kickoff_at', { ascending: true })
+      .limit(6),
+    getPersonalUpcomingMatches(supabase, user.id, 8),
   ]);
+
+  const wcMatches = (wcRes.data ?? []) as unknown as MatchRow[];
+  const top5Matches = (top5Res.data ?? []) as unknown as MatchRow[];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -136,7 +133,7 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {personal && (
+      {personal.length > 0 && (
         <section className="mb-12">
           <header className="mb-4 flex items-end justify-between">
             <h2 className="text-lg font-semibold">
@@ -215,8 +212,6 @@ export default async function HomePage() {
           </div>
         )}
       </section>
-
-      <SignupCta />
     </main>
   );
 }
@@ -226,33 +221,5 @@ function EmptyState({ label }: { label: string }) {
     <div className="bg-card text-muted-foreground border-border rounded-xl border p-6 text-center text-sm">
       {label}
     </div>
-  );
-}
-
-async function SignupCta() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) return null;
-
-  return (
-    <section className="bg-card border-border mt-6 rounded-xl border p-6 sm:p-8">
-      <h3 className="text-lg font-semibold">
-        Crée ton compte pour suivre la CDM
-      </h3>
-      <p className="text-muted-foreground mt-1 text-sm">
-        Ajoute tes équipes et joueurs favoris, reçois les compos officielles dès
-        leur sortie, et l&apos;analyse IA pré-match avant le coup d&apos;envoi.
-      </p>
-      <div className="mt-4 flex gap-2">
-        <Link href="/signup" className={buttonVariants()}>
-          Créer mon compte
-        </Link>
-        <Link href="/login" className={buttonVariants({ variant: 'outline' })}>
-          Se connecter
-        </Link>
-      </div>
-    </section>
   );
 }
