@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({
@@ -13,11 +14,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 });
-
-const SITE_URL = 'https://tactua.vercel.app';
-const SITE_NAME = 'Tactua';
-const SITE_DESCRIPTION =
-  "Tout ce qu'il faut comprendre avant le match : compositions, analyses tactiques IA, classements, stats joueurs et équipes.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

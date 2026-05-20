@@ -2,8 +2,8 @@ import { Resend } from 'resend';
 
 // Domaine partagé Resend pour le MVP (envoi limité à l'email du compte
 // Resend tant qu'on n'a pas vérifié un domaine custom). Une fois custom prêt,
-// remplacer par "Tactua <notifs@tactua.app>" ou équivalent.
-export const FROM = 'Tactua <onboarding@resend.dev>';
+// remplacer par "Tactuo <notifs@tactuo.com>" ou équivalent.
+export const FROM = 'Tactuo <onboarding@resend.dev>';
 
 let _resend: Resend | null = null;
 

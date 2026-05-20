@@ -2,6 +2,8 @@
 // Lu par Google pour les rich snippets et par les LLMs (ChatGPT, Perplexity)
 // pour les citations.
 
+import { SITE_URL } from '@/lib/site';
+
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
@@ -10,8 +12,6 @@ export function JsonLd({ data }: { data: Record<string, unknown> }) {
     />
   );
 }
-
-const SITE_URL = 'https://tactua.vercel.app';
 
 type TeamRef = {
   id: number;

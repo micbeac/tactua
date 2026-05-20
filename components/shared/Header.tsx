@@ -18,7 +18,7 @@ export async function Header() {
             className="bg-primary inline-block size-2.5 rounded-full shadow-[0_0_12px_var(--primary)]"
             aria-hidden
           />
-          <span className="text-base font-semibold tracking-tight">Tactua</span>
+          <span className="text-base font-semibold tracking-tight">Tactuo</span>
         </Link>
 
         <div className="flex flex-1 items-center justify-end gap-3">

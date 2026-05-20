@@ -1,4 +1,4 @@
-# Tactua
+# Tactuo
 
 WebApp d'analyse football augmentée par l'IA. **Pas une app de paris sportifs.** Positionnement : "Voici tout ce qu'il faut comprendre avant le match", pas "voici ton pari".
 

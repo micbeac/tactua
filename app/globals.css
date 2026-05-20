@@ -84,7 +84,7 @@
 }
 
 .dark {
-  /* Tactua : fond bleu nuit + accent vert électrique (#22c55e). */
+  /* Tactuo : fond bleu nuit + accent vert électrique (#22c55e). */
   --background: oklch(0.16 0.025 255);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.22 0.03 255);

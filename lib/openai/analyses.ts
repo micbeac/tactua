@@ -38,7 +38,7 @@ export type PreMatchContext = {
   head_to_head: H2HContext[]; // jusqu'à 5
 };
 
-const SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactua, une webapp d'analyse augmentée par l'IA.
+const SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
 Tu écris pour des fans curieux qui veulent comprendre le match avant le coup d'envoi : tactique, forme, joueurs clés, points faibles.
 
 Règles :
@@ -158,7 +158,7 @@ export type PostMatchContext = {
   };
 };
 
-const POST_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactua, une webapp d'analyse augmentée par l'IA.
+const POST_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
 Tu rédiges une lecture post-match factuelle et engageante : faits marquants, homme du match, performances notables, lecture tactique, moment-clé.
 
 Règles :

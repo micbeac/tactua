@@ -19,9 +19,9 @@ const supabase = createClient<Database>(url, key, {
   auth: { persistSession: false },
 });
 
-const TEST_EMAIL = `test+${Date.now()}@tactua.test`;
-const TEST_PASSWORD = 'tactua-test-12345';
-const TEST_USERNAME = 'tactua_tester';
+const TEST_EMAIL = `test+${Date.now()}@tactuo.test`;
+const TEST_PASSWORD = 'tactuo-test-12345';
+const TEST_USERNAME = 'tactuo_tester';
 
 async function main() {
   console.log(`▶ Création du user ${TEST_EMAIL}…`);

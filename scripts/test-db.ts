@@ -27,7 +27,7 @@ async function main() {
     .from('competitions')
     .insert({
       id: TEST_ID,
-      name: 'Test Tactua Jour 2',
+      name: 'Test Tactuo Jour 2',
       code: 'TEST',
       country: 'TEST',
       current_season: '2026',

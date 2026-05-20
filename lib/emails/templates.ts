@@ -2,7 +2,7 @@
 // Pas de framework email (React Email overkill ici) : juste du HTML inliné
 // compatible Gmail / Outlook / Apple Mail.
 
-const SITE_URL = 'https://tactua.vercel.app';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 const ACCENT = '#22c55e';
 const BG = '#0a0f1e';
@@ -50,7 +50,7 @@ function shell(title: string, bodyHtml: string, ctaUrl: string): string {
           <tr>
             <td style="padding:0 0 24px 0;">
               <p style="margin:0;font-size:14px;color:${ACCENT};font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">
-                ● Tactua
+                ● ${SITE_NAME}
               </p>
             </td>
           </tr>

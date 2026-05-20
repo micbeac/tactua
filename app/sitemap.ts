@@ -1,8 +1,7 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL as BASE_URL } from '@/lib/site';
 import { createClient } from '@/lib/supabase/server';
 import { playerHref, teamHref } from '@/lib/url';
-
-const BASE_URL = 'https://tactua.vercel.app';
 
 // Cap par section pour rester sous la limite de 50k URLs sitemap.
 const MAX_TEAMS = 500;
