@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { signOut } from '@/app/(auth)/actions';
+import { HeaderSearchBox } from '@/components/shared/HeaderSearchBox';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/server';
 
@@ -20,47 +21,50 @@ export async function Header() {
           <span className="text-base font-semibold tracking-tight">Tactua</span>
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm sm:gap-2">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
-          >
-            Matchs
-          </Link>
-          {user && (
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <HeaderSearchBox />
+          <nav className="flex items-center gap-1 text-sm sm:gap-2">
             <Link
-              href="/favoris"
-              className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5"
+              href="/"
+              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
             >
-              Favoris
+              Matchs
             </Link>
-          )}
-
-          {user ? (
-            <div className="flex items-center gap-2 pl-2">
-              <span className="text-muted-foreground hidden text-xs sm:inline">
-                {user.email}
-              </span>
-              <form action={signOut}>
-                <Button type="submit" variant="ghost" size="sm">
-                  Déconnexion
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 pl-2">
+            {user && (
               <Link
-                href="/login"
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                href="/favoris"
+                className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5"
               >
-                Connexion
+                Favoris
               </Link>
-              <Link href="/signup" className={buttonVariants({ size: 'sm' })}>
-                S&apos;inscrire
-              </Link>
-            </div>
-          )}
-        </nav>
+            )}
+
+            {user ? (
+              <div className="flex items-center gap-2 pl-2">
+                <span className="text-muted-foreground hidden text-xs sm:inline">
+                  {user.email}
+                </span>
+                <form action={signOut}>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Déconnexion
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 pl-2">
+                <Link
+                  href="/login"
+                  className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                >
+                  Connexion
+                </Link>
+                <Link href="/signup" className={buttonVariants({ size: 'sm' })}>
+                  S&apos;inscrire
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
       </div>
     </header>
   );
