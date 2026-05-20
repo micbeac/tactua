@@ -23,16 +23,25 @@ function StadiumBackground() {
         src="/landing/stadium-hero.jpg"
         alt=""
         aria-hidden
-        className="absolute inset-0 size-full object-cover opacity-60"
+        className="absolute inset-0 size-full object-cover opacity-75"
+        style={{ objectPosition: 'center 65%' }}
         loading="eager"
       />
-      {/* Overlay assombri pour préserver la lisibilité, plus léger en haut
-       * pour bien voir la photo, plus marqué en bas pour fondre dans la suite */}
+      {/* Overlay assombri sur les côtés / haut / bas pour faire ressortir
+       * le centre où s'affiche le texte, tout en laissant la photo bien visible */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.45) 0%, oklch(0.16 0.025 255 / 0.55) 40%, oklch(0.16 0.025 255 / 0.85) 80%, oklch(0.16 0.025 255) 100%)',
+            'radial-gradient(ellipse 60% 80% at 50% 40%, oklch(0.16 0.025 255 / 0.25) 0%, oklch(0.16 0.025 255 / 0.65) 60%, oklch(0.16 0.025 255 / 0.95) 100%)',
+        }}
+      />
+      {/* Fondu vers le fond en bas pour transition vers la marquee */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-32"
+        style={{
+          background:
+            'linear-gradient(180deg, transparent 0%, oklch(0.16 0.025 255) 100%)',
         }}
       />
 

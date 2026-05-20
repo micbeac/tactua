@@ -11,7 +11,10 @@ export async function Header() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="bg-background/80 border-border sticky top-0 z-30 border-b backdrop-blur">
+    <header
+      className="border-border sticky top-0 z-30 border-b backdrop-blur"
+      style={{ backgroundColor: 'oklch(0.16 0.025 255 / 0.85)' }}
+    >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <span

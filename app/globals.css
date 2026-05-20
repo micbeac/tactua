@@ -100,8 +100,13 @@ html {
   }
   body {
     @apply bg-background text-foreground;
+    /* Garde-fou : si une extension navigateur écrase --background, on
+     * conserve quand même un fond dark navy. */
+    background-color: oklch(0.16 0.025 255);
+    color: oklch(0.985 0 0);
   }
   html {
     @apply font-sans;
+    background-color: oklch(0.16 0.025 255);
   }
 }
