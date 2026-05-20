@@ -215,7 +215,10 @@ export async function POST(
       if (canDeep) {
         const season = afSeason(afLeagueId!, m.kickoff_at);
         const matchDate = new Date(m.kickoff_at);
-        const [homeCtx, awayCtx, h2hAf] = await Promise.all([
+        console.log(
+          `[analyze ${m.id}] deep mode AF league=${afLeagueId} season=${season} home=${afHomeId} away=${afAwayId}`,
+        );
+        const [homeCtxR, awayCtxR, h2hAfR] = await Promise.allSettled([
           buildDeepTeamContext({
             af_team_id: afHomeId!,
             af_league_id: afLeagueId!,
@@ -236,6 +239,24 @@ export async function POST(
           }),
           fetchH2H(afHomeId!, afAwayId!, 10),
         ]);
+        if (homeCtxR.status === 'rejected') {
+          throw new Error(
+            `Step home_context (${m.home_team.name}): ${homeCtxR.reason instanceof Error ? homeCtxR.reason.message : String(homeCtxR.reason)}`,
+          );
+        }
+        if (awayCtxR.status === 'rejected') {
+          throw new Error(
+            `Step away_context (${m.away_team.name}): ${awayCtxR.reason instanceof Error ? awayCtxR.reason.message : String(awayCtxR.reason)}`,
+          );
+        }
+        if (h2hAfR.status === 'rejected') {
+          throw new Error(
+            `Step h2h: ${h2hAfR.reason instanceof Error ? h2hAfR.reason.message : String(h2hAfR.reason)}`,
+          );
+        }
+        const homeCtx = homeCtxR.value;
+        const awayCtx = awayCtxR.value;
+        const h2hAf = h2hAfR.value;
 
         const { analysis, model } = await generateDeepPreMatchAnalysis({
           competition: m.competition?.name ?? 'Compétition',

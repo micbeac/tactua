@@ -71,7 +71,10 @@ export function MatchAnalysisOnDemand({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error ?? 'Erreur lors de la génération');
+        const detail = data?.message ? ` — ${data.message}` : '';
+        throw new Error(
+          `${data?.error ?? 'Erreur lors de la génération'}${detail}`,
+        );
       }
       setAnalysis(data.analysis);
       setGeneratedAt(data.generated_at);
