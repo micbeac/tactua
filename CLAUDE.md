@@ -120,6 +120,26 @@ supabase/
 - Notifications par email uniquement au lancement (Resend)
 - Stripe codé en backend mais paywall inactif jusqu'en juillet 2026
 
+## Projections coût (mesurées en sprint)
+
+- **OpenAI gpt-4o-mini** : ~$0.0001-0.0002 par analyse (mesuré : 520-527 tokens in / 222-318 out). 64 matchs CDM × 2 analyses = **~$0.02 pour toute la CDM**. Ajout des autres compétitions = ~$0.10-0.30 / mois. Très loin du budget 5-15€ du plan.
+- **Football-Data.org** : free tier 10 req/min suffisant pour les crons actuels. Tous les appels passent par les crons côté serveur, indépendants du nombre d'users.
+- **Supabase** : free tier OK jusqu'à 500MB DB / 2GB bande passante. Notre DB actuelle : ~50MB après tout le sprint.
+- **Vercel Hobby** : OK tant qu'on est < ~100GB bande passante / mois. Limite des 2 cron jobs blocking pour refresh-matchday sub-10min.
+- **Resend** : free tier 3000 emails/mois. À 100 users × 5 emails/mois CDM = 500 emails. Très loin.
+
+## Checklist pré-lancement (à valider avant le 11/06)
+
+- [ ] Toutes les env vars Vercel présentes : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FOOTBALL_DATA_API_KEY`, `OPENAI_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET`
+- [ ] `refresh-structures` a tourné au moins une fois ces dernières 72h (sinon : trigger manuel)
+- [ ] `refresh-rankings` a tourné dans les 24h
+- [ ] Pré-générer les analyses pré-match des matchs CDM via `/api/cron/generate-analysis` une fois les équipes confirmées
+- [ ] Upgrade Vercel Pro pour activer `refresh-matchday` à \*/3 (sinon scores live à +10min) — voir mémoire `project_vercel_pro_upgrade.md`
+- [ ] Vérifier domaine Resend custom OU avertir que les emails ne partent qu'à l'email du compte Resend (free tier shared domain)
+- [ ] Ajouter `NEXT_PUBLIC_SENTRY_DSN` dans Vercel pour activer le monitoring (optionnel mais recommandé)
+- [ ] Tester signup + favoris + visualisation analyse IA sur prod avant le coup d'envoi
+- [ ] Monitoring rapproché H+0 à H+48 le 11 juin
+
 ## Comportement attendu de Claude Code
 
 - Avancer par petites étapes, valider à chaque étape avant la suivante

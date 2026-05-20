@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
+import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { buttonVariants } from '@/components/ui/button';
 import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
@@ -124,13 +125,14 @@ export default async function HomePage() {
         <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
           Coupe du Monde 2026
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mb-4 text-3xl font-semibold tracking-tight sm:text-4xl">
           Tout ce qu&apos;il faut comprendre avant le match.
         </h1>
-        <p className="text-muted-foreground mt-3 max-w-2xl text-sm">
-          Compositions probables, classements en direct, et analyses tactiques
-          générées par l&apos;IA. Suivez vos équipes et joueurs préférés et
-          recevez les notifs essentielles.
+        <WorldCupCountdown />
+        <p className="text-muted-foreground mt-5 max-w-2xl text-sm">
+          Compositions, classements en direct et analyses tactiques générées par
+          l&apos;IA. Suis tes équipes et joueurs préférés et reçois les notifs
+          essentielles.
         </p>
       </section>
 
