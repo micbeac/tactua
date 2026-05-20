@@ -133,8 +133,36 @@ export function MatchAnalysisOnDemand({
 
   // === État : analyse présente ===
   if (analysis) {
+    const refreshButton = (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => runAnalysis(true)}
+        disabled={loading}
+      >
+        <RefreshCw className="mr-1 size-3.5" aria-hidden />
+        Actualiser
+      </Button>
+    );
+
     return (
       <div className="space-y-3">
+        {/* Barre du haut : date + bouton actualiser visible immédiatement */}
+        <div className="bg-card/60 border-border/60 flex items-center justify-between gap-3 rounded-lg border px-3 py-2 backdrop-blur">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+              <Sparkles className="size-3" aria-hidden />
+              Analyse IA prête
+            </span>
+            {generatedAt && (
+              <span className="text-muted-foreground">
+                · Générée le {DATE_FMT.format(new Date(generatedAt))}
+              </span>
+            )}
+          </div>
+          {refreshButton}
+        </div>
+
         {type === 'pre_match' ? (
           <PreMatchAnalysisSection
             analysis={analysis as PreMatchAnalysis | DeepPreMatchAnalysis}
@@ -150,25 +178,13 @@ export function MatchAnalysisOnDemand({
             generated_at={generatedAt ?? undefined}
           />
         )}
-        <div className="flex items-center justify-between gap-3 px-1">
-          <p className="text-muted-foreground text-xs">
-            {generatedAt
-              ? `Générée le ${DATE_FMT.format(new Date(generatedAt))}`
-              : ''}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => runAnalysis(true)}
-            disabled={loading}
-          >
-            <RefreshCw className="mr-1 size-3.5" aria-hidden />
-            Demander une analyse actualisée
-          </Button>
+
+        {/* Bouton de bas : redondant mais utile après lecture complète */}
+        <div className="flex items-center justify-end px-1">
+          {refreshButton}
         </div>
-        {error && (
-          <p className="text-destructive px-1 text-xs">{error}</p>
-        )}
+
+        {error && <p className="text-destructive px-1 text-xs">{error}</p>}
       </div>
     );
   }
