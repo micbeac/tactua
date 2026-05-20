@@ -30,20 +30,44 @@ const SOURCES = [
 ];
 
 function buildQuery(teamName: string): string {
+  // On cible les articles individuels (URLs avec /article ou /football/),
+  // pas les pages catégorie. Le mois et l'année actuels forcent Google à
+  // prioriser les résultats récents.
+  const now = new Date();
+  const monthFr = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(
+    now,
+  );
+  const year = now.getFullYear();
   const sources = SOURCES.map((s) => `site:${s}`).join(' OR ');
-  return `${teamName} dernières actualités (${sources})`;
+  return `${teamName} actualité ${monthFr} ${year} transfert OR blessure OR composition (${sources})`;
 }
 
 function extractSnippet(r: RagBrowserResult): string {
-  // Récupère les ~250 premiers caractères significatifs du markdown
+  // Stratégie en cascade :
+  // 1. Si metadata.description existe, l'utiliser (= description SEO, souvent
+  //    le meilleur résumé d'un article)
+  // 2. Sinon, parser le markdown et extraire le 1er paragraphe substantiel
+  //    (≥ 80 caractères, en sautant la nav/header)
+  const desc = r.metadata?.description?.trim();
+  if (desc && desc.length >= 60) return desc.slice(0, 280);
+
   const md = r.markdown ?? '';
-  const cleaned = md
-    .replace(/^#.*$/gm, '') // retire les titres markdown
-    .replace(/!\[.*?\]\(.*?\)/g, '') // retire les images
-    .replace(/\[(.*?)\]\(.*?\)/g, '$1') // déstructure les liens
-    .replace(/\s+/g, ' ')
-    .trim();
-  return cleaned.slice(0, 280);
+  // Découpe par paragraphes et filtre ceux qui ressemblent à du contenu
+  const paragraphs = md
+    .split(/\n\s*\n/)
+    .map((p) =>
+      p
+        .replace(/^#{1,6}\s+/gm, '') // retire les marqueurs de titre
+        .replace(/!\[.*?\]\(.*?\)/g, '') // retire les images
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // déstructure les liens
+        .replace(/[*_`>|]/g, '') // retire formatage markdown
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter((p) => p.length >= 80) // ignore les petits trucs (nav, dates seules)
+    .filter((p) => !/^(menu|connexion|s'inscrire|cookies?)$/i.test(p));
+
+  return paragraphs[0]?.slice(0, 280) ?? '';
 }
 
 export async function GET(request: Request) {
@@ -91,7 +115,7 @@ export async function GET(request: Request) {
 
   for (const team of list) {
     try {
-      const results = await ragWebSearch(buildQuery(team.name), 3);
+      const results = await ragWebSearch(buildQuery(team.name), 5);
       if (results.length === 0) continue;
 
       const rows = results
