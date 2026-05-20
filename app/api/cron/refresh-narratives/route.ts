@@ -136,10 +136,13 @@ export async function GET(request: Request) {
     errors: [] as CronError[],
   };
 
-  for (const team of list) {
+  // Traitement en parallèle par batches de 3 équipes simultanées.
+  // Apify gère bien la concurrence, ce qui divise par ~3 le temps total.
+  const CONCURRENCY = 3;
+  async function processTeam(team: TeamRow) {
     try {
       const results = await ragWebSearch(buildQuery(team.name), 5);
-      if (results.length === 0) continue;
+      if (results.length === 0) return;
 
       const rows = results
         .filter((r) => r.metadata?.title && r.metadata?.url)
@@ -148,11 +151,11 @@ export async function GET(request: Request) {
           title: r.metadata.title.slice(0, 300),
           url: r.metadata.url,
           snippet: extractSnippet(r),
-          published_at: null, // pas exposé par rag-web-browser
+          published_at: null,
           source: 'apify-rag',
         }));
 
-      if (rows.length === 0) continue;
+      if (rows.length === 0) return;
 
       const { error } = await supabase
         .from('team_narratives')
@@ -166,8 +169,11 @@ export async function GET(request: Request) {
         message: e instanceof Error ? e.message : String(e),
       });
     }
-    // Petit délai pour éviter de saturer Apify (très conservatif)
-    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  for (let i = 0; i < list.length; i += CONCURRENCY) {
+    const batch = list.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(processTeam));
   }
 
   console.log('[cron:refresh-narratives]', stats);
