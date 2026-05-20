@@ -8,15 +8,33 @@ import { Button } from '@/components/ui/button';
 import { AnimatedCounter } from './AnimatedCounter';
 
 /**
- * Fond hero : stade vu de l'intérieur, stylisé.
- * - Gazon en bas (gradient vert + bandes alternées)
- * - Tribunes en perspective (lignes convergentes)
- * - Halos lumineux des projecteurs en haut
- * Tout en SVG, très discret, pour ne pas distraire.
+ * Fond hero : vraie photo de stade en arrière-plan + overlay + lignes terrain.
+ * - Photo Unsplash (stade vu de l'intérieur, nuit, lumières), fortement assombrie
+ * - Gradient vertical qui fond la photo dans le background dark navy
+ * - Halos projecteurs verts en haut
+ * - Lignes de terrain en filigrane
  */
 function StadiumBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {/* Photo de fond — stade vu de l'intérieur, ambiance nuit/projecteurs */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="https://images.unsplash.com/photo-1522778034537-20a2486be803?w=2400&q=80&auto=format&fit=crop"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 size-full object-cover opacity-25"
+        loading="eager"
+      />
+      {/* Overlay sombre pour préserver la lisibilité */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.85) 0%, oklch(0.16 0.025 255 / 0.7) 50%, oklch(0.16 0.025 255) 100%)',
+        }}
+      />
+
       {/* Halo projecteurs en haut */}
       <div className="absolute inset-x-0 top-0 h-[60%]">
         <div className="bg-primary/10 absolute top-[-20%] left-[15%] size-[600px] rounded-full blur-3xl" />

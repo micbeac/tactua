@@ -2,7 +2,16 @@
 
 import { motion, useInView, useScroll, useTransform } from 'motion/react';
 import { useRef } from 'react';
-import { Sparkles, TrendingUp, Goal, Shield } from 'lucide-react';
+import {
+  Sparkles,
+  TrendingUp,
+  Goal,
+  Shield,
+  Activity,
+  AlertTriangle,
+  Users,
+  Trophy,
+} from 'lucide-react';
 
 const PROBABILITIES = [
   { label: 'FC Internazionale', value: 65, color: 'bg-primary' },
@@ -34,18 +43,46 @@ const SCENARIOS = [
   },
 ];
 
+const STATS_COMPARE = [
+  { label: 'Buts/match (saison)', home: '1.2', away: '2.3', advantage: 'away' },
+  { label: 'Buts encaissés/match', home: '1.5', away: '0.9', advantage: 'away' },
+  { label: 'Clean sheets', home: '8', away: '18', advantage: 'away' },
+  { label: 'Forme (10 derniers)', home: '4V-2N-4D', away: '8V-1N-1D', advantage: 'away' },
+  { label: 'Possession moyenne', home: '47 %', away: '58 %', advantage: 'away' },
+];
+
+const KEY_PLAYERS = {
+  home: [
+    { name: 'R. Orsolini', pos: 'AD', stat: '10 buts · 8 passes déc.' },
+    { name: 'L. Ferguson', pos: 'MC', stat: '7 buts · note 7.2' },
+  ],
+  away: [
+    { name: 'Lautaro Martínez', pos: 'BU', stat: '17 buts · capitaine' },
+    { name: 'N. Barella', pos: 'MC', stat: '9 passes déc. · note 7.4' },
+  ],
+};
+
+const FORM_HOME = ['W', 'W', 'D', 'L', 'L'];
+const FORM_AWAY = ['W', 'D', 'W', 'W', 'D'];
+
+const formColor = (r: string) =>
+  r === 'W'
+    ? 'bg-primary/20 text-primary'
+    : r === 'D'
+      ? 'bg-amber-500/20 text-amber-500'
+      : 'bg-destructive/20 text-destructive';
+
 export function LandingDemo() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
-  // Scroll-driven : la carte se redresse en arrivant + parallax léger
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ['start end', 'end start'],
   });
-  const cardRotate = useTransform(scrollYProgress, [0, 0.4, 1], [12, 0, -8]);
-  const cardY = useTransform(scrollYProgress, [0, 1], [60, -60]);
+  const cardRotate = useTransform(scrollYProgress, [0, 0.4, 1], [8, 0, -5]);
+  const cardY = useTransform(scrollYProgress, [0, 1], [40, -40]);
 
   return (
     <section ref={sectionRef} id="demo" className="relative py-20 sm:py-28">
@@ -58,13 +95,14 @@ export function LandingDemo() {
           className="mx-auto mb-12 max-w-2xl text-center"
         >
           <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
-            Une analyse, pas une fiche de stats
+            Une vraie analyse, pas une fiche de stats
           </p>
           <h2 className="mb-4 text-3xl font-semibold tracking-tight sm:text-4xl">
             Ce qu’on te livre en 15 secondes
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Notre IA ne te jette pas des chiffres bruts. Elle synthétise, te
+            Notre IA ne te jette pas des chiffres bruts. Elle synthétise les
+            stats détaillées des deux équipes, identifie les joueurs clés, te
             propose plusieurs scénarios crédibles, et explique pourquoi.
           </p>
         </motion.div>
@@ -72,9 +110,9 @@ export function LandingDemo() {
         <div
           ref={ref}
           className="relative mx-auto max-w-4xl"
-          style={{ perspective: '1200px' }}
+          style={{ perspective: '1500px' }}
         >
-          {/* Décor de fond pour la carte : halo qui respire en boucle */}
+          {/* Halos respirants */}
           <motion.div
             className="bg-primary/15 pointer-events-none absolute -inset-6 -z-10 rounded-3xl blur-3xl"
             animate={{
@@ -83,7 +121,6 @@ export function LandingDemo() {
             }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
-          {/* Second halo en contre-temps pour effet d'aura */}
           <motion.div
             className="bg-emerald-400/10 pointer-events-none absolute -inset-2 -z-10 rounded-3xl blur-2xl"
             animate={{
@@ -107,26 +144,33 @@ export function LandingDemo() {
               y: cardY,
               transformStyle: 'preserve-3d',
             }}
-            className="bg-card border-border space-y-6 rounded-2xl border p-6 shadow-2xl sm:p-8"
+            className="bg-card border-border space-y-7 rounded-2xl border p-6 shadow-2xl sm:p-8"
           >
-            {/* Header de la carte démo */}
+            {/* Header de la carte */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="text-primary size-5" aria-hidden />
-                <h3 className="text-sm font-semibold">Analyse pré-match · IA</h3>
+                <h3 className="text-sm font-semibold">
+                  Analyse pré-match · IA
+                </h3>
               </div>
-              <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                Démo
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                  Mode deep
+                </span>
+                <span className="bg-emerald-500/10 text-emerald-500 rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                  Démo
+                </span>
+              </div>
             </div>
 
             {/* Match en tête */}
             <div className="border-border flex items-center justify-between border-y py-4">
               <div>
                 <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                  Serie A · Journée 38
+                  Serie A · Journée 38 · Stadio Renato Dall’Ara
                 </p>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-lg font-semibold sm:text-xl">
                   Bologna FC <span className="text-muted-foreground">vs</span>{' '}
                   Inter Milano
                 </p>
@@ -136,26 +180,183 @@ export function LandingDemo() {
               </p>
             </div>
 
-            {/* Ce que disent les chiffres */}
+            {/* === Bandeau de stats clés comparées === */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <Activity className="size-3" aria-hidden />
+                Comparaison statistique
+              </div>
+              <div className="border-border overflow-hidden rounded-xl border">
+                <div className="bg-muted/30 grid grid-cols-[1fr_2fr_1fr] items-center border-b px-3 py-2 text-[10px] font-semibold tracking-wide uppercase">
+                  <span className="text-primary text-right">Bologna</span>
+                  <span className="text-muted-foreground text-center">
+                    Statistique
+                  </span>
+                  <span className="text-primary">Inter</span>
+                </div>
+                {STATS_COMPARE.map((s, i) => {
+                  const homeWin = s.advantage === 'home';
+                  return (
+                    <motion.div
+                      key={s.label}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={inView ? { opacity: 1, x: 0 } : {}}
+                      transition={{ delay: 0.3 + i * 0.06, duration: 0.4 }}
+                      className="border-border grid grid-cols-[1fr_2fr_1fr] items-center border-b px-3 py-2.5 text-sm last:border-b-0"
+                    >
+                      <span
+                        className={`text-right tabular-nums ${
+                          homeWin
+                            ? 'text-primary font-semibold'
+                            : 'text-foreground/80'
+                        }`}
+                      >
+                        {s.home}
+                      </span>
+                      <span className="text-muted-foreground text-center text-xs">
+                        {s.label}
+                      </span>
+                      <span
+                        className={`tabular-nums ${
+                          !homeWin
+                            ? 'text-primary font-semibold'
+                            : 'text-foreground/80'
+                        }`}
+                      >
+                        {s.away}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* === Forme récente côte à côte === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <TrendingUp className="size-3" aria-hidden />
+                Forme récente · 5 derniers
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { name: 'Bologna', form: FORM_HOME, label: '2V-1N-2D' },
+                  { name: 'Inter Milano', form: FORM_AWAY, label: '3V-2N-0D' },
+                ].map((t, ti) => (
+                  <div
+                    key={t.name}
+                    className="border-border rounded-lg border p-3"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold">{t.name}</span>
+                      <span className="text-muted-foreground text-[10px] tabular-nums">
+                        {t.label}
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {t.form.map((r, ri) => (
+                        <motion.span
+                          key={ri}
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={inView ? { scale: 1, opacity: 1 } : {}}
+                          transition={{
+                            delay: 0.7 + ti * 0.1 + ri * 0.06,
+                            duration: 0.3,
+                            type: 'spring',
+                          }}
+                          className={`flex size-7 items-center justify-center rounded-md text-[11px] font-bold ${formColor(r)}`}
+                        >
+                          {r}
+                        </motion.span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* === Ce que disent les chiffres === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.6, duration: 0.5 }}
               className="bg-muted/40 rounded-lg p-4"
             >
               <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
                 Ce que disent les chiffres
               </p>
               <p className="text-sm leading-relaxed">
-                L’Inter affiche une attaque plus efficace (2,0 buts/match à
-                l’extérieur) et une défense solide (0,9 but encaissé/match).
-                Bologne peine à marquer à domicile (0,9 but/match) et compte 5
+                L’Inter affiche une attaque plus efficace (2,3 buts/match
+                saison) et une défense solide (0,9 but encaissé/match). Bologne
+                peine à marquer à domicile (0,9 but/match) et compte 5
                 indisponibles, ce qui pèse sur son XI.
               </p>
             </motion.div>
 
-            {/* Scénarios */}
-            <div>
+            {/* === Joueurs clés === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.7, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <Users className="size-3" aria-hidden />
+                Joueurs clés à surveiller
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {[
+                  { team: 'Bologna', players: KEY_PLAYERS.home },
+                  { team: 'Inter Milano', players: KEY_PLAYERS.away },
+                ].map((side, si) => (
+                  <div
+                    key={side.team}
+                    className="border-border bg-muted/20 space-y-2 rounded-lg border p-3"
+                  >
+                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                      {side.team}
+                    </p>
+                    {side.players.map((p, pi) => (
+                      <motion.div
+                        key={p.name}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={inView ? { opacity: 1, x: 0 } : {}}
+                        transition={{
+                          delay: 0.85 + si * 0.1 + pi * 0.07,
+                          duration: 0.35,
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="bg-primary/15 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                          {p.pos}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {p.name}
+                          </p>
+                          <p className="text-muted-foreground truncate text-[11px]">
+                            {p.stat}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* === Scénarios === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.85, duration: 0.5 }}
+            >
               <p className="text-muted-foreground mb-3 text-[10px] tracking-wide uppercase">
                 Scénarios possibles
               </p>
@@ -165,7 +366,7 @@ export function LandingDemo() {
                     key={s.n}
                     initial={{ opacity: 0, x: -20 }}
                     animate={inView ? { opacity: 1, x: 0 } : {}}
-                    transition={{ delay: 0.5 + i * 0.15, duration: 0.4 }}
+                    transition={{ delay: 1 + i * 0.12, duration: 0.4 }}
                     className={`flex items-center justify-between rounded-lg border p-3 ${s.color}`}
                   >
                     <p className="text-sm font-semibold">
@@ -179,13 +380,48 @@ export function LandingDemo() {
                   </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Probabilités */}
-            <div>
-              <p className="text-muted-foreground mb-3 text-[10px] tracking-wide uppercase">
-                Probabilités
-              </p>
+            {/* === Points faibles === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.1, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <AlertTriangle className="size-3" aria-hidden />
+                Points faibles
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-0.5 text-[10px] uppercase">
+                    Bologna
+                  </p>
+                  <p className="text-xs">
+                    11 matchs sans marquer cette saison · 5 absences
+                  </p>
+                </div>
+                <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-0.5 text-[10px] uppercase">
+                    Inter Milano
+                  </p>
+                  <p className="text-xs">
+                    3 défaites sur 18 matchs à l’extérieur
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* === Probabilités === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.25, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <Trophy className="size-3" aria-hidden />
+                Probabilités d’issue
+              </div>
               <div className="space-y-3">
                 {PROBABILITIES.map((p, i) => (
                   <div key={p.label}>
@@ -200,7 +436,7 @@ export function LandingDemo() {
                         initial={{ width: 0 }}
                         animate={inView ? { width: `${p.value}%` } : {}}
                         transition={{
-                          delay: 1 + i * 0.2,
+                          delay: 1.4 + i * 0.2,
                           duration: 0.9,
                           ease: 'easeOut',
                         }}
@@ -210,53 +446,58 @@ export function LandingDemo() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Tuiles BTTS / Over */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* === Tuiles BTTS / Over + Score plausible === */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 {
                   icon: Goal,
-                  label: 'Les 2 équipes marquent',
+                  label: 'Les 2 marquent',
                   value: 'Non',
-                  why: '18 clean sheets Inter cette saison.',
+                  why: '18 clean sheets Inter.',
                 },
                 {
                   icon: TrendingUp,
                   label: 'Plus de 2.5 buts',
                   value: 'Oui',
-                  why: '2,0 buts/match Inter à l’extérieur.',
+                  why: '2,3 buts/match Inter.',
+                },
+                {
+                  icon: Trophy,
+                  label: 'Score plausible',
+                  value: '0 - 2',
+                  why: 'Cohérent avec les probas.',
                 },
               ].map((t, i) => (
                 <motion.div
                   key={t.label}
                   initial={{ opacity: 0, y: 10 }}
                   animate={inView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ delay: 1.6 + i * 0.1, duration: 0.4 }}
+                  transition={{ delay: 1.9 + i * 0.1, duration: 0.4 }}
                   className="border-border rounded-lg border p-3"
                 >
                   <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] uppercase">
                     <t.icon className="size-3" aria-hidden />
                     {t.label}
                   </div>
-                  <p className="text-sm font-semibold">{t.value}</p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">{t.why}</p>
+                  <p className="text-base font-bold">{t.value}</p>
+                  <p className="text-muted-foreground mt-0.5 text-[11px]">
+                    {t.why}
+                  </p>
                 </motion.div>
               ))}
             </div>
 
-            {/* Confiance */}
+            {/* === Confiance === */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 1.9, duration: 0.5 }}
+              transition={{ delay: 2.2, duration: 0.5 }}
             >
               <div className="mb-1 flex items-center justify-between text-[10px] tracking-wide uppercase">
                 <span className="text-muted-foreground">
-                  <Shield
-                    className="mr-1 inline size-3"
-                    aria-hidden
-                  />
+                  <Shield className="mr-1 inline size-3" aria-hidden />
                   Confiance de l’IA
                 </span>
                 <span className="text-primary font-semibold">Élevée</span>
@@ -265,10 +506,13 @@ export function LandingDemo() {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={inView ? { width: '90%' } : {}}
-                  transition={{ delay: 2, duration: 0.8, ease: 'easeOut' }}
+                  transition={{ delay: 2.3, duration: 0.8, ease: 'easeOut' }}
                   className="bg-primary h-full"
                 />
               </div>
+              <p className="text-muted-foreground mt-2 text-[11px] italic">
+                Basée sur 37 matchs joués · 14 critères croisés · GPT-4o-mini
+              </p>
             </motion.div>
           </motion.div>
         </div>
