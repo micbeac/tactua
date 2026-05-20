@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { teamHref } from '@/lib/url';
 
 type Team = {
@@ -10,6 +11,7 @@ type Team = {
 };
 
 export type MatchHeaderProps = {
+  id: number;
   kickoff_at: string;
   status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
   stage: string | null;
@@ -18,6 +20,8 @@ export type MatchHeaderProps = {
   score_away: number | null;
   home: Team;
   away: Team;
+  is_favorite: boolean;
+  is_logged_in: boolean;
 };
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
@@ -97,6 +101,7 @@ function TeamBlock({ team }: { team: Team }) {
 
 export function MatchHeader(props: MatchHeaderProps) {
   const {
+    id,
     kickoff_at,
     status,
     stage,
@@ -105,6 +110,8 @@ export function MatchHeader(props: MatchHeaderProps) {
     score_away,
     home,
     away,
+    is_favorite,
+    is_logged_in,
   } = props;
   const dateLabel = DATE_FMT.format(new Date(kickoff_at));
   const stageLabel = formatStage(stage);
@@ -163,6 +170,17 @@ export function MatchHeader(props: MatchHeaderProps) {
           )}
         </div>
         <TeamBlock team={away} />
+      </div>
+
+      <div className="mt-6 flex justify-center">
+        <FavoriteButton
+          entity_type="match"
+          entity_id={id}
+          is_favorite={is_favorite}
+          is_logged_in={is_logged_in}
+          label_add="Suivre ce match"
+          label_remove="Suivi"
+        />
       </div>
     </section>
   );

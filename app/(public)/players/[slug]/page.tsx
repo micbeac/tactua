@@ -14,6 +14,7 @@ import {
   getPlayerRecentPerformances,
   getPlayerSeasonStats,
 } from '@/lib/data/player';
+import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
 
@@ -50,6 +51,16 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
 
   // Note : voir commentaire identique dans /teams/[slug]/page.tsx — pas de
   // redirect canonical à cause de l'interaction redirect + ISR sur Vercel.
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const favorite = await isFavorite(
+    supabase,
+    user?.id ?? null,
+    'player',
+    playerId,
+  );
 
   const [seasonStatsRaw, performancesRaw] = await Promise.all([
     getPlayerSeasonStats(supabase, playerId),
@@ -108,10 +119,13 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <PlayerHeader
+        id={player.id}
         name={player.name}
         position={player.position}
         nationality={player.nationality}
         date_of_birth={player.date_of_birth}
+        is_favorite={favorite}
+        is_logged_in={Boolean(user)}
         current_team={
           player.current_team
             ? {

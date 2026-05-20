@@ -20,6 +20,7 @@ import {
   getTeamUpcomingMatches,
   type ScheduleMatch,
 } from '@/lib/data/team';
+import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
 
@@ -71,12 +72,18 @@ export default async function TeamPage({ params }: TeamPageParams) {
   // affichera toujours l'URL propre. Seuls les accès directs à /teams/{id} pur
   // resteront sans slug — acceptable pour le MVP.
 
-  const [seasonStatsRows, upcoming, recent, squad] = await Promise.all([
-    getTeamSeasonStats(supabase, teamId),
-    getTeamUpcomingMatches(supabase, teamId, 5),
-    getTeamRecentMatches(supabase, teamId, 5),
-    getTeamSquad(supabase, teamId),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [seasonStatsRows, upcoming, recent, squad, favorite] =
+    await Promise.all([
+      getTeamSeasonStats(supabase, teamId),
+      getTeamUpcomingMatches(supabase, teamId, 5),
+      getTeamRecentMatches(supabase, teamId, 5),
+      getTeamSquad(supabase, teamId),
+      isFavorite(supabase, user?.id ?? null, 'team', teamId),
+    ]);
 
   // Compétition principale : la 1re du tri (points DESC, position ASC).
   const main = seasonStatsRows[0] ?? null;
@@ -117,12 +124,15 @@ export default async function TeamPage({ params }: TeamPageParams) {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <TeamHeader
+        id={team.id}
         name={team.name}
         tla={team.tla}
         logo_url={team.logo_url}
         country={team.country}
         founded={team.founded}
         venue={team.venue}
+        is_favorite={favorite}
+        is_logged_in={Boolean(user)}
       />
 
       {main && (

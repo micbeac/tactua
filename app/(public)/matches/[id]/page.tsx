@@ -9,6 +9,7 @@ import {
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import { isFavorite } from '@/lib/data/favorites';
 import {
   getHeadToHead,
   getMatchTeamStats,
@@ -158,7 +159,11 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const homeId = match.home_team?.id ?? match.home_team_id;
   const awayId = match.away_team?.id ?? match.away_team_id;
 
-  const [h2h, formHome, formAway, teamStats] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [h2h, formHome, formAway, teamStats, favorite] = await Promise.all([
     homeId != null && awayId != null
       ? getHeadToHead(supabase, homeId, awayId, matchId, 5)
       : Promise.resolve([]),
@@ -169,6 +174,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
       ? getTeamForm(supabase, awayId, matchId, 5)
       : Promise.resolve([]),
     getMatchTeamStats(supabase, matchId),
+    isFavorite(supabase, user?.id ?? null, 'match', matchId),
   ]);
 
   const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
@@ -178,12 +184,15 @@ export default async function MatchPage({ params }: MatchPageParams) {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <MatchHeader
+        id={match.id}
         kickoff_at={match.kickoff_at}
         status={match.status}
         stage={match.stage}
         matchday={match.matchday}
         score_home={match.score_home}
         score_away={match.score_away}
+        is_favorite={favorite}
+        is_logged_in={Boolean(user)}
         home={{
           id: match.home_team?.id ?? match.home_team_id,
           name: match.home_team?.name ?? 'À déterminer',

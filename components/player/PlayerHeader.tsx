@@ -1,8 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { teamHref } from '@/lib/url';
 
 export type PlayerHeaderProps = {
+  id: number;
   name: string;
   position: string | null;
   nationality: string | null;
@@ -13,6 +15,8 @@ export type PlayerHeaderProps = {
     logo_url: string | null;
     country: string | null;
   } | null;
+  is_favorite: boolean;
+  is_logged_in: boolean;
 };
 
 function computeAge(dob: string | null): number | null {
@@ -33,11 +37,14 @@ const DOB_FMT = new Intl.DateTimeFormat('fr-FR', {
 });
 
 export function PlayerHeader({
+  id,
   name,
   position,
   nationality,
   date_of_birth,
   current_team,
+  is_favorite,
+  is_logged_in,
 }: PlayerHeaderProps) {
   const age = computeAge(date_of_birth);
   const meta: string[] = [];
@@ -88,6 +95,14 @@ export function PlayerHeader({
             </div>
           </Link>
         )}
+      </div>
+      <div className="mt-4">
+        <FavoriteButton
+          entity_type="player"
+          entity_id={id}
+          is_favorite={is_favorite}
+          is_logged_in={is_logged_in}
+        />
       </div>
     </section>
   );
