@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Users,
   Trophy,
+  BarChart3,
+  Star,
 } from 'lucide-react';
 
 const PROBABILITIES = [
@@ -61,6 +63,30 @@ const KEY_PLAYERS = {
     { name: 'N. Barella', pos: 'MC', stat: '9 passes déc. · note 7.4' },
   ],
 };
+
+// Graphe comparatif (vue Visifoot) : barres verticales pour 5 dimensions.
+const RADAR_CATEGORIES = [
+  { label: 'Attaque', home: 58, away: 82 },
+  { label: 'Défense', home: 62, away: 88 },
+  { label: 'Forme', home: 45, away: 86 },
+  { label: 'Discipline', home: 71, away: 69 },
+  { label: 'Globale', home: 59, away: 82 },
+];
+
+// Forme des joueurs clés : note sur les 5 derniers matchs
+const PLAYER_FORM = [
+  { name: 'R. Orsolini', team: 'home', ratings: [7.2, 6.5, 7.8, 7.4, 6.1] },
+  { name: 'Lautaro Martínez', team: 'away', ratings: [8.4, 7.6, 8.1, 7.2, 8.6] },
+  { name: 'L. Ferguson', team: 'home', ratings: [6.8, 7.0, 6.4, 6.9, 6.5] },
+  { name: 'N. Barella', team: 'away', ratings: [7.4, 7.8, 7.1, 8.0, 7.4] },
+];
+
+function ratingColor(r: number): string {
+  if (r >= 7.5) return 'bg-primary text-primary-foreground';
+  if (r >= 6.8) return 'bg-emerald-500/30 text-emerald-300';
+  if (r >= 6.0) return 'bg-amber-500/30 text-amber-300';
+  return 'bg-destructive/30 text-destructive';
+}
 
 const FORM_HOME = ['W', 'W', 'D', 'L', 'L'];
 const FORM_AWAY = ['W', 'D', 'W', 'W', 'D'];
@@ -235,6 +261,96 @@ export function LandingDemo() {
               </div>
             </motion.div>
 
+            {/* === Graphe comparatif vertical (radar dépiauté) === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <BarChart3 className="size-3" aria-hidden />
+                Comparaison globale
+              </div>
+              {/* Légende */}
+              <div className="mb-3 flex items-center justify-center gap-4 text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="bg-primary/60 size-3 rounded-sm" />
+                  Bologna
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="bg-emerald-400 size-3 rounded-sm" />
+                  Inter
+                </span>
+              </div>
+              {/* Bars verticales */}
+              <div className="border-border bg-muted/20 grid grid-cols-5 items-end gap-3 rounded-xl border p-4">
+                {RADAR_CATEGORIES.map((cat, i) => (
+                  <div
+                    key={cat.label}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <div className="flex h-32 w-full items-end justify-center gap-1.5">
+                      {/* Barre Bologna */}
+                      <div className="relative flex h-full w-3 flex-col justify-end">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={
+                            inView ? { height: `${cat.home}%` } : { height: 0 }
+                          }
+                          transition={{
+                            delay: 0.6 + i * 0.08,
+                            duration: 0.8,
+                            ease: 'easeOut',
+                          }}
+                          className="bg-primary/60 w-full rounded-t-sm"
+                        />
+                        <motion.span
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={
+                            inView ? { opacity: 1, y: 0 } : { opacity: 0 }
+                          }
+                          transition={{ delay: 1.4 + i * 0.08, duration: 0.3 }}
+                          className="text-foreground/80 absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold tabular-nums"
+                          style={{ bottom: `${cat.home}%` }}
+                        >
+                          {cat.home}
+                        </motion.span>
+                      </div>
+                      {/* Barre Inter */}
+                      <div className="relative flex h-full w-3 flex-col justify-end">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={
+                            inView ? { height: `${cat.away}%` } : { height: 0 }
+                          }
+                          transition={{
+                            delay: 0.65 + i * 0.08,
+                            duration: 0.8,
+                            ease: 'easeOut',
+                          }}
+                          className="w-full rounded-t-sm bg-emerald-400"
+                        />
+                        <motion.span
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={
+                            inView ? { opacity: 1, y: 0 } : { opacity: 0 }
+                          }
+                          transition={{ delay: 1.45 + i * 0.08, duration: 0.3 }}
+                          className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold tabular-nums text-emerald-300"
+                          style={{ bottom: `${cat.away}%` }}
+                        >
+                          {cat.away}
+                        </motion.span>
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground text-center text-[10px] font-medium">
+                      {cat.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
             {/* === Forme récente côte à côte === */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -348,6 +464,74 @@ export function LandingDemo() {
                     ))}
                   </div>
                 ))}
+              </div>
+            </motion.div>
+
+            {/* === Forme des joueurs clés (notes 5 derniers matchs) === */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.8, duration: 0.5 }}
+            >
+              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
+                <Star className="size-3" aria-hidden />
+                Forme des joueurs · notes des 5 derniers matchs
+              </div>
+              <div className="border-border bg-muted/20 overflow-hidden rounded-xl border">
+                {PLAYER_FORM.map((p, i) => {
+                  const avg =
+                    p.ratings.reduce((s, r) => s + r, 0) / p.ratings.length;
+                  return (
+                    <motion.div
+                      key={p.name}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={inView ? { opacity: 1, x: 0 } : {}}
+                      transition={{ delay: 0.95 + i * 0.08, duration: 0.4 }}
+                      className="border-border grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {p.name}
+                        </p>
+                        <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                          {p.team === 'home' ? 'Bologna' : 'Inter'}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        {p.ratings.map((r, ri) => (
+                          <motion.div
+                            key={ri}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={inView ? { scale: 1, opacity: 1 } : {}}
+                            transition={{
+                              delay: 1.1 + i * 0.08 + ri * 0.04,
+                              duration: 0.3,
+                            }}
+                            className={`flex size-7 items-center justify-center rounded-md text-[10px] font-bold tabular-nums ${ratingColor(r)}`}
+                          >
+                            {r.toFixed(1)}
+                          </motion.div>
+                        ))}
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-muted-foreground text-[9px] tracking-wide uppercase">
+                          Moy.
+                        </span>
+                        <span
+                          className={`text-sm font-bold tabular-nums ${
+                            avg >= 7.5
+                              ? 'text-primary'
+                              : avg >= 6.8
+                                ? 'text-emerald-300'
+                                : 'text-amber-300'
+                          }`}
+                        >
+                          {avg.toFixed(2)}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
 

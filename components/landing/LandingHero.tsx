@@ -20,18 +20,18 @@ function StadiumBackground() {
       {/* Photo de fond — stade vu de l'intérieur, ambiance nuit/projecteurs */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="https://images.unsplash.com/photo-1522778034537-20a2486be803?w=2400&q=80&auto=format&fit=crop"
+        src="/landing/stadium-hero.jpg"
         alt=""
         aria-hidden
-        className="absolute inset-0 size-full object-cover opacity-25"
+        className="absolute inset-0 size-full object-cover opacity-45"
         loading="eager"
       />
-      {/* Overlay sombre pour préserver la lisibilité */}
+      {/* Overlay sombre vertical pour préserver la lisibilité du texte */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.85) 0%, oklch(0.16 0.025 255 / 0.7) 50%, oklch(0.16 0.025 255) 100%)',
+            'linear-gradient(180deg, oklch(0.16 0.025 255 / 0.65) 0%, oklch(0.16 0.025 255 / 0.55) 40%, oklch(0.16 0.025 255 / 0.85) 80%, oklch(0.16 0.025 255) 100%)',
         }}
       />
 
