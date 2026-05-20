@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import {
   PlayerRecentPerformances,
@@ -15,7 +15,7 @@ import {
   getPlayerSeasonStats,
 } from '@/lib/data/player';
 import { createClient } from '@/lib/supabase/server';
-import { parseEntityId, playerHref } from '@/lib/url';
+import { parseEntityId } from '@/lib/url';
 
 export const revalidate = 60;
 
@@ -48,10 +48,8 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
   const player = await getPlayer(supabase, playerId);
   if (!player) notFound();
 
-  const canonical = playerHref(player.id, player.name);
-  if (`/players/${slug}` !== canonical) {
-    permanentRedirect(canonical);
-  }
+  // Note : voir commentaire identique dans /teams/[slug]/page.tsx — pas de
+  // redirect canonical à cause de l'interaction redirect + ISR sur Vercel.
 
   const [seasonStatsRaw, performancesRaw] = await Promise.all([
     getPlayerSeasonStats(supabase, playerId),

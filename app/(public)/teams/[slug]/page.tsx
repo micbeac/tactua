@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { TeamHeader } from '@/components/team/TeamHeader';
 import {
   TeamMatchesList,
@@ -21,7 +21,7 @@ import {
   type ScheduleMatch,
 } from '@/lib/data/team';
 import { createClient } from '@/lib/supabase/server';
-import { parseEntityId, teamHref } from '@/lib/url';
+import { parseEntityId } from '@/lib/url';
 
 export const revalidate = 60;
 
@@ -66,13 +66,10 @@ export default async function TeamPage({ params }: TeamPageParams) {
   const team = await getTeam(supabase, teamId);
   if (!team) notFound();
 
-  // Redirige vers l'URL canonique si on est arrivé via id pur ou slug obsolète.
-  const canonical = teamHref(team.id, team.name);
-  const currentPath = `/teams/${slug}`;
-  console.log('[teams page] slug check', { currentPath, canonical });
-  if (currentPath !== canonical) {
-    permanentRedirect(canonical);
-  }
+  // Note : pas de redirect canonical (redirect + ISR posent problème sur Vercel).
+  // Toutes nos balises <Link> génèrent déjà la version slug, donc la nav interne
+  // affichera toujours l'URL propre. Seuls les accès directs à /teams/{id} pur
+  // resteront sans slug — acceptable pour le MVP.
 
   const [seasonStatsRows, upcoming, recent, squad] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
