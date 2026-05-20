@@ -9,6 +9,7 @@ const COMPS = [
   { name: 'Serie A', country: '🇮🇹' },
   { name: 'Bundesliga', country: '🇩🇪' },
   { name: 'Ligue 1', country: '🇫🇷' },
+  { name: 'Jupiler Pro League', country: '🇧🇪' },
   { name: 'Champions League', country: '🇪🇺' },
   { name: 'Coupe du Monde 2026', country: '🌍' },
 ];

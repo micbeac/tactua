@@ -21,6 +21,7 @@ const TOP5_COMPETITION_IDS = [
   2019, // Serie A
   2015, // Ligue 1
 ];
+const JPL_COMPETITION_ID = 9001; // Jupiler Pro League
 
 type TeamEmbed = {
   id: number;
@@ -107,7 +108,7 @@ export default async function HomePage() {
   }
 
   // === Dashboard utilisateur connecté ===
-  const [wcRes, top5Res, personal] = await Promise.all([
+  const [wcRes, top5Res, jplRes, personal] = await Promise.all([
     supabase
       .from('matches')
       .select(SELECT_FRAGMENT)
@@ -124,11 +125,20 @@ export default async function HomePage() {
       .gte('kickoff_at', new Date().toISOString())
       .order('kickoff_at', { ascending: true })
       .limit(6),
+    supabase
+      .from('matches')
+      .select(SELECT_FRAGMENT)
+      .eq('competition_id', JPL_COMPETITION_ID)
+      .eq('status', 'scheduled')
+      .gte('kickoff_at', new Date().toISOString())
+      .order('kickoff_at', { ascending: true })
+      .limit(6),
     getPersonalUpcomingMatches(supabase, user.id, 8),
   ]);
 
   const wcMatches = (wcRes.data ?? []) as unknown as MatchRow[];
   const top5Matches = (top5Res.data ?? []) as unknown as MatchRow[];
+  const jplMatches = (jplRes.data ?? []) as unknown as MatchRow[];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -221,6 +231,29 @@ export default async function HomePage() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {top5Matches.map((m) => (
+              <MatchCard key={m.id} {...toCardProps(m)} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-12">
+        <header className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold">
+            🇧🇪 Jupiler Pro League — Prochains matchs
+          </h2>
+          <Link
+            href="/competitions/bjl"
+            className="text-muted-foreground hover:text-foreground text-xs underline"
+          >
+            Voir tout
+          </Link>
+        </header>
+        {jplMatches.length === 0 ? (
+          <EmptyState label="Aucun match Jupiler Pro League à venir." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {jplMatches.map((m) => (
               <MatchCard key={m.id} {...toCardProps(m)} />
             ))}
           </div>

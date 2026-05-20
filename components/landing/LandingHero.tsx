@@ -290,10 +290,10 @@ export function LandingHero() {
             transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           >
             {[
-              { value: 157, suffix: '', label: 'équipes trackées' },
+              { value: 175, suffix: '', label: 'équipes trackées' },
               { value: 3200, suffix: '+', label: 'joueurs avec stats' },
               { value: 15, prefix: '~', suffix: 's', label: 'pour une analyse' },
-              { value: 7, suffix: '', label: 'compétitions live' },
+              { value: 8, suffix: '', label: 'compétitions live' },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
