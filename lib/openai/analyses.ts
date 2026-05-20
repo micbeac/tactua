@@ -154,14 +154,23 @@ export type DeepTeamContext = {
   failed_to_score: number;
   biggest_streak: { wins: number; loses: number };
   primary_formation: string | null;
-  // Joueurs
+  // Joueurs : top performers avec stats enrichies
   top_performers: Array<{
     name: string;
     position: string | null;
-    appearances: number;
+    is_captain: boolean;
+    lineups: number;
+    minutes: number;
     goals: number;
     assists: number;
     rating: number | null;
+    shots_on_target: number | null;
+    key_passes: number | null;
+    passes_accuracy: number | null;
+    duels_won_ratio: number | null;
+    // Gardien (null sinon)
+    saves: number | null;
+    goals_conceded: number | null;
   }>;
   // Indisponibles
   active_injuries: Array<{ player_name: string; reason: string | null }>;
@@ -211,11 +220,26 @@ function fmtSquad(squad: string[]): string {
 function fmtTop(performers: DeepTeamContext['top_performers']): string {
   if (performers.length === 0) return 'données non disponibles';
   return performers
-    .map(
-      (p) =>
-        `${p.name} (${p.position ?? '?'}, ${p.appearances} matchs, ${p.goals}b/${p.assists}a${p.rating ? `, note ${p.rating}` : ''})`,
-    )
-    .join(' · ');
+    .map((p) => {
+      const parts = [`${p.name}`];
+      if (p.is_captain) parts.push('(C)');
+      if (p.position) parts.push(`[${p.position}]`);
+      const stats: string[] = [];
+      stats.push(`${p.lineups} titu/${p.minutes}min`);
+      if (p.goals || p.assists) stats.push(`${p.goals}b/${p.assists}a`);
+      if (p.rating) stats.push(`note ${p.rating}`);
+      if (p.shots_on_target != null)
+        stats.push(`${p.shots_on_target} tirs cadrés`);
+      if (p.key_passes != null) stats.push(`${p.key_passes} passes clés`);
+      if (p.passes_accuracy != null)
+        stats.push(`${Math.round(p.passes_accuracy)}% passes`);
+      if (p.duels_won_ratio != null)
+        stats.push(`${Math.round(p.duels_won_ratio * 100)}% duels gagnés`);
+      if (p.saves != null) stats.push(`${p.saves} arrêts (G)`);
+      if (p.goals_conceded != null) stats.push(`${p.goals_conceded} buts enc.`);
+      return `${parts.join(' ')} — ${stats.join(', ')}`;
+    })
+    .join('\n  • ');
 }
 
 function fmtInjuries(list: DeepTeamContext['active_injuries']): string {

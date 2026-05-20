@@ -179,35 +179,125 @@ export async function fetchH2H(
 }
 
 // ============================================================================
+// Squad complet — /players/squads (photos + numéros)
+// ============================================================================
+
+type SquadResponse = {
+  response: Array<{
+    team: { id: number; name: string };
+    players: Array<{
+      id: number;
+      name: string;
+      age: number | null;
+      number: number | null;
+      position: string | null;
+      photo: string | null;
+    }>;
+  }>;
+};
+
+export type SquadEntry = {
+  player_id: number;
+  name: string;
+  age: number | null;
+  number: number | null;
+  position: string | null;
+  photo: string | null;
+};
+
+export async function fetchSquad(teamId: number): Promise<SquadEntry[]> {
+  const d = await af<SquadResponse>(`/players/squads?team=${teamId}`);
+  const team = d.response[0];
+  if (!team) return [];
+  return team.players.map((p) => ({
+    player_id: p.id,
+    name: p.name,
+    age: p.age,
+    number: p.number,
+    position: p.position,
+    photo: p.photo,
+  }));
+}
+
+// ============================================================================
 // Top players — /players?team=X&season=Y (paginé)
 // ============================================================================
 
 type PlayerSeasonResponse = {
   response: Array<{
-    player: { id: number; name: string };
+    player: { id: number; name: string; photo: string | null };
     statistics: Array<{
       league: { id: number };
       games: {
         appearences: number | null;
+        lineups: number | null;
         minutes: number | null;
         position: string | null;
         rating: string | null;
+        captain: boolean | null;
       };
-      goals: { total: number | null; assists: number | null };
       shots: { total: number | null; on: number | null };
+      goals: {
+        total: number | null;
+        assists: number | null;
+        conceded: number | null;
+        saves: number | null;
+      };
+      passes: {
+        total: number | null;
+        key: number | null;
+        accuracy: number | string | null;
+      };
+      dribbles: {
+        attempts: number | null;
+        success: number | null;
+      };
+      tackles: {
+        total: number | null;
+        interceptions: number | null;
+      };
+      duels: { total: number | null; won: number | null };
+      cards: { yellow: number | null; red: number | null };
     }>;
   }>;
   paging: { current: number; total: number };
 };
 
 export type SquadPerformer = {
+  player_id: number;
   player_name: string;
+  photo: string | null;
   position: string | null;
+  is_captain: boolean;
   appearances: number;
+  lineups: number;
+  minutes: number;
   goals: number;
   assists: number;
   rating: number | null;
+  shots_on_target: number | null;
+  key_passes: number | null;
+  passes_accuracy: number | null;
+  dribbles_success_ratio: number | null;
+  duels_won_ratio: number | null;
+  yellow_cards: number;
+  red_cards: number;
+  // Spécifique gardien (null sinon)
+  saves: number | null;
+  goals_conceded: number | null;
 };
+
+function ratio(num: number | null, denom: number | null): number | null {
+  if (num == null || denom == null || denom === 0) return null;
+  return Math.round((num / denom) * 100) / 100;
+}
+
+function asNumber(v: number | string | null): number | null {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  const n = Number(v.replace?.('%', '') ?? v);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * Top performers d'une équipe sur la saison en cours dans une compétition.
@@ -236,12 +326,26 @@ export async function fetchTopPerformers(
       if (!s || !s.games.appearences || s.games.appearences === 0) continue;
       const rating = s.games.rating ? Number(s.games.rating) : null;
       performers.push({
+        player_id: p.player.id,
         player_name: p.player.name,
+        photo: p.player.photo,
         position: s.games.position,
+        is_captain: Boolean(s.games.captain),
         appearances: s.games.appearences,
+        lineups: s.games.lineups ?? 0,
+        minutes: s.games.minutes ?? 0,
         goals: s.goals.total ?? 0,
         assists: s.goals.assists ?? 0,
         rating: Number.isFinite(rating ?? NaN) ? rating : null,
+        shots_on_target: s.shots.on,
+        key_passes: s.passes.key,
+        passes_accuracy: asNumber(s.passes.accuracy),
+        dribbles_success_ratio: ratio(s.dribbles.success, s.dribbles.attempts),
+        duels_won_ratio: ratio(s.duels.won, s.duels.total),
+        yellow_cards: s.cards.yellow ?? 0,
+        red_cards: s.cards.red ?? 0,
+        saves: s.goals.saves,
+        goals_conceded: s.goals.conceded,
       });
     }
     page += 1;

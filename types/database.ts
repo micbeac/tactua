@@ -427,7 +427,9 @@ export type Database = {
           last_updated_at: string;
           name: string;
           nationality: string | null;
+          photo_url: string | null;
           position: string | null;
+          shirt_number: number | null;
         };
         Insert: {
           current_team_id?: number | null;
@@ -438,7 +440,9 @@ export type Database = {
           last_updated_at?: string;
           name: string;
           nationality?: string | null;
+          photo_url?: string | null;
           position?: string | null;
+          shirt_number?: number | null;
         };
         Update: {
           current_team_id?: number | null;
@@ -449,7 +453,9 @@ export type Database = {
           last_updated_at?: string;
           name?: string;
           nationality?: string | null;
+          photo_url?: string | null;
           position?: string | null;
+          shirt_number?: number | null;
         };
         Relationships: [
           {
