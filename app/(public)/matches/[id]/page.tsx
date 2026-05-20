@@ -9,6 +9,9 @@ import {
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import { PostMatchAnalysisSection } from '@/components/match/PostMatchAnalysisSection';
+import { PreMatchAnalysisSection } from '@/components/match/PreMatchAnalysisSection';
+import { getAnalysis } from '@/lib/data/analysis';
 import { isFavorite } from '@/lib/data/favorites';
 import {
   getHeadToHead,
@@ -16,6 +19,7 @@ import {
   getTeamForm,
 } from '@/lib/data/match';
 import { createClient } from '@/lib/supabase/server';
+import type { PostMatchAnalysis, PreMatchAnalysis } from '@/lib/openai/types';
 
 export const revalidate = 60;
 
@@ -163,7 +167,15 @@ export default async function MatchPage({ params }: MatchPageParams) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [h2h, formHome, formAway, teamStats, favorite] = await Promise.all([
+  const [
+    h2h,
+    formHome,
+    formAway,
+    teamStats,
+    favorite,
+    preAnalysis,
+    postAnalysis,
+  ] = await Promise.all([
     homeId != null && awayId != null
       ? getHeadToHead(supabase, homeId, awayId, matchId, 5)
       : Promise.resolve([]),
@@ -175,6 +187,8 @@ export default async function MatchPage({ params }: MatchPageParams) {
       : Promise.resolve([]),
     getMatchTeamStats(supabase, matchId),
     isFavorite(supabase, user?.id ?? null, 'match', matchId),
+    getAnalysis(supabase, matchId, 'pre_match'),
+    getAnalysis(supabase, matchId, 'post_match'),
   ]);
 
   const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
@@ -215,6 +229,31 @@ export default async function MatchPage({ params }: MatchPageParams) {
         venue={match.venue}
         referee={match.referee}
       />
+
+      {match.status === 'finished' && (
+        <PostMatchAnalysisSection
+          analysis={
+            (postAnalysis?.content_json as PostMatchAnalysis | undefined) ??
+            null
+          }
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          generated_at={postAnalysis?.generated_at}
+        />
+      )}
+
+      {(match.status === 'scheduled' ||
+        match.status === 'live' ||
+        match.status === 'finished') && (
+        <PreMatchAnalysisSection
+          analysis={
+            (preAnalysis?.content_json as PreMatchAnalysis | undefined) ?? null
+          }
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          generated_at={preAnalysis?.generated_at}
+        />
+      )}
 
       <MatchLineupSection
         is_confirmed={anyConfirmed}
