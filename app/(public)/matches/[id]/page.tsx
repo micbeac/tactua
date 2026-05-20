@@ -11,6 +11,7 @@ import {
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
 import { PostMatchAnalysisSection } from '@/components/match/PostMatchAnalysisSection';
 import { PreMatchAnalysisSection } from '@/components/match/PreMatchAnalysisSection';
+import { buildSportsEventJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { getAnalysis } from '@/lib/data/analysis';
 import { isFavorite } from '@/lib/data/favorites';
 import {
@@ -197,6 +198,29 @@ export default async function MatchPage({ params }: MatchPageParams) {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <JsonLd
+        data={buildSportsEventJsonLd({
+          match_id: match.id,
+          home: match.home_team
+            ? {
+                id: match.home_team.id,
+                name: match.home_team.name,
+                logo_url: match.home_team.logo_url,
+              }
+            : null,
+          away: match.away_team
+            ? {
+                id: match.away_team.id,
+                name: match.away_team.name,
+                logo_url: match.away_team.logo_url,
+              }
+            : null,
+          competition_name: match.competition?.name ?? null,
+          kickoff_at_iso: match.kickoff_at,
+          venue: match.venue,
+          status: match.status,
+        })}
+      />
       <MatchHeader
         id={match.id}
         kickoff_at={match.kickoff_at}

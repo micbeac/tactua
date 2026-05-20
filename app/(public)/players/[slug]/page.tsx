@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
+import { buildPersonJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import {
   PlayerRecentPerformances,
   type PerformanceItem,
@@ -118,6 +119,16 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <JsonLd
+        data={buildPersonJsonLd({
+          player_id: player.id,
+          name: player.name,
+          position: player.position,
+          nationality: player.nationality,
+          date_of_birth: player.date_of_birth,
+          current_team_name: player.current_team?.name ?? null,
+        })}
+      />
       <PlayerHeader
         id={player.id}
         name={player.name}

@@ -96,9 +96,7 @@ async function loadRecipients(
       supabase as unknown as {
         auth: {
           admin: {
-            getUserById: (
-              id: string,
-            ) => Promise<{
+            getUserById: (id: string) => Promise<{
               data: { user: { email?: string | null } | null };
               error: unknown;
             }>;

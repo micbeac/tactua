@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { buildSportsTeamJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { TeamHeader } from '@/components/team/TeamHeader';
 import {
   TeamMatchesList,
@@ -123,6 +124,16 @@ export default async function TeamPage({ params }: TeamPageParams) {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <JsonLd
+        data={buildSportsTeamJsonLd({
+          team_id: team.id,
+          name: team.name,
+          logo_url: team.logo_url,
+          country: team.country,
+          founded: team.founded,
+          venue: team.venue,
+        })}
+      />
       <TeamHeader
         id={team.id}
         name={team.name}
