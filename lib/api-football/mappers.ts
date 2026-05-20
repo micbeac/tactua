@@ -1,8 +1,10 @@
 // Mappers API-Football → tables Supabase.
-// Convention : on garde nos IDs Football-Data sur teams/matches/players (PK
-// connue), donc les mappers reçoivent l'ID DB en paramètre quand l'API-Football
-// ne le connaît pas. Pour les joueurs/équipes inconnus de notre DB, on les
-// upsert au passage (id = api-football id, pour les nouveaux).
+// Convention : nos IDs primaires viennent de Football-Data. Pour les
+// enrichissements API-Football, on traduit l'AF player_id en DB id via
+// players.api_football_id. Si un joueur AF n'existe pas en DB, on l'insère
+// avec id = af_player_id et api_football_id = af_player_id (l'ID AF sert
+// de PK pour ce nouveau row, et la colonne api_football_id permet aux
+// prochains enrichissements de le retrouver sans dupliquer).
 
 import type { Database } from '@/types/database';
 import type {
@@ -20,20 +22,27 @@ type MatchPlayerStatsInsert =
   Database['public']['Tables']['match_player_stats']['Insert'];
 type PlayerInsert = Database['public']['Tables']['players']['Insert'];
 
+export type PlayerIdMap = Map<number, number>; // AF player_id → DB players.id
+
 /**
  * Aplatit la réponse `/fixtures/lineups` en lignes match_lineups.
- * `teamIdMap` matche team api-football → team_id en base (= team_id Football-Data).
- * Les joueurs sont retournés à part pour upsert avant insertion des lineups
- * (FK vers public.players).
+ *
+ * `teamIdMap`   : team AF id → team_id DB
+ * `playerIdMap` : player AF id → player_id DB (rempli en amont par enrichMatch)
+ *
+ * Pour un joueur AF sans entrée dans `playerIdMap`, on retourne un PlayerInsert
+ * dans `players` à upserter par l'appelant (id = AF id, api_football_id = AF id).
+ * Le map est mis à jour en place pour les appels suivants (player stats).
  */
 export function mapApiFootballLineups(
   resp: AFLineupsResponse,
   matchId: number,
   teamIdMap: Map<number, number>,
+  playerIdMap: PlayerIdMap,
 ): { lineups: MatchLineupInsert[]; players: PlayerInsert[] } {
   const lineups: MatchLineupInsert[] = [];
   const players: PlayerInsert[] = [];
-  const seenPlayers = new Set<number>();
+  const seenNewPlayers = new Set<number>();
 
   for (const team of resp.response) {
     const dbTeamId = teamIdMap.get(team.team.id);
@@ -52,19 +61,26 @@ export function mapApiFootballLineups(
     ) => {
       for (const item of list) {
         const p = item.player;
-        if (!seenPlayers.has(p.id)) {
-          players.push({
-            id: p.id,
-            name: p.name,
-            position: p.pos,
-            current_team_id: dbTeamId,
-          });
-          seenPlayers.add(p.id);
+        let dbPlayerId = playerIdMap.get(p.id);
+        if (!dbPlayerId) {
+          // Inconnu en DB : on l'insère avec AF id comme PK.
+          dbPlayerId = p.id;
+          if (!seenNewPlayers.has(p.id)) {
+            players.push({
+              id: p.id,
+              api_football_id: p.id,
+              name: p.name,
+              position: p.pos,
+              current_team_id: dbTeamId,
+            });
+            seenNewPlayers.add(p.id);
+            playerIdMap.set(p.id, p.id);
+          }
         }
         lineups.push({
           match_id: matchId,
           team_id: dbTeamId,
-          player_id: p.id,
+          player_id: dbPlayerId,
           position: p.pos,
           shirt_number: p.number,
           is_starter: isStarter,
@@ -127,20 +143,47 @@ export function mapApiFootballTeamStats(
   return rows;
 }
 
-/** `/fixtures/players` → match_player_stats (1 ligne par joueur ayant joué). */
+/**
+ * `/fixtures/players` → match_player_stats (1 ligne par joueur ayant joué).
+ *
+ * `playerIdMap` traduit AF player_id → DB players.id. Pour les joueurs absents
+ * du map, on retourne un PlayerInsert pour upsert avant insertion des stats
+ * (FK). Le map est enrichi en place.
+ */
 export function mapApiFootballPlayerStats(
   resp: AFPlayerStatsResponse,
   matchId: number,
-): MatchPlayerStatsInsert[] {
+  teamIdMap: Map<number, number>,
+  playerIdMap: PlayerIdMap,
+): { rows: MatchPlayerStatsInsert[]; players: PlayerInsert[] } {
   const rows: MatchPlayerStatsInsert[] = [];
+  const players: PlayerInsert[] = [];
+  const seenNewPlayers = new Set<number>();
+
   for (const t of resp.response) {
+    const dbTeamId = teamIdMap.get(t.team.id);
     for (const p of t.players) {
       const s = p.statistics[0];
       if (!s || s.games.minutes == null) continue;
+      let dbPlayerId = playerIdMap.get(p.player.id);
+      if (!dbPlayerId) {
+        dbPlayerId = p.player.id;
+        if (!seenNewPlayers.has(p.player.id)) {
+          players.push({
+            id: p.player.id,
+            api_football_id: p.player.id,
+            name: p.player.name,
+            position: s.games.position ?? null,
+            current_team_id: dbTeamId ?? null,
+          });
+          seenNewPlayers.add(p.player.id);
+          playerIdMap.set(p.player.id, p.player.id);
+        }
+      }
       const rating = s.games.rating ? Number(s.games.rating) : null;
       rows.push({
         match_id: matchId,
-        player_id: p.player.id,
+        player_id: dbPlayerId,
         minutes_played: s.games.minutes,
         goals: s.goals.total ?? 0,
         assists: s.goals.assists ?? 0,
@@ -153,5 +196,5 @@ export function mapApiFootballPlayerStats(
       });
     }
   }
-  return rows;
+  return { rows, players };
 }

@@ -45,7 +45,7 @@ async function main() {
       transfers_json: JSON.parse(JSON.stringify(transfers)),
     })
     .eq('id', dbId)
-    .select('id', { count: 'exact', head: true });
+    .select('id');
   if (error) throw error;
   console.log(`✅ OK (${count ?? 0} ligne(s) mise(s) à jour)`);
 }

@@ -452,6 +452,99 @@ export async function fetchTopPerformers(
     page += 1;
   }
 
+  // Aggregated variant kept below
+  performers.sort((a, b) => {
+    const sA = a.goals + a.assists;
+    const sB = b.goals + b.assists;
+    if (sB !== sA) return sB - sA;
+    return (b.rating ?? 0) - (a.rating ?? 0);
+  });
+
+  return performers.slice(0, topN);
+}
+
+/**
+ * Variante pour sélections nationales : agrège les stats sur TOUTES les
+ * compétitions internationales (Friendlies, Nations League, qualifs, WC...)
+ * pour une équipe nationale sur une saison. Renvoie un row par joueur.
+ */
+export async function fetchAggregatedTeamPerformers(
+  teamId: number,
+  season: number,
+  topN = 100,
+): Promise<SquadPerformer[]> {
+  const performers: SquadPerformer[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages && page <= 5) {
+    const d = await af<PlayerSeasonResponse>(
+      `/players?team=${teamId}&season=${season}&page=${page}`,
+    );
+    totalPages = d.paging.total;
+
+    for (const p of d.response) {
+      // Agrégation sur toutes les compétitions de la saison
+      let appearances = 0;
+      let lineups = 0;
+      let minutes = 0;
+      let goals = 0;
+      let assists = 0;
+      let yellow = 0;
+      let red = 0;
+      let position: string | null = null;
+      let isCaptain = false;
+      let ratingSum = 0;
+      let ratingN = 0;
+
+      for (const s of p.statistics) {
+        if (!s.games.appearences || s.games.appearences === 0) continue;
+        appearances += s.games.appearences;
+        lineups += s.games.lineups ?? 0;
+        minutes += s.games.minutes ?? 0;
+        goals += s.goals.total ?? 0;
+        assists += s.goals.assists ?? 0;
+        yellow += s.cards.yellow ?? 0;
+        red += s.cards.red ?? 0;
+        if (!position && s.games.position) position = s.games.position;
+        if (s.games.captain) isCaptain = true;
+        if (s.games.rating) {
+          const r = Number(s.games.rating);
+          if (Number.isFinite(r)) {
+            ratingSum += r;
+            ratingN += 1;
+          }
+        }
+      }
+
+      if (appearances === 0) continue;
+
+      performers.push({
+        player_id: p.player.id,
+        player_name: p.player.name,
+        photo: p.player.photo,
+        position,
+        is_captain: isCaptain,
+        appearances,
+        lineups,
+        minutes,
+        goals,
+        assists,
+        rating: ratingN > 0 ? Math.round((ratingSum / ratingN) * 100) / 100 : null,
+        shots_on_target: null,
+        key_passes: null,
+        passes_accuracy: null,
+        dribbles_success_ratio: null,
+        duels_won_ratio: null,
+        yellow_cards: yellow,
+        red_cards: red,
+        saves: null,
+        goals_conceded: null,
+      });
+    }
+    page += 1;
+  }
+
   performers.sort((a, b) => {
     const sA = a.goals + a.assists;
     const sB = b.goals + b.assists;

@@ -60,13 +60,13 @@ export async function enrichMatchFromApiFootball(
     notes: [],
   };
 
-  // 1. Charger le match
+  // 1. Charger le match (avec fixture_id pré-mappé et IDs AF des équipes)
   const { data: match, error } = await supabase
     .from('matches')
     .select(
-      `id, kickoff_at, home_team_id, away_team_id,
-       home_team:teams!matches_home_team_id_fkey(id, name),
-       away_team:teams!matches_away_team_id_fkey(id, name)`,
+      `id, kickoff_at, home_team_id, away_team_id, api_football_fixture_id,
+       home_team:teams!matches_home_team_id_fkey(id, name, api_football_id),
+       away_team:teams!matches_away_team_id_fkey(id, name, api_football_id)`,
     )
     .eq('id', matchId)
     .single();
@@ -80,8 +80,9 @@ export async function enrichMatchFromApiFootball(
     kickoff_at: string;
     home_team_id: number | null;
     away_team_id: number | null;
-    home_team: { id: number; name: string } | null;
-    away_team: { id: number; name: string } | null;
+    api_football_fixture_id: number | null;
+    home_team: { id: number; name: string; api_football_id: number | null } | null;
+    away_team: { id: number; name: string; api_football_id: number | null } | null;
   };
   const m = match as unknown as LoadedMatch;
 
@@ -90,38 +91,70 @@ export async function enrichMatchFromApiFootball(
     return result;
   }
 
-  // 2. Chercher le fixture API-Football à la date du match (UTC)
+  // 2. Récupérer le fixture API-Football.
+  // Voie rapide : api_football_fixture_id pré-mappé (résolu par
+  // resolve-fixture-ids). Voie de secours : recherche par date + nom.
   const client = createApiFootballClient();
-  const date = m.kickoff_at.slice(0, 10);
-  const search = await client.searchFixturesByDate(date);
+  let afFixtureId: number | null = m.api_football_fixture_id;
+  let afHomeId: number | null = m.home_team.api_football_id;
+  let afAwayId: number | null = m.away_team.api_football_id;
 
-  const fixture = search.response.find(
-    (f) =>
-      namesMatch(f.teams.home.name, m.home_team!.name) &&
-      namesMatch(f.teams.away.name, m.away_team!.name),
-  );
-
-  if (!fixture) {
-    result.notes.push(
-      `Aucun fixture API-Football trouvé le ${date} pour ${m.home_team.name} vs ${m.away_team.name}`,
+  if (!afFixtureId) {
+    const date = m.kickoff_at.slice(0, 10);
+    const search = await client.searchFixturesByDate(date);
+    const fixture = search.response.find(
+      (f) =>
+        namesMatch(f.teams.home.name, m.home_team!.name) &&
+        namesMatch(f.teams.away.name, m.away_team!.name),
     );
+    if (!fixture) {
+      result.notes.push(
+        `Aucun fixture API-Football trouvé le ${date} pour ${m.home_team.name} vs ${m.away_team.name}`,
+      );
+      return result;
+    }
+    afFixtureId = fixture.fixture.id;
+    afHomeId = fixture.teams.home.id;
+    afAwayId = fixture.teams.away.id;
+  }
+
+  if (!afHomeId || !afAwayId) {
+    result.notes.push('Équipes sans api_football_id');
     return result;
   }
 
-  result.fixture_id = fixture.fixture.id;
+  result.fixture_id = afFixtureId;
   const teamIdMap = new Map<number, number>([
-    [fixture.teams.home.id, m.home_team.id],
-    [fixture.teams.away.id, m.away_team.id],
+    [afHomeId, m.home_team.id],
+    [afAwayId, m.away_team.id],
   ]);
 
-  // 3. Lineups
+  // 3. Précharger le mapping AF→DB des joueurs des 2 équipes.
+  // Évite de dupliquer un joueur déjà connu en DB avec un autre id.
+  const playerIdMap = new Map<number, number>();
+  const { data: dbPlayers } = await supabase
+    .from('players')
+    .select('id, api_football_id')
+    .or(
+      `current_team_id.eq.${m.home_team.id},current_team_id.eq.${m.away_team.id}`,
+    )
+    .not('api_football_id', 'is', null);
+  for (const p of (dbPlayers ?? []) as Array<{
+    id: number;
+    api_football_id: number;
+  }>) {
+    playerIdMap.set(p.api_football_id, p.id);
+  }
+
+  // 4. Lineups
   try {
-    const lineupsResp = await client.getLineups(fixture.fixture.id);
+    const lineupsResp = await client.getLineups(afFixtureId);
     if (lineupsResp.response.length > 0) {
       const { lineups, players } = mapApiFootballLineups(
         lineupsResp,
         m.id,
         teamIdMap,
+        playerIdMap,
       );
 
       if (players.length > 0) {
@@ -148,9 +181,9 @@ export async function enrichMatchFromApiFootball(
     result.notes.push(`Lineups: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // 4. Team stats
+  // 5. Team stats
   try {
-    const statsResp = await client.getTeamStats(fixture.fixture.id);
+    const statsResp = await client.getTeamStats(afFixtureId);
     if (statsResp.response.length > 0) {
       const rows = mapApiFootballTeamStats(statsResp, m.id, teamIdMap);
       if (rows.length > 0) {
@@ -169,39 +202,27 @@ export async function enrichMatchFromApiFootball(
     );
   }
 
-  // 5. Player stats
+  // 6. Player stats
   try {
-    const playersResp = await client.getPlayerStats(fixture.fixture.id);
+    const playersResp = await client.getPlayerStats(afFixtureId);
     if (playersResp.response.length > 0) {
-      const rows = mapApiFootballPlayerStats(playersResp, m.id);
-      if (rows.length > 0) {
-        // FK match_player_stats.player_id → public.players. On a déjà upsert
-        // les joueurs des lineups ci-dessus, mais certains joueurs présents
-        // dans les player stats peuvent ne pas être dans le startXI.
-        // On les upsert au passage.
-        const playerIds = Array.from(new Set(rows.map((r) => r.player_id)));
-        const newPlayers = playersResp.response.flatMap((t) =>
-          t.players
-            .filter((p) => playerIds.includes(p.player.id))
-            .map((p) => ({
-              id: p.player.id,
-              name: p.player.name,
-              position: p.statistics[0]?.games.position ?? null,
-              current_team_id: teamIdMap.get(t.team.id) ?? null,
-            })),
-        );
-        // Dédoublonner par id
-        const playersToUpsert = Array.from(
-          new Map(newPlayers.map((p) => [p.id, p])).values(),
-        );
-        if (playersToUpsert.length > 0) {
-          const { error: pErr } = await supabase
-            .from('players')
-            .upsert(playersToUpsert, { onConflict: 'id' });
-          if (pErr)
-            throw new Error(`players upsert (for stats): ${pErr.message}`);
-        }
+      const { rows, players: newPlayers } = mapApiFootballPlayerStats(
+        playersResp,
+        m.id,
+        teamIdMap,
+        playerIdMap,
+      );
 
+      if (newPlayers.length > 0) {
+        const { error: pErr } = await supabase
+          .from('players')
+          .upsert(newPlayers, { onConflict: 'id' });
+        if (pErr)
+          throw new Error(`players upsert (for stats): ${pErr.message}`);
+        result.players_upserted += newPlayers.length;
+      }
+
+      if (rows.length > 0) {
         const { error: psErr } = await supabase
           .from('match_player_stats')
           .upsert(rows, { onConflict: 'match_id,player_id' });
