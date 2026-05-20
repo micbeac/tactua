@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { teamHref } from '@/lib/url';
 
 export type PlayerHeaderProps = {
   name: string;
@@ -65,7 +66,7 @@ export function PlayerHeader({
 
         {current_team && (
           <Link
-            href={`/teams/${current_team.id}`}
+            href={teamHref(current_team.id, current_team.name)}
             className="bg-muted/40 hover:bg-muted border-border flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 transition-colors sm:self-auto"
           >
             <div className="bg-background relative size-8 shrink-0 overflow-hidden rounded-full">

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { teamHref } from '@/lib/url';
 
 type Team = {
   id: number | null;
@@ -81,7 +82,7 @@ function TeamBlock({ team }: { team: Team }) {
   if (team.id != null) {
     return (
       <Link
-        href={`/teams/${team.id}`}
+        href={teamHref(team.id, team.name)}
         className="hover:text-primary group flex flex-col items-center gap-3 text-center transition-colors"
       >
         {inner}

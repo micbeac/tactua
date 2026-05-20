@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { TeamHeader } from '@/components/team/TeamHeader';
 import {
   TeamMatchesList,
@@ -21,17 +21,20 @@ import {
   type ScheduleMatch,
 } from '@/lib/data/team';
 import { createClient } from '@/lib/supabase/server';
+import { parseEntityId, teamHref } from '@/lib/url';
 
 export const revalidate = 60;
 
-type TeamPageParams = { params: Promise<{ id: string }> };
+type TeamPageParams = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({
   params,
 }: TeamPageParams): Promise<Metadata> {
-  const { id } = await params;
+  const { slug } = await params;
+  const id = parseEntityId(slug);
+  if (id == null) return { title: 'Équipe introuvable' };
   const supabase = await createClient();
-  const team = await getTeam(supabase, Number(id));
+  const team = await getTeam(supabase, id);
   if (!team) return { title: 'Équipe introuvable' };
   return {
     title: team.name,
@@ -55,13 +58,19 @@ function toMatchItem(teamId: number, m: ScheduleMatch): TeamMatchItem {
 }
 
 export default async function TeamPage({ params }: TeamPageParams) {
-  const { id } = await params;
-  const teamId = Number(id);
-  if (!Number.isFinite(teamId)) notFound();
+  const { slug } = await params;
+  const teamId = parseEntityId(slug);
+  if (teamId == null) notFound();
 
   const supabase = await createClient();
   const team = await getTeam(supabase, teamId);
   if (!team) notFound();
+
+  // Redirige vers l'URL canonique si on est arrivé via id pur ou slug obsolète.
+  const canonical = teamHref(team.id, team.name);
+  if (`/teams/${slug}` !== canonical) {
+    redirect(canonical);
+  }
 
   const [seasonStatsRows, upcoming, recent, squad] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),

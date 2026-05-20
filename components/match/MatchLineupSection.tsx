@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { playerHref } from '@/lib/url';
 
 type LineupPlayer = {
   player_id: number;
@@ -25,7 +26,7 @@ function PlayerRow({ p }: { p: LineupPlayer }) {
   return (
     <li className="border-border/60 border-b last:border-b-0">
       <Link
-        href={`/players/${p.player_id}`}
+        href={playerHref(p.player_id, p.player_name)}
         className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
       >
         <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">

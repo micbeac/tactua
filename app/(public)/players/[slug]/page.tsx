@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import {
   PlayerRecentPerformances,
@@ -15,17 +15,20 @@ import {
   getPlayerSeasonStats,
 } from '@/lib/data/player';
 import { createClient } from '@/lib/supabase/server';
+import { parseEntityId, playerHref } from '@/lib/url';
 
 export const revalidate = 60;
 
-type PlayerPageParams = { params: Promise<{ id: string }> };
+type PlayerPageParams = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({
   params,
 }: PlayerPageParams): Promise<Metadata> {
-  const { id } = await params;
+  const { slug } = await params;
+  const id = parseEntityId(slug);
+  if (id == null) return { title: 'Joueur introuvable' };
   const supabase = await createClient();
-  const player = await getPlayer(supabase, Number(id));
+  const player = await getPlayer(supabase, id);
   if (!player) return { title: 'Joueur introuvable' };
   const club = player.current_team?.name;
   return {
@@ -37,13 +40,18 @@ export async function generateMetadata({
 }
 
 export default async function PlayerPage({ params }: PlayerPageParams) {
-  const { id } = await params;
-  const playerId = Number(id);
-  if (!Number.isFinite(playerId)) notFound();
+  const { slug } = await params;
+  const playerId = parseEntityId(slug);
+  if (playerId == null) notFound();
 
   const supabase = await createClient();
   const player = await getPlayer(supabase, playerId);
   if (!player) notFound();
+
+  const canonical = playerHref(player.id, player.name);
+  if (`/players/${slug}` !== canonical) {
+    redirect(canonical);
+  }
 
   const [seasonStatsRaw, performancesRaw] = await Promise.all([
     getPlayerSeasonStats(supabase, playerId),

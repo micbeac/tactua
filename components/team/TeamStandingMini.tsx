@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { teamHref } from '@/lib/url';
 
 export type StandingTeam = {
   team_id: number;
@@ -72,7 +73,7 @@ export function TeamStandingMini({
                   </td>
                   <td className="py-2 pr-2">
                     <Link
-                      href={`/teams/${r.team_id}`}
+                      href={teamHref(r.team_id, r.team_name)}
                       className="flex items-center gap-2 hover:underline"
                     >
                       <span className="bg-muted relative size-5 shrink-0 overflow-hidden rounded-full">

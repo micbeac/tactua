@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { playerHref } from '@/lib/url';
 
 export type SquadPlayer = {
   id: number;
@@ -96,7 +97,7 @@ export function TeamSquadSection({ players }: TeamSquadSectionProps) {
                     return (
                       <li key={p.id}>
                         <Link
-                          href={`/players/${p.id}`}
+                          href={playerHref(p.id, p.name)}
                           className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
                         >
                           <span className="flex-1 truncate text-sm font-medium">
