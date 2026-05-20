@@ -3,7 +3,9 @@
 
 import { DEFAULT_MODEL, getOpenAI } from './client.ts';
 import {
+  POST_MATCH_JSON_SCHEMA,
   PRE_MATCH_JSON_SCHEMA,
+  type PostMatchAnalysis,
   type PreMatchAnalysis,
   type TeamSide,
 } from './types.ts';
@@ -129,4 +131,106 @@ export async function generatePreMatchAnalysis(
 /** Petit helper exporté pour la lisibilité côté UI. */
 export function teamSideLabel(side: TeamSide): string {
   return side === 'home' ? 'Domicile' : 'Extérieur';
+}
+
+// ============================================================================
+// POST-MATCH
+// ============================================================================
+
+export type PostMatchContext = {
+  competition: string;
+  stage_or_matchday: string | null;
+  kickoff_at_iso: string;
+  venue: string | null;
+  home: {
+    name: string;
+    country: string | null;
+    score: number;
+    half_time_score: number | null;
+    starting_eleven: string[];
+  };
+  away: {
+    name: string;
+    country: string | null;
+    score: number;
+    half_time_score: number | null;
+    starting_eleven: string[];
+  };
+};
+
+const POST_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactua, une webapp d'analyse augmentée par l'IA.
+Tu rédiges une lecture post-match factuelle et engageante : faits marquants, homme du match, performances notables, lecture tactique, moment-clé.
+
+Règles :
+- Français exclusivement. Ton factuel, mesuré, jamais sensationnaliste.
+- Base-toi UNIQUEMENT sur les données fournies (score, score mi-temps, compositions si dispo). Pas d'invention de buteurs, passeurs, ou stats spécifiques.
+- Si tu n'as pas les compositions, ne nomme pas de joueur spécifique pour l'homme du match : utilise un nom générique ("L'attaquant principal de X") ou indique que l'info manque.
+- "facts" : 3 à 5 faits chiffrés ou notables (score final, score mi-temps, retournement, dynamique).
+- "turning_point" : 1-2 phrases sur le moment qui a fait basculer le match (peut être déduit du score mi-temps vs final).
+- "tactical_reading" : 2-3 phrases sur ce que le résultat révèle du jeu des deux équipes.`;
+
+function buildPostMatchPrompt(ctx: PostMatchContext): string {
+  const fmtSquad = (squad: string[]) =>
+    squad.length === 0 ? 'non publiée' : squad.join(', ');
+  const fmtHT = (n: number | null) => (n != null ? String(n) : '?');
+
+  return `Contexte du match terminé :
+
+Compétition : ${ctx.competition}${ctx.stage_or_matchday ? ` (${ctx.stage_or_matchday})` : ''}
+Coup d'envoi : ${ctx.kickoff_at_iso}${ctx.venue ? ` — ${ctx.venue}` : ''}
+
+Score final : ${ctx.home.name} ${ctx.home.score} - ${ctx.away.score} ${ctx.away.name}
+Score mi-temps : ${fmtHT(ctx.home.half_time_score)} - ${fmtHT(ctx.away.half_time_score)}
+
+Équipe à domicile : ${ctx.home.name}${ctx.home.country ? ` (${ctx.home.country})` : ''}
+- XI titulaire : ${fmtSquad(ctx.home.starting_eleven)}
+
+Équipe à l'extérieur : ${ctx.away.name}${ctx.away.country ? ` (${ctx.away.country})` : ''}
+- XI titulaire : ${fmtSquad(ctx.away.starting_eleven)}
+
+Génère l'analyse post-match en JSON selon le schéma fourni.`;
+}
+
+export async function generatePostMatchAnalysis(
+  ctx: PostMatchContext,
+  options: { model?: string } = {},
+): Promise<{
+  analysis: PostMatchAnalysis;
+  model: string;
+  usage: { input: number; output: number };
+}> {
+  const model = options.model ?? DEFAULT_MODEL;
+  const openai = getOpenAI();
+
+  const response = await openai.chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: POST_SYSTEM_PROMPT },
+      { role: 'user', content: buildPostMatchPrompt(ctx) },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'post_match_analysis',
+        strict: true,
+        schema: POST_MATCH_JSON_SCHEMA as unknown as Record<string, unknown>,
+      },
+    },
+    temperature: 0.5,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenAI a renvoyé une réponse vide.');
+  }
+  const analysis = JSON.parse(content) as PostMatchAnalysis;
+
+  return {
+    analysis,
+    model,
+    usage: {
+      input: response.usage?.prompt_tokens ?? 0,
+      output: response.usage?.completion_tokens ?? 0,
+    },
+  };
 }

@@ -46,6 +46,50 @@ export type PostMatchAnalysis = {
   turning_point: string;
 };
 
+/** JSON Schema strict envoyé à l'API OpenAI pour le post-match. */
+export const POST_MATCH_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'facts',
+    'man_of_the_match',
+    'notable_performances',
+    'tactical_reading',
+    'turning_point',
+  ],
+  properties: {
+    facts: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    man_of_the_match: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['name', 'team', 'why'],
+      properties: {
+        name: { type: 'string' },
+        team: { type: 'string', enum: ['home', 'away'] },
+        why: { type: 'string' },
+      },
+    },
+    notable_performances: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['team', 'name', 'why'],
+        properties: {
+          team: { type: 'string', enum: ['home', 'away'] },
+          name: { type: 'string' },
+          why: { type: 'string' },
+        },
+      },
+    },
+    tactical_reading: { type: 'string' },
+    turning_point: { type: 'string' },
+  },
+} as const;
+
 /** JSON Schema strict envoyé à l'API OpenAI pour le pré-match. */
 export const PRE_MATCH_JSON_SCHEMA = {
   type: 'object',
