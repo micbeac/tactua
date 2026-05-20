@@ -1,14 +1,20 @@
-// Cron haute fréquence : refresh des matchs imminents (lineups officielles + scores).
+// Cron haute fréquence : refresh des matchs imminents (status + scores depuis
+// Football-Data) + enrichissement (lineups + stats équipes + stats joueurs)
+// depuis API-Football si dispo dans la fenêtre.
+//
 // Fenêtre : matchs avec kickoff dans [now - 2h, now + 24h] et pas encore finished.
 //
 // Schedule prod : ce cron est ÉCRIT pour tourner toutes les 2-3 min mais Vercel
-// Hobby ne permet pas cette fréquence. En attendant Pro, vercel.json le déclare
-// à */10 (toutes les 10 min) — frontière de tolérance habituelle.
+// Hobby ne permet pas cette fréquence. En attendant Pro, le cron n'est pas dans
+// vercel.json — à invoquer manuellement ou activer après upgrade Pro.
 //
-// Note : pour Jour 5 on ne refresh que la table `matches` (status + score).
-// Les lineups détaillées arrivent Jour 8 quand on les affichera côté UI.
+// Garde-fou quota API-Football (100 req/jour, 4 req par enrich) :
+//   MAX_ENRICH_PER_RUN limite à 5 matchs par exécution = 20 req max.
+//   On enrich uniquement les matchs qui n'ont pas encore lineups OU pas encore
+//   team_stats en base — pour éviter de gaspiller le quota.
 
 import { NextResponse } from 'next/server';
+import { enrichMatchFromApiFootball } from '@/lib/api-football/enrich';
 import { requireCronAuth } from '@/lib/cron/auth';
 import { createFootballClient } from '@/lib/football-api/client';
 import { mapMatch } from '@/lib/football-api/mappers';
@@ -20,6 +26,7 @@ export const dynamic = 'force-dynamic';
 
 const PRE_KICKOFF_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h avant
 const POST_KICKOFF_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h après
+const MAX_ENRICH_PER_RUN = 5;
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -37,7 +44,6 @@ export async function GET(request: Request) {
     .select('id, status, kickoff_at')
     .gte('kickoff_at', lowerBound)
     .lte('kickoff_at', upperBound)
-    .neq('status', 'finished')
     .order('kickoff_at', { ascending: true });
 
   if (queryErr) {
@@ -48,14 +54,21 @@ export async function GET(request: Request) {
     );
   }
 
-  type CronError = { match_id: number; message: string };
+  type CronError = { match_id: number; step: string; message: string };
   const stats = {
     candidates: pending?.length ?? 0,
     refreshed: 0,
+    enriched: 0,
+    enrich_skipped_already: 0,
+    enrich_skipped_quota: 0,
     errors: [] as CronError[],
   };
 
+  // ============================================================================
+  // 1. Refresh Football-Data (status + score)
+  // ============================================================================
   for (const m of pending ?? []) {
+    if (m.status === 'finished') continue; // déjà finis : pas besoin de refresh status
     try {
       const detail = await football.getMatch(m.id);
       const { error } = await supabase
@@ -66,6 +79,59 @@ export async function GET(request: Request) {
     } catch (e) {
       stats.errors.push({
         match_id: m.id,
+        step: 'refresh',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  // ============================================================================
+  // 2. Enrichissement API-Football (lineups + stats) sur matchs dans la fenêtre
+  // ============================================================================
+  if (!process.env.API_FOOTBALL_KEY) {
+    console.log(
+      '[cron:refresh-matchday] API_FOOTBALL_KEY absent, enrichissement skippé',
+    );
+    return NextResponse.json({ ok: stats.errors.length === 0, stats });
+  }
+
+  // On cherche les matchs qui n'ont PAS encore de team_stats (= pas encore enrichis)
+  // ET dans la fenêtre. Priorité aux matchs récents/imminents.
+  const candidateIds = (pending ?? []).map((m) => m.id);
+  if (candidateIds.length === 0) {
+    return NextResponse.json({ ok: stats.errors.length === 0, stats });
+  }
+
+  const { data: alreadyStats } = await supabase
+    .from('match_team_stats')
+    .select('match_id')
+    .in('match_id', candidateIds);
+  const alreadyStatsSet = new Set((alreadyStats ?? []).map((r) => r.match_id));
+
+  let enrichBudget = MAX_ENRICH_PER_RUN;
+  for (const m of pending ?? []) {
+    if (enrichBudget <= 0) {
+      stats.enrich_skipped_quota += 1;
+      continue;
+    }
+    if (alreadyStatsSet.has(m.id)) {
+      stats.enrich_skipped_already += 1;
+      continue;
+    }
+
+    try {
+      const r = await enrichMatchFromApiFootball(supabase, m.id);
+      if (r.fixture_id) {
+        stats.enriched += 1;
+        enrichBudget -= 1;
+      }
+      // Note: si fixture_id null (free tier hors fenêtre), on ne décrémente
+      // pas le budget car aucune ressource n'a été consommée pour lineups/stats
+      // (1 req de recherche fixtures quand même — acceptable).
+    } catch (e) {
+      stats.errors.push({
+        match_id: m.id,
+        step: 'enrich',
         message: e instanceof Error ? e.message : String(e),
       });
     }
