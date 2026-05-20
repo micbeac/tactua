@@ -74,8 +74,29 @@ export function LandingDemo() {
           className="relative mx-auto max-w-4xl"
           style={{ perspective: '1200px' }}
         >
-          {/* Décor de fond pour la carte */}
-          <div className="bg-primary/10 pointer-events-none absolute -inset-4 -z-10 rounded-3xl blur-2xl" />
+          {/* Décor de fond pour la carte : halo qui respire en boucle */}
+          <motion.div
+            className="bg-primary/15 pointer-events-none absolute -inset-6 -z-10 rounded-3xl blur-3xl"
+            animate={{
+              scale: [1, 1.08, 1],
+              opacity: [0.5, 0.9, 0.5],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          {/* Second halo en contre-temps pour effet d'aura */}
+          <motion.div
+            className="bg-emerald-400/10 pointer-events-none absolute -inset-2 -z-10 rounded-3xl blur-2xl"
+            animate={{
+              scale: [1.05, 1, 1.05],
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{
+              duration: 5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: 0.5,
+            }}
+          />
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
