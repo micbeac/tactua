@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Logos d'équipes Football-Data.org
       { protocol: 'https', hostname: 'crests.football-data.org' },
+      // Logos d'équipes + photos joueurs API-Football (utilisés pour JPL et squads)
+      { protocol: 'https', hostname: 'media.api-sports.io' },
     ],
   },
 };
