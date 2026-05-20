@@ -55,6 +55,77 @@ export type MatchScenario = {
   likelihood: 'élevée' | 'moyenne' | 'faible';
 };
 
+// ============================================================================
+// Données calculées côté backend (pas IA). Garantit l'exactitude des chiffres.
+// Stockées dans content_json.rich_data pour rendu visuel détaillé.
+// ============================================================================
+
+/** Comparaison stat par stat entre les 2 équipes. */
+export type StatComparison = {
+  label: string;
+  home: string;
+  away: string;
+  advantage: 'home' | 'away' | 'equal';
+};
+
+/** Dimension du radar de comparaison (0-100). */
+export type RadarDimension = {
+  label: string;
+  home: number;
+  away: number;
+};
+
+export type RecentFormResult = 'W' | 'D' | 'L';
+
+/** Détail joueur clé avec stats saison. */
+export type PlayerSeasonStat = {
+  name: string;
+  team: 'home' | 'away';
+  position: string | null;
+  is_captain: boolean;
+  appearances: number;
+  goals: number;
+  assists: number;
+  rating: number | null;
+  shots_on_target: number | null;
+  key_passes: number | null;
+  passes_accuracy: number | null;
+};
+
+/** Indisponibles (blessures/suspensions). */
+export type AbsentPlayer = {
+  team: 'home' | 'away';
+  name: string;
+  reason: string | null;
+};
+
+export type MatchRichData = {
+  /** Comparaison stat par stat (6-8 lignes). */
+  stats_compare: StatComparison[];
+  /** Radar 5 dimensions (Attaque/Défense/Forme/Régularité/Globale). */
+  radar: RadarDimension[];
+  /** Forme récente (5 derniers, du + ancien au + récent). */
+  form_home: RecentFormResult[];
+  form_away: RecentFormResult[];
+  /** Forme longue saison (10-20 caractères). */
+  form_long_home: string;
+  form_long_away: string;
+  /** Top joueurs des 2 équipes avec stats détaillées. */
+  top_players: PlayerSeasonStat[];
+  /** Joueurs indisponibles connus. */
+  absent_players: AbsentPlayer[];
+  /** Formation type de chaque équipe. */
+  formation_home: string | null;
+  formation_away: string | null;
+  /** Récap H2H : nb victoires home / nuls / victoires away sur les derniers matchs. */
+  h2h_summary: {
+    home_wins: number;
+    draws: number;
+    away_wins: number;
+    total: number;
+  };
+};
+
 export type DeepPreMatchAnalysis = {
   tactical_overview: {
     home_approach: string;
@@ -86,6 +157,8 @@ export type DeepPreMatchAnalysis = {
     over_2_5_reason: string;
     confidence: 'low' | 'medium' | 'high';
   };
+  /** Données calculées en backend (post-IA), facultatif pour compat ascendante. */
+  rich_data?: MatchRichData;
 };
 
 export type PostMatchAnalysis = {

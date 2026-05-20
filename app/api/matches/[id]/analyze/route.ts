@@ -19,7 +19,9 @@ import {
   generateDeepPreMatchAnalysis,
   generatePostMatchAnalysis,
   generatePreMatchAnalysis,
+  type DeepPreMatchContext,
 } from '@/lib/openai/analyses';
+import { buildRichData } from '@/lib/openai/rich-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -261,7 +263,7 @@ export async function POST(
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
 
-        const { analysis, model } = await generateDeepPreMatchAnalysis({
+        const deepCtx: DeepPreMatchContext = {
           competition: m.competition?.name ?? 'Compétition',
           stage_or_matchday:
             m.stage ?? (m.matchday != null ? `Journée ${m.matchday}` : null),
@@ -276,13 +278,27 @@ export async function POST(
             score_home: h.score_home,
             score_away: h.score_away,
           })),
-        });
+        };
 
-        await upsertAnalysis(supabase, m.id, 'pre_match', analysis, model);
+        const { analysis, model } = await generateDeepPreMatchAnalysis(deepCtx);
+
+        // Enrichissement déterministe (chiffres exacts, pas d'IA) calculé
+        // depuis les données API-Football. Permet d'afficher tableau comparatif,
+        // radar, forme, joueurs avec stats détaillées, indispos, etc.
+        const richData = buildRichData(deepCtx);
+        const enrichedAnalysis = { ...analysis, rich_data: richData };
+
+        await upsertAnalysis(
+          supabase,
+          m.id,
+          'pre_match',
+          enrichedAnalysis,
+          model,
+        );
         return NextResponse.json({
           was_cached: false,
           mode: 'deep',
-          analysis,
+          analysis: enrichedAnalysis,
           generated_at: new Date().toISOString(),
           ai_model: model,
         });
