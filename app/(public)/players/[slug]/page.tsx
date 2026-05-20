@@ -132,6 +132,8 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
       <PlayerHeader
         id={player.id}
         name={player.name}
+        photo_url={player.photo_url}
+        shirt_number={player.shirt_number}
         position={player.position}
         nationality={player.nationality}
         date_of_birth={player.date_of_birth}

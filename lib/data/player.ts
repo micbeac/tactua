@@ -12,6 +12,8 @@ export type PlayerRow = {
   nationality: string | null;
   date_of_birth: string | null;
   current_team_id: number | null;
+  photo_url: string | null;
+  shirt_number: number | null;
   current_team: {
     id: number;
     name: string;
@@ -29,7 +31,7 @@ export async function getPlayer(
     .from('players')
     .select(
       `id, name, first_name, last_name, position, nationality, date_of_birth,
-       current_team_id,
+       current_team_id, photo_url, shirt_number,
        current_team:teams!players_current_team_id_fkey(id, name, tla, logo_url, country)`,
     )
     .eq('id', id)

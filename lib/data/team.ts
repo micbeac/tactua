@@ -202,6 +202,8 @@ export type SquadPlayer = {
   position: string | null;
   date_of_birth: string | null;
   nationality: string | null;
+  photo_url: string | null;
+  shirt_number: number | null;
 };
 
 export async function getTeamSquad(
@@ -210,8 +212,11 @@ export async function getTeamSquad(
 ): Promise<SquadPlayer[]> {
   const { data, error } = await supabase
     .from('players')
-    .select('id, name, position, date_of_birth, nationality')
+    .select(
+      'id, name, position, date_of_birth, nationality, photo_url, shirt_number',
+    )
     .eq('current_team_id', teamId)
+    .order('shirt_number', { ascending: true, nullsFirst: false })
     .order('name');
   if (error) {
     console.error('[data/team] squad', error);

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { playerHref } from '@/lib/url';
 
@@ -7,6 +8,8 @@ export type SquadPlayer = {
   position: string | null;
   date_of_birth: string | null;
   nationality: string | null;
+  photo_url: string | null;
+  shirt_number: number | null;
 };
 
 export type TeamSquadSectionProps = {
@@ -100,7 +103,28 @@ export function TeamSquadSection({ players }: TeamSquadSectionProps) {
                           href={playerHref(p.id, p.name)}
                           className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
                         >
+                          <div className="bg-muted relative size-8 shrink-0 overflow-hidden rounded-full">
+                            {p.photo_url ? (
+                              <Image
+                                src={p.photo_url}
+                                alt=""
+                                fill
+                                sizes="32px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <span className="text-muted-foreground flex h-full w-full items-center justify-center text-[10px] font-semibold">
+                                {p.shirt_number ?? p.name.charAt(0)}
+                              </span>
+                            )}
+                          </div>
                           <span className="flex-1 truncate text-sm font-medium">
+                            {p.shirt_number != null && (
+                              <span className="text-muted-foreground mr-2 tabular-nums">
+                                {p.shirt_number}
+                              </span>
+                            )}
                             {p.name}
                           </span>
                           <span className="text-muted-foreground hidden text-xs sm:inline">

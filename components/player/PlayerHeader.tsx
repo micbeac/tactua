@@ -6,6 +6,8 @@ import { teamHref } from '@/lib/url';
 export type PlayerHeaderProps = {
   id: number;
   name: string;
+  photo_url: string | null;
+  shirt_number: number | null;
   position: string | null;
   nationality: string | null;
   date_of_birth: string | null;
@@ -39,6 +41,8 @@ const DOB_FMT = new Intl.DateTimeFormat('fr-FR', {
 export function PlayerHeader({
   id,
   name,
+  photo_url,
+  shirt_number,
   position,
   nationality,
   date_of_birth,
@@ -55,20 +59,43 @@ export function PlayerHeader({
   return (
     <section className="bg-card border-border rounded-2xl border p-6 sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {name}
-          </h1>
-          {meta.length > 0 && (
-            <p className="text-muted-foreground mt-1 text-sm">
-              {meta.join(' · ')}
-            </p>
-          )}
-          {date_of_birth && (
-            <p className="text-muted-foreground/80 mt-0.5 text-xs">
-              Né le {DOB_FMT.format(new Date(date_of_birth))}
-            </p>
-          )}
+        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+          <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-full sm:size-24">
+            {photo_url ? (
+              <Image
+                src={photo_url}
+                alt=""
+                fill
+                sizes="(min-width: 640px) 96px, 80px"
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="text-muted-foreground flex h-full w-full items-center justify-center text-2xl font-semibold">
+                {shirt_number ?? name.charAt(0)}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              {shirt_number != null && (
+                <span className="text-muted-foreground mr-2 tabular-nums">
+                  #{shirt_number}
+                </span>
+              )}
+              {name}
+            </h1>
+            {meta.length > 0 && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {meta.join(' · ')}
+              </p>
+            )}
+            {date_of_birth && (
+              <p className="text-muted-foreground/80 mt-0.5 text-xs">
+                Né le {DOB_FMT.format(new Date(date_of_birth))}
+              </p>
+            )}
+          </div>
         </div>
 
         {current_team && (
