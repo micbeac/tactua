@@ -3,8 +3,10 @@
 
 import { DEFAULT_MODEL, getOpenAI } from './client.ts';
 import {
+  DEEP_PRE_MATCH_JSON_SCHEMA,
   POST_MATCH_JSON_SCHEMA,
   PRE_MATCH_JSON_SCHEMA,
+  type DeepPreMatchAnalysis,
   type PostMatchAnalysis,
   type PreMatchAnalysis,
   type TeamSide,
@@ -131,6 +133,183 @@ export async function generatePreMatchAnalysis(
 /** Petit helper exporté pour la lisibilité côté UI. */
 export function teamSideLabel(side: TeamSide): string {
   return side === 'home' ? 'Domicile' : 'Extérieur';
+}
+
+// ============================================================================
+// DEEP PRE-MATCH (avec stats détaillées via API-Football)
+// ============================================================================
+
+export type DeepTeamContext = {
+  name: string;
+  country: string | null;
+  // Stats globales saison
+  form_long: string; // ex "LWLWDWWDDWWWLDLDLLDWLLLLWWWLWLWWLLDWW"
+  played: { home: number; away: number; total: number };
+  wins: { home: number; away: number; total: number };
+  draws: { home: number; away: number; total: number };
+  loses: { home: number; away: number; total: number };
+  goals_for_avg: { home: string; away: string; total: string };
+  goals_against_avg: { home: string; away: string; total: string };
+  clean_sheets: number;
+  failed_to_score: number;
+  biggest_streak: { wins: number; loses: number };
+  primary_formation: string | null;
+  // Joueurs
+  top_performers: Array<{
+    name: string;
+    position: string | null;
+    appearances: number;
+    goals: number;
+    assists: number;
+    rating: number | null;
+  }>;
+  // Indisponibles
+  active_injuries: Array<{ player_name: string; reason: string | null }>;
+  // XI titulaire si dispo (sinon vide)
+  starting_eleven: string[];
+};
+
+export type DeepPreMatchContext = {
+  competition: string;
+  stage_or_matchday: string | null;
+  kickoff_at_iso: string;
+  venue: string | null;
+  home: DeepTeamContext;
+  away: DeepTeamContext;
+  head_to_head: Array<{
+    date: string;
+    home_team: string;
+    away_team: string;
+    score_home: number | null;
+    score_away: number | null;
+  }>;
+};
+
+const DEEP_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
+Tu rédiges une analyse pré-match approfondie en t'appuyant sur des STATISTIQUES DÉTAILLÉES.
+
+Règles :
+- Français exclusivement. Ton factuel, fondé sur les chiffres fournis. Aucune invention.
+- Tu DOIS citer des chiffres précis dans tes paragraphes (ex : "Bologne marque 1,6 but/match à l'extérieur", "Inter a 12 clean sheets cette saison", "ratio victoires à domicile : X/Y").
+- "data_insight" : 2-3 phrases qui synthétisent ce que les chiffres révèlent du match à venir (mismatch tactique, déséquilibre dom/ext, joueur clé absent, série en cours…).
+- "prediction.probabilities" : pourcentages cohérents qui somment à 100. Base tes probas sur :
+  * V/N/D historiques de chaque équipe (split home/away)
+  * forme récente (longue série fournie, regarde les 10 derniers caractères)
+  * H2H récent
+  * impact des indisponibilités
+- "prediction.btts" : "yes" si les 2 équipes marquent plus de 60% du temps en moyenne, sinon "no". Justifie en citant les chiffres "failed_to_score" et "clean_sheets".
+- "prediction.over_2_5" : "yes" si la moyenne combinée des buts pour des 2 équipes > 2.5. Justifie.
+- "prediction.scoreline_guess" : score plausible cohérent avec les probas et les moyennes de buts (ex "1-1", "2-1", "0-2").
+- "prediction.confidence" : "high" si les indicateurs convergent, "medium" si mixtes, "low" si chaos.
+
+Reste mesuré, c'est de l'analyse pas du pari sportif.`;
+
+function fmtSquad(squad: string[]): string {
+  return squad.length === 0 ? 'non publiée' : squad.join(', ');
+}
+
+function fmtTop(performers: DeepTeamContext['top_performers']): string {
+  if (performers.length === 0) return 'données non disponibles';
+  return performers
+    .map(
+      (p) =>
+        `${p.name} (${p.position ?? '?'}, ${p.appearances} matchs, ${p.goals}b/${p.assists}a${p.rating ? `, note ${p.rating}` : ''})`,
+    )
+    .join(' · ');
+}
+
+function fmtInjuries(list: DeepTeamContext['active_injuries']): string {
+  if (list.length === 0) return 'aucune indispo connue';
+  return list
+    .map((i) => `${i.player_name}${i.reason ? ` (${i.reason})` : ''}`)
+    .join(' · ');
+}
+
+function buildDeepPrompt(ctx: DeepPreMatchContext): string {
+  const fmtTeam = (t: DeepTeamContext, side: 'Domicile' | 'Extérieur') =>
+    `
+[${side}] ${t.name}${t.country ? ` (${t.country})` : ''}
+- Forme longue (W/D/L, du + ancien au + récent) : ${t.form_long}
+- Bilan total : ${t.wins.total}V ${t.draws.total}N ${t.loses.total}D sur ${t.played.total} matchs
+- À domicile : ${t.wins.home}V ${t.draws.home}N ${t.loses.home}D sur ${t.played.home} matchs
+- À l'extérieur : ${t.wins.away}V ${t.draws.away}N ${t.loses.away}D sur ${t.played.away} matchs
+- Buts marqués / match : home ${t.goals_for_avg.home}, away ${t.goals_for_avg.away}, total ${t.goals_for_avg.total}
+- Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
+- Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
+- Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
+- Formation principale : ${t.primary_formation ?? '—'}
+- Top performers : ${fmtTop(t.top_performers)}
+- Indisponibles récents : ${fmtInjuries(t.active_injuries)}
+- XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}`.trim();
+
+  const h2hLines =
+    ctx.head_to_head.length === 0
+      ? 'Aucune confrontation passée enregistrée.'
+      : ctx.head_to_head
+          .map(
+            (h) =>
+              `- ${h.date} : ${h.home_team} ${h.score_home ?? '?'}-${h.score_away ?? '?'} ${h.away_team}`,
+          )
+          .join('\n');
+
+  return `Contexte du match à venir :
+
+Compétition : ${ctx.competition}${ctx.stage_or_matchday ? ` (${ctx.stage_or_matchday})` : ''}
+Coup d'envoi : ${ctx.kickoff_at_iso}${ctx.venue ? ` — ${ctx.venue}` : ''}
+
+${fmtTeam(ctx.home, 'Domicile')}
+
+${fmtTeam(ctx.away, 'Extérieur')}
+
+Confrontations directes récentes :
+${h2hLines}
+
+Génère l'analyse pré-match enrichie en JSON selon le schéma fourni.`;
+}
+
+export async function generateDeepPreMatchAnalysis(
+  ctx: DeepPreMatchContext,
+  options: { model?: string } = {},
+): Promise<{
+  analysis: DeepPreMatchAnalysis;
+  model: string;
+  usage: { input: number; output: number };
+}> {
+  const model = options.model ?? DEFAULT_MODEL;
+  const openai = getOpenAI();
+
+  const response = await openai.chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: DEEP_SYSTEM_PROMPT },
+      { role: 'user', content: buildDeepPrompt(ctx) },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'deep_pre_match_analysis',
+        strict: true,
+        schema: DEEP_PRE_MATCH_JSON_SCHEMA as unknown as Record<
+          string,
+          unknown
+        >,
+      },
+    },
+    temperature: 0.5,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('OpenAI a renvoyé une réponse vide.');
+  const analysis = JSON.parse(content) as DeepPreMatchAnalysis;
+
+  return {
+    analysis,
+    model,
+    usage: {
+      input: response.usage?.prompt_tokens ?? 0,
+      output: response.usage?.completion_tokens ?? 0,
+    },
+  };
 }
 
 // ============================================================================
