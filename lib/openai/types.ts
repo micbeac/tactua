@@ -44,6 +44,17 @@ export type PreMatchAnalysis = {
  *   - prediction.over_2_5 : "yes" ou "no"
  *   - prediction.confidence : low/medium/high
  */
+/**
+ * Scénario possible du match. L'IA en propose 3, ordonnés par probabilité.
+ * Le narratif décrit comment le match pourrait se dérouler (rythme, phases,
+ * issue), en s'appuyant sur les stats fournies.
+ */
+export type MatchScenario = {
+  title: string;
+  narrative: string;
+  likelihood: 'élevée' | 'moyenne' | 'faible';
+};
+
 export type DeepPreMatchAnalysis = {
   tactical_overview: {
     home_approach: string;
@@ -60,6 +71,7 @@ export type DeepPreMatchAnalysis = {
     away: string;
   };
   data_insight: string;
+  scenarios: MatchScenario[];
   prediction: {
     summary: string;
     scoreline_guess: string;
@@ -98,6 +110,7 @@ export const DEEP_PRE_MATCH_JSON_SCHEMA = {
     'key_players',
     'weak_points',
     'data_insight',
+    'scenarios',
     'prediction',
   ],
   properties: {
@@ -143,6 +156,22 @@ export const DEEP_PRE_MATCH_JSON_SCHEMA = {
       },
     },
     data_insight: { type: 'string' },
+    scenarios: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'narrative', 'likelihood'],
+        properties: {
+          title: { type: 'string' },
+          narrative: { type: 'string' },
+          likelihood: {
+            type: 'string',
+            enum: ['élevée', 'moyenne', 'faible'],
+          },
+        },
+      },
+    },
     prediction: {
       type: 'object',
       additionalProperties: false,

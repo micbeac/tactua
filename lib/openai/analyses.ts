@@ -201,6 +201,11 @@ Règles :
 - Français exclusivement. Ton factuel, fondé sur les chiffres fournis. Aucune invention.
 - Tu DOIS citer des chiffres précis dans tes paragraphes (ex : "Bologne marque 1,6 but/match à l'extérieur", "Inter a 12 clean sheets cette saison", "ratio victoires à domicile : X/Y").
 - "data_insight" : 2-3 phrases qui synthétisent ce que les chiffres révèlent du match à venir (mismatch tactique, déséquilibre dom/ext, joueur clé absent, série en cours…).
+- "scenarios" : exactement 3 scénarios narratifs du match, ORDONNÉS du plus probable au moins probable. Chacun :
+  * "title" : 4-8 mots qui résument le scénario (ex : "Domination Inter, but tardif des visiteurs", "Match fermé décidé sur coup de pied arrêté").
+  * "narrative" : 3-4 phrases qui racontent comment le match se déroule dans CE scénario — phases de jeu, joueurs impliqués, moments clés, score final implicite. Cite des chiffres précis (ex : "Profitant des 1,8 buts/match marqués à domicile…").
+  * "likelihood" : "élevée" (scénario #1, le plus probable), "moyenne" (scénario #2, alternatif crédible), "faible" (scénario #3, retournement possible).
+  Les 3 scénarios doivent être DIFFÉRENTS dans leur déroulé et leur issue (pas 3 variantes du même scénario).
 - "prediction.probabilities" : pourcentages cohérents qui somment à 100. Base tes probas sur :
   * V/N/D historiques de chaque équipe (split home/away)
   * forme récente (longue série fournie, regarde les 10 derniers caractères)
