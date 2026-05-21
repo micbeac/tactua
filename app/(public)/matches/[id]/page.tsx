@@ -27,6 +27,7 @@ import {
   getMatchTeamStats,
   getTeamForm,
 } from '@/lib/data/match';
+import { getMatchPlayerPopupMap } from '@/lib/data/match-player-popup';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
@@ -211,6 +212,14 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
 
+  // Map player_id → PlayerPopupData pour clic sur joueur (lineup + timeline)
+  const playerPopupMap = await getMatchPlayerPopupMap(
+    supabase,
+    matchId,
+    homeId,
+    awayId,
+  );
+
   // Events live / timeline
   const { data: eventsData } = await supabase
     .from('match_events')
@@ -389,6 +398,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
           home_team_name={match.home_team?.name ?? 'Domicile'}
           away_team_name={match.away_team?.name ?? 'Extérieur'}
           match_status={match.status}
+          popup_map={playerPopupMap}
         />
       )}
 
@@ -432,6 +442,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
         is_confirmed={anyConfirmed}
         home={buildTeamLineup(match.home_team, lineupRows)}
         away={buildTeamLineup(match.away_team, lineupRows)}
+        popup_map={playerPopupMap}
       />
 
       <MatchFormSection

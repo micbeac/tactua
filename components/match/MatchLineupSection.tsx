@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PlayerPopup, type PlayerPopupData } from '@/components/match/PlayerPopup';
 import { playerHref } from '@/lib/url';
 
 type LineupPlayer = {
@@ -20,27 +21,43 @@ export type MatchLineupSectionProps = {
   is_confirmed: boolean;
   home: TeamLineup | null;
   away: TeamLineup | null;
+  /** Map player_id → PlayerPopupData pour ouvrir un popup au clic sur un joueur. */
+  popup_map?: Map<number, PlayerPopupData>;
 };
 
-function PlayerRow({ p }: { p: LineupPlayer }) {
+function PlayerRow({
+  p,
+  team_name,
+  popup_data,
+}: {
+  p: LineupPlayer;
+  team_name: string;
+  popup_data?: PlayerPopupData;
+}) {
+  const inner = (
+    <div className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors">
+      <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">
+        {p.shirt_number ?? '—'}
+      </span>
+      <span className="flex-1 truncate text-sm">
+        {p.player_name ?? `Joueur #${p.player_id}`}
+      </span>
+      {p.position && (
+        <span className="text-muted-foreground hidden text-xs sm:inline">
+          {p.position}
+        </span>
+      )}
+    </div>
+  );
   return (
     <li className="border-border/60 border-b last:border-b-0">
-      <Link
-        href={playerHref(p.player_id, p.player_name)}
-        className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
-      >
-        <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">
-          {p.shirt_number ?? '—'}
-        </span>
-        <span className="flex-1 truncate text-sm">
-          {p.player_name ?? `Joueur #${p.player_id}`}
-        </span>
-        {p.position && (
-          <span className="text-muted-foreground hidden text-xs sm:inline">
-            {p.position}
-          </span>
-        )}
-      </Link>
+      {popup_data ? (
+        <PlayerPopup player={popup_data} team_name={team_name}>
+          {inner}
+        </PlayerPopup>
+      ) : (
+        <Link href={playerHref(p.player_id, p.player_name)}>{inner}</Link>
+      )}
     </li>
   );
 }
@@ -48,9 +65,11 @@ function PlayerRow({ p }: { p: LineupPlayer }) {
 function TeamLineupColumn({
   team,
   label,
+  popup_map,
 }: {
   team: TeamLineup;
   label: string;
+  popup_map?: Map<number, PlayerPopupData>;
 }) {
   return (
     <div>
@@ -73,7 +92,12 @@ function TeamLineupColumn({
       ) : (
         <ul>
           {team.starters.map((p) => (
-            <PlayerRow key={`s-${p.player_id}`} p={p} />
+            <PlayerRow
+              key={`s-${p.player_id}`}
+              p={p}
+              team_name={team.team_name}
+              popup_data={popup_map?.get(p.player_id)}
+            />
           ))}
         </ul>
       )}
@@ -85,7 +109,12 @@ function TeamLineupColumn({
           </p>
           <ul>
             {team.bench.map((p) => (
-              <PlayerRow key={`b-${p.player_id}`} p={p} />
+              <PlayerRow
+                key={`b-${p.player_id}`}
+                p={p}
+                team_name={team.team_name}
+                popup_data={popup_map?.get(p.player_id)}
+              />
             ))}
           </ul>
         </>
@@ -98,6 +127,7 @@ export function MatchLineupSection({
   is_confirmed,
   home,
   away,
+  popup_map,
 }: MatchLineupSectionProps) {
   const hasAny =
     (home && (home.starters.length > 0 || home.bench.length > 0)) ||
@@ -127,8 +157,24 @@ export function MatchLineupSection({
         </p>
       ) : (
         <div className="grid gap-8 sm:grid-cols-2">
-          {home ? <TeamLineupColumn team={home} label="Domicile" /> : <div />}
-          {away ? <TeamLineupColumn team={away} label="Extérieur" /> : <div />}
+          {home ? (
+            <TeamLineupColumn
+              team={home}
+              label="Domicile"
+              popup_map={popup_map}
+            />
+          ) : (
+            <div />
+          )}
+          {away ? (
+            <TeamLineupColumn
+              team={away}
+              label="Extérieur"
+              popup_map={popup_map}
+            />
+          ) : (
+            <div />
+          )}
         </div>
       )}
     </section>

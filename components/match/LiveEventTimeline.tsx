@@ -6,6 +6,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
+import { PlayerPopup, type PlayerPopupData } from '@/components/match/PlayerPopup';
 import { playerHref } from '@/lib/url';
 
 export type LiveMatchEvent = {
@@ -26,6 +27,8 @@ type Props = {
   home_team_name: string;
   away_team_name: string;
   match_status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+  /** Map player_id → PlayerPopupData pour ouvrir un popup au clic. */
+  popup_map?: Map<number, PlayerPopupData>;
 };
 
 function formatMinute(m: LiveMatchEvent): string {
@@ -62,53 +65,84 @@ function eventIcon(type: string, detail: string | null) {
 function PlayerName({
   player,
   fallback,
+  team_name,
+  popup_map,
 }: {
   player: { id: number | null; name: string | null };
   fallback?: string;
+  team_name?: string;
+  popup_map?: Map<number, PlayerPopupData>;
 }) {
   const name = player.name ?? fallback ?? '';
   if (!name) return null;
-  if (player.id != null) {
+  if (player.id == null) return <span>{name}</span>;
+
+  const popupData = popup_map?.get(player.id);
+  if (popupData) {
     return (
-      <Link
-        href={playerHref(player.id, name)}
-        className="hover:text-primary hover:underline"
-      >
-        {name}
-      </Link>
+      <PlayerPopup player={popupData} team_name={team_name}>
+        <span className="text-primary hover:underline cursor-pointer">
+          {name}
+        </span>
+      </PlayerPopup>
     );
   }
-  return <span>{name}</span>;
+  return (
+    <Link
+      href={playerHref(player.id, name)}
+      className="hover:text-primary hover:underline"
+    >
+      {name}
+    </Link>
+  );
 }
 
-function eventLabel(e: LiveMatchEvent): React.ReactNode {
+function eventLabel(
+  e: LiveMatchEvent,
+  team_name: string | undefined,
+  popup_map: Map<number, PlayerPopupData> | undefined,
+): React.ReactNode {
   const detail = (e.detail ?? '').toLowerCase();
+  const pname = (
+    <PlayerName
+      player={e.player}
+      fallback="?"
+      team_name={team_name}
+      popup_map={popup_map}
+    />
+  );
+  const aname = e.assist.name ? (
+    <PlayerName
+      player={e.assist}
+      fallback={e.assist.name}
+      team_name={team_name}
+      popup_map={popup_map}
+    />
+  ) : null;
+
   if (e.type === 'goal') {
     if (detail.includes('own')) {
       return (
         <>
-          <span className="font-semibold">CSC</span> ·{' '}
-          <PlayerName player={e.player} fallback="?" />
+          <span className="font-semibold">CSC</span> · {pname}
         </>
       );
     }
     if (detail.includes('penalty')) {
       return (
         <>
-          <span className="font-semibold">But (pen)</span> ·{' '}
-          <PlayerName player={e.player} fallback="?" />
+          <span className="font-semibold">But (pen)</span> · {pname}
         </>
       );
     }
     return (
       <>
-        <span className="font-semibold">But</span> ·{' '}
-        <PlayerName player={e.player} fallback="?" />
-        {e.assist.name && (
+        <span className="font-semibold">But</span> · {pname}
+        {aname && (
           <>
             {' '}
             <span className="text-muted-foreground text-xs">
-              (passe : <PlayerName player={e.assist} fallback={e.assist.name} />)
+              (passe : {aname})
             </span>
           </>
         )}
@@ -119,17 +153,15 @@ function eventLabel(e: LiveMatchEvent): React.ReactNode {
     const color = detail.includes('red') ? 'rouge' : 'jaune';
     return (
       <>
-        <span className="font-semibold">Carton {color}</span> ·{' '}
-        <PlayerName player={e.player} fallback="?" />
+        <span className="font-semibold">Carton {color}</span> · {pname}
       </>
     );
   }
   if (e.type === 'subst') {
     return (
       <>
-        <span className="font-semibold">Changement</span> · {' '}
-        <PlayerName player={e.assist} fallback={e.assist.name ?? '?'} /> ↑{' '}
-        <PlayerName player={e.player} fallback={e.player.name ?? '?'} /> ↓
+        <span className="font-semibold">Changement</span> · {aname ?? '?'} ↑{' '}
+        {pname} ↓
       </>
     );
   }
@@ -151,6 +183,7 @@ export function LiveEventTimeline({
   home_team_name,
   away_team_name,
   match_status,
+  popup_map,
 }: Props) {
   if (events.length === 0) {
     if (match_status === 'live' || match_status === 'finished') {
@@ -213,7 +246,17 @@ export function LiveEventTimeline({
                     {teamLabel}
                   </p>
                 )}
-                <p className="text-sm leading-snug">{eventLabel(e)}</p>
+                <p className="text-sm leading-snug">
+                  {eventLabel(
+                    e,
+                    e.team_side === 'home'
+                      ? home_team_name
+                      : e.team_side === 'away'
+                        ? away_team_name
+                        : undefined,
+                    popup_map,
+                  )}
+                </p>
               </div>
             </li>
           );
