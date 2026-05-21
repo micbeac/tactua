@@ -272,6 +272,57 @@ export async function POST(
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
 
+        // Fix anti-mercato : l'endpoint AF /players?team=X&season=Y retourne
+        // TOUS les joueurs ayant joué cette saison, y compris ceux partis au
+        // mercato. On filtre via notre DB pour ne garder que ceux dont
+        // current_team_id correspond toujours à l'équipe analysée.
+        try {
+          const allAfIds = [
+            ...homeCtx.top_performers.map((p) => p.af_player_id),
+            ...awayCtx.top_performers.map((p) => p.af_player_id),
+          ];
+          if (allAfIds.length > 0) {
+            const { data: rosterRows } = await supabase
+              .from('players')
+              .select('api_football_id, current_team_id, name')
+              .in('api_football_id', allAfIds);
+            type RR = {
+              api_football_id: number;
+              current_team_id: number | null;
+              name: string;
+            };
+            const rosterByAfId = new Map<number, RR>();
+            for (const r of (rosterRows ?? []) as RR[]) {
+              rosterByAfId.set(r.api_football_id, r);
+            }
+            // Pour chaque équipe, retire les joueurs dont current_team_id != team
+            for (const [ctx, teamDbId] of [
+              [homeCtx, m.home_team_id!],
+              [awayCtx, m.away_team_id!],
+            ] as const) {
+              const transferredOut: string[] = [];
+              ctx.top_performers = ctx.top_performers.filter((p) => {
+                const r = rosterByAfId.get(p.af_player_id);
+                // Si on n'a pas le joueur en DB, on garde (incertitude → mieux que silence)
+                if (!r) return true;
+                // Si current_team_id ne match pas, c'est un transfert sortant
+                if (r.current_team_id !== teamDbId) {
+                  transferredOut.push(p.name);
+                  return false;
+                }
+                return true;
+              });
+              if (transferredOut.length > 0) {
+                console.log(
+                  `[analyze ${m.id}] retire ${transferredOut.length} joueur(s) transferes : ${transferredOut.join(', ')}`,
+                );
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[analyze ${m.id}] filter transferred failed:`, e);
+        }
+
         // Mode what-if : exclut les joueurs spécifiés du contexte avant l'IA.
         // 1. Récupère leurs api_football_id depuis la DB
         // 2. Les retire des top_performers (pour ne plus apparaître dans l'analyse)
