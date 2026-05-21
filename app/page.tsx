@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { DailyRecapSection } from '@/components/dashboard/DailyRecapSection';
+import { PlayerRecommendationsSection } from '@/components/dashboard/PlayerRecommendationsSection';
 import {
   WatchlistSection,
   type WatchlistMatch,
@@ -14,8 +15,9 @@ import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
-import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
+import { getPersonalUpcomingMatches, getUserFavorites } from '@/lib/data/favorites';
 import { getDailyRecap } from '@/lib/data/recap';
+import { getRecommendedPlayers } from '@/lib/data/recommendations';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -141,14 +143,26 @@ export default async function HomePage() {
     ...competitionQueries,
     getPersonalUpcomingMatches(supabase, user.id, 8),
     getDailyRecap(supabase, user.id),
+    getRecommendedPlayers(supabase, user.id, 8),
+    getUserFavorites(supabase, user.id),
   ]);
 
-  const personal = results[results.length - 2] as Awaited<
+  const personal = results[results.length - 4] as Awaited<
     ReturnType<typeof getPersonalUpcomingMatches>
   >;
-  const recap = results[results.length - 1] as Awaited<
+  const recap = results[results.length - 3] as Awaited<
     ReturnType<typeof getDailyRecap>
   >;
+  const recommendations = results[results.length - 2] as Awaited<
+    ReturnType<typeof getRecommendedPlayers>
+  >;
+  const userFavs = results[results.length - 1] as Awaited<
+    ReturnType<typeof getUserFavorites>
+  >;
+  const favoriteTeamsCount = userFavs.filter(
+    (f) => f.entity_type === 'team',
+  ).length;
+
   const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => ({
     ...c,
     matches: ((results[i] as { data: unknown }).data ?? []) as MatchRow[],
@@ -203,6 +217,12 @@ export default async function HomePage() {
             },
           }),
         )}
+      />
+
+      {/* Recommandations joueurs basées sur les équipes favorites */}
+      <PlayerRecommendationsSection
+        players={recommendations}
+        favorite_teams_count={favoriteTeamsCount}
       />
 
       {/* Une section accordéon par compétition trackée — repliable, état persisté */}
