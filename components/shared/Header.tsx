@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { signOut } from '@/app/(auth)/actions';
 import { HeaderSearchBox } from '@/components/shared/HeaderSearchBox';
@@ -26,12 +27,19 @@ export async function Header() {
       style={{ backgroundColor: 'oklch(0.16 0.025 255 / 0.85)' }}
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2.5">
           <span
             className="bg-primary inline-block size-2.5 rounded-full shadow-[0_0_12px_var(--primary)]"
             aria-hidden
           />
-          <span className="text-base font-semibold tracking-tight">Tactuo</span>
+          <Image
+            src="/logo.png"
+            alt="Tactuo"
+            width={120}
+            height={66}
+            className="h-7 w-auto"
+            priority
+          />
         </Link>
 
         <div className="flex flex-1 items-center justify-end gap-3">

@@ -41,11 +41,20 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} — Analyse foot augmentée par l'IA`,
     description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/logo.png',
+        width: 1024,
+        height: 564,
+        alt: 'Tactuo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${SITE_NAME} — Analyse foot augmentée par l'IA`,
     description: SITE_DESCRIPTION,
+    images: ['/logo.png'],
   },
   robots: {
     index: true,
