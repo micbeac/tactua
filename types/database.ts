@@ -500,6 +500,12 @@ export type Database = {
           plan: string
           updated_at: string
           username: string | null
+          is_admin: boolean
+          subscription_status: 'free' | 'trial' | 'paid' | 'admin_grant' | 'suspended'
+          subscription_expires_at: string | null
+          subscription_notes: string | null
+          signup_ref_code: string | null
+          last_seen_at: string | null
         }
         Insert: {
           created_at?: string
@@ -509,6 +515,12 @@ export type Database = {
           plan?: string
           updated_at?: string
           username?: string | null
+          is_admin?: boolean
+          subscription_status?: 'free' | 'trial' | 'paid' | 'admin_grant' | 'suspended'
+          subscription_expires_at?: string | null
+          subscription_notes?: string | null
+          signup_ref_code?: string | null
+          last_seen_at?: string | null
         }
         Update: {
           created_at?: string
@@ -518,8 +530,187 @@ export type Database = {
           plan?: string
           updated_at?: string
           username?: string | null
+          is_admin?: boolean
+          subscription_status?: 'free' | 'trial' | 'paid' | 'admin_grant' | 'suspended'
+          subscription_expires_at?: string | null
+          subscription_notes?: string | null
+          signup_ref_code?: string | null
+          last_seen_at?: string | null
         }
         Relationships: []
+      }
+      email_templates: {
+        Row: {
+          id: number
+          key: string
+          subject: string
+          body_md: string
+          description: string | null
+          variables: Json
+          is_active: boolean
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          key: string
+          subject: string
+          body_md: string
+          description?: string | null
+          variables?: Json
+          is_active?: boolean
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          key?: string
+          subject?: string
+          body_md?: string
+          description?: string | null
+          variables?: Json
+          is_active?: boolean
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      partners: {
+        Row: {
+          id: number
+          name: string
+          slug: string
+          email: string | null
+          notes: string | null
+          commission_pct: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          slug: string
+          email?: string | null
+          notes?: string | null
+          commission_pct?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          slug?: string
+          email?: string | null
+          notes?: string | null
+          commission_pct?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          id: number
+          code: string
+          discount_type: 'percent' | 'fixed_eur'
+          discount_value: number
+          partner_id: number | null
+          max_uses: number | null
+          used_count: number
+          expires_at: string | null
+          is_active: boolean
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          code: string
+          discount_type: 'percent' | 'fixed_eur'
+          discount_value: number
+          partner_id?: number | null
+          max_uses?: number | null
+          used_count?: number
+          expires_at?: string | null
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          code?: string
+          discount_type?: 'percent' | 'fixed_eur'
+          discount_value?: number
+          partner_id?: number | null
+          max_uses?: number | null
+          used_count?: number
+          expires_at?: string | null
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      partner_referrals: {
+        Row: {
+          id: number
+          partner_id: number
+          user_id: string
+          promo_code_id: number | null
+          signed_up_at: string
+          became_paying_at: string | null
+          amount_paid_eur: number | null
+          commission_due_eur: number | null
+          notes: string | null
+        }
+        Insert: {
+          id?: number
+          partner_id: number
+          user_id: string
+          promo_code_id?: number | null
+          signed_up_at?: string
+          became_paying_at?: string | null
+          amount_paid_eur?: number | null
+          commission_due_eur?: number | null
+          notes?: string | null
+        }
+        Update: {
+          id?: number
+          partner_id?: number
+          user_id?: string
+          promo_code_id?: number | null
+          signed_up_at?: string
+          became_paying_at?: string | null
+          amount_paid_eur?: number | null
+          commission_due_eur?: number | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_match_analysis_events: {
         Row: {

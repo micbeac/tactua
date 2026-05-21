@@ -10,6 +10,16 @@ export async function Header() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle();
+    isAdmin = Boolean(profile?.is_admin);
+  }
+
   return (
     <header
       className="border-border sticky top-0 z-30 border-b backdrop-blur"
@@ -70,6 +80,14 @@ export async function Header() {
 
             {user ? (
               <div className="flex items-center gap-2 pl-2">
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="bg-primary/15 text-primary hover:bg-primary/25 hidden rounded-md px-2 py-1.5 text-xs font-semibold tracking-wide uppercase sm:inline-block"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <Link
                   href="/account/notifications"
                   className="text-muted-foreground hover:text-foreground hidden rounded-md px-2 py-1.5 text-xs sm:inline-block"

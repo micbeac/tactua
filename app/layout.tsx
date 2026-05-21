@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
+import { RefCapture } from '@/components/shared/RefCapture';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import './globals.css';
 
@@ -75,6 +76,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
+        <RefCapture />
         <Header />
         <div className="flex-1">{children}</div>
         <Footer />
