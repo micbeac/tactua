@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { ArrowLeftRight, Swords } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { TeamHistoryCompareSection } from '@/components/compare/TeamHistoryCompare';
 import { TeamSelector } from '@/components/compare/TeamSelector';
 import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import { getTeamCompare } from '@/lib/data/team-compare';
+import { getTeamHistoryCompare } from '@/lib/data/team-history-compare';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
 
@@ -29,10 +31,13 @@ export default async function CompareTeamsPage({
 
   const supabase = await createClient();
 
-  const compare =
+  const [compare, history] =
     teamAId && teamBId
-      ? await getTeamCompare(supabase, teamAId, teamBId)
-      : null;
+      ? await Promise.all([
+          getTeamCompare(supabase, teamAId, teamBId),
+          getTeamHistoryCompare(supabase, teamAId, teamBId),
+        ])
+      : [null, null];
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
@@ -252,6 +257,15 @@ export default async function CompareTeamsPage({
                 })}
               </div>
             </section>
+          )}
+
+          {/* Historique multi-saisons */}
+          {history && (
+            <TeamHistoryCompareSection
+              team_a_name={compare.team_a.name}
+              team_b_name={compare.team_b.name}
+              data={history}
+            />
           )}
 
           {/* H2H récap */}

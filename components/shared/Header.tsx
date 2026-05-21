@@ -39,13 +39,33 @@ export async function Header() {
             >
               Comparer
             </Link>
+            <Link
+              href="/precision"
+              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
+            >
+              Précision IA
+            </Link>
+            <Link
+              href="/quiz"
+              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
+            >
+              Quiz
+            </Link>
             {user && (
-              <Link
-                href="/favoris"
-                className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5"
-              >
-                Favoris
-              </Link>
+              <>
+                <Link
+                  href="/favoris"
+                  className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5"
+                >
+                  Favoris
+                </Link>
+                <Link
+                  href="/account/historique"
+                  className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
+                >
+                  Historique
+                </Link>
+              </>
             )}
 
             {user ? (

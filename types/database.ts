@@ -521,6 +521,74 @@ export type Database = {
         }
         Relationships: []
       }
+      user_match_analysis_events: {
+        Row: {
+          id: number
+          user_id: string
+          match_id: number
+          analysis_type: 'pre_match' | 'post_match'
+          action: 'generated' | 'refreshed' | 'viewed'
+          at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          match_id: number
+          analysis_type: 'pre_match' | 'post_match'
+          action: 'generated' | 'refreshed' | 'viewed'
+          at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          match_id?: number
+          analysis_type?: 'pre_match' | 'post_match'
+          action?: 'generated' | 'refreshed' | 'viewed'
+          at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_match_analysis_events_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_quiz_attempts: {
+        Row: {
+          id: number
+          user_id: string
+          quiz_day: string
+          score: number
+          total_questions: number
+          correct_answers: number
+          details_json: Json
+          completed_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          quiz_day: string
+          score: number
+          total_questions: number
+          correct_answers: number
+          details_json?: Json
+          completed_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          quiz_day?: string
+          score?: number
+          total_questions?: number
+          correct_answers?: number
+          details_json?: Json
+          completed_at?: string
+        }
+        Relationships: []
+      }
       team_narratives: {
         Row: {
           id: number

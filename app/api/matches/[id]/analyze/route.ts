@@ -401,6 +401,16 @@ export async function POST(
             model,
           );
         }
+
+        // Log l'événement (skip si mode what-if non-sauvé)
+        if (shouldSave) {
+          await supabase.from('user_match_analysis_events').insert({
+            user_id: user.id,
+            match_id: m.id,
+            analysis_type: 'pre_match',
+            action: existing ? 'refreshed' : 'generated',
+          });
+        }
         return NextResponse.json({
           was_cached: false,
           mode: 'deep',
@@ -453,6 +463,12 @@ export async function POST(
       });
 
       await upsertAnalysis(supabase, m.id, 'pre_match', analysis, model);
+      await supabase.from('user_match_analysis_events').insert({
+        user_id: user.id,
+        match_id: m.id,
+        analysis_type: 'pre_match',
+        action: existing ? 'refreshed' : 'generated',
+      });
 
       return NextResponse.json({
         was_cached: false,
@@ -517,6 +533,12 @@ export async function POST(
     });
 
     await upsertAnalysis(supabase, m.id, 'post_match', analysis, model);
+    await supabase.from('user_match_analysis_events').insert({
+      user_id: user.id,
+      match_id: m.id,
+      analysis_type: 'post_match',
+      action: existing ? 'refreshed' : 'generated',
+    });
 
     return NextResponse.json({
       was_cached: false,

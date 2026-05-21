@@ -18,6 +18,7 @@ import {
   getMatchTeamStats,
   getTeamForm,
 } from '@/lib/data/match';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type {
   DeepPreMatchAnalysis,
@@ -198,6 +199,38 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
+
+  // Tracking passif : log un "viewed" si user logged-in et qu'une analyse existe.
+  // Throttle : un seul event "viewed" par user/match/type/jour (anti-spam).
+  // Le write passe par admin client (table protégée par RLS write).
+  if (user && (preAnalysis || postAnalysis)) {
+    const admin = createAdminClient();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const toLog: Array<{ analysis_type: 'pre_match' | 'post_match' }> = [];
+    if (preAnalysis) toLog.push({ analysis_type: 'pre_match' });
+    if (postAnalysis) toLog.push({ analysis_type: 'post_match' });
+
+    await Promise.all(
+      toLog.map(async ({ analysis_type }) => {
+        const { data: recent } = await admin
+          .from('user_match_analysis_events')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('match_id', matchId)
+          .eq('analysis_type', analysis_type)
+          .gte('at', oneDayAgo)
+          .limit(1);
+        if ((recent ?? []).length === 0) {
+          await admin.from('user_match_analysis_events').insert({
+            user_id: user.id,
+            match_id: matchId,
+            analysis_type,
+            action: 'viewed',
+          });
+        }
+      }),
+    );
+  }
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
