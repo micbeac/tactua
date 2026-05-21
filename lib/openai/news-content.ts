@@ -8,7 +8,7 @@
 // du contexte Tactuo (forme récente, position, prochain match) pour être
 // original et utile aux LLM extractors / Google AI Overviews.
 
-import { DEFAULT_MODEL, getOpenAI } from './client';
+import { DEFAULT_MODEL, getOpenAI } from './client.ts';
 
 const SCHEMA = {
   type: 'object',
