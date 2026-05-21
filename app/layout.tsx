@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
@@ -65,14 +64,15 @@ export default function RootLayout({
     >
       <head>
         {/* Privacy-friendly analytics by Plausible */}
-        <Script
+        <script
           async
           src="https://plausible.io/js/pa-QTle0QQknVnVhH2ifUMyI.js"
-          strategy="afterInteractive"
         />
-        <Script id="plausible-init" strategy="afterInteractive">
-          {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`}
-        </Script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`,
+          }}
+        />
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <Header />
