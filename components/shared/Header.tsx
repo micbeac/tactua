@@ -44,9 +44,13 @@ export async function Header() {
 
             {user ? (
               <div className="flex items-center gap-2 pl-2">
-                <span className="text-muted-foreground hidden text-xs sm:inline">
+                <Link
+                  href="/account/notifications"
+                  className="text-muted-foreground hover:text-foreground hidden rounded-md px-2 py-1.5 text-xs sm:inline-block"
+                  title="Préférences notifications"
+                >
                   {user.email}
-                </span>
+                </Link>
                 <form action={signOut}>
                   <Button type="submit" variant="ghost" size="sm">
                     Déconnexion
