@@ -25,8 +25,10 @@ import type { Database } from '../types/database.ts';
 type PlayerUpdate = Database['public']['Tables']['players']['Update'];
 
 const DAILY_LIMIT = Number(process.env.BACKFILL_LIMIT ?? 2000);
-const CONCURRENCY = Math.max(1, Math.min(5, Number(process.env.BACKFILL_CONCURRENCY ?? 2)));
+const CONCURRENCY = Math.max(1, Math.min(5, Number(process.env.BACKFILL_CONCURRENCY ?? 1)));
 const OFFSET = Number(process.env.BACKFILL_OFFSET ?? 0);
+const PER_PLAYER_DELAY_MS = Number(process.env.BACKFILL_DELAY_MS ?? 500);
+const MAX_RETRIES = 4;
 
 const supabase = createAdminClient();
 
@@ -40,12 +42,39 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Retry une fonction qui peut throw 429. Backoff exponentiel : 1s, 2s, 4s, 8s. */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      const is429 = /429|rateLimit|Too many requests/i.test(msg);
+      if (!is429 || attempt === MAX_RETRIES) throw e;
+      const waitMs = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s, 8s
+      console.log(`    ⏳ 429 sur ${label}, retry dans ${waitMs}ms (essai ${attempt + 1}/${MAX_RETRIES})`);
+      await sleep(waitMs);
+    }
+  }
+  throw lastErr;
+}
+
 async function processOne(t: Target): Promise<{ ok: boolean; error?: string }> {
   try {
-    const [profile, transfers] = await Promise.all([
-      fetchPlayerProfile(t.af_id),
-      fetchPlayerTransfers(t.af_id),
-    ]);
+    // Sequentiel (pas Promise.all) pour reduire la pression sur l'API
+    const profile = await withRetry(
+      () => fetchPlayerProfile(t.af_id),
+      `profile ${t.af_id}`,
+    );
+    const transfers = await withRetry(
+      () => fetchPlayerTransfers(t.af_id),
+      `transfers ${t.af_id}`,
+    );
 
     const updates: PlayerUpdate = {
       // On stocke toujours quelque chose pour transfers_json (même tableau vide)
@@ -130,8 +159,8 @@ async function main() {
         errors++;
         console.error(`  ✗ [w${idx}] ${t.name} (AF ${t.af_id}) :`, res.error);
       }
-      // Petit délai pour éviter les bursts (AF Pro limite ~10 req/s)
-      await sleep(150);
+      // Délai entre joueurs (AF Pro limite ~450 req/min ≈ 7.5/sec)
+      await sleep(PER_PLAYER_DELAY_MS);
     }
   }
 
