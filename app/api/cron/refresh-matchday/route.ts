@@ -25,9 +25,12 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-const PRE_KICKOFF_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h avant
-const POST_KICKOFF_WINDOW_MS = 3 * 60 * 60 * 1000; // 3h après (couvre les prolongations CDM)
+const PRE_KICKOFF_WINDOW_MS = 3 * 60 * 60 * 1000; // 3h avant (au lieu de 24h)
+const POST_KICKOFF_WINDOW_MS = 3 * 60 * 60 * 1000; // 3h après (couvre prolongations CDM)
 const MAX_ENRICH_PER_RUN = 10;
+// Si aucun match dans cette fenêtre étendue, on peut skip total : pas
+// besoin de hit AF/FD pour rien.
+const ACTIVITY_WINDOW_MS = 30 * 60 * 1000; // 30min : matchs imminents
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -47,17 +50,6 @@ export async function GET(request: Request) {
     .lte('kickoff_at', upperBound)
     .order('kickoff_at', { ascending: true });
 
-  // Tri : on traite les matchs live EN PREMIER, puis les imminents, puis les autres.
-  // Sécurise le quota : si on a 10 matchs live + 5 imminents, les lives sont prioritaires.
-  if (pending) {
-    pending.sort((a, b) => {
-      const aLive = a.status === 'live' ? 0 : 1;
-      const bLive = b.status === 'live' ? 0 : 1;
-      if (aLive !== bLive) return aLive - bLive;
-      return new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime();
-    });
-  }
-
   if (queryErr) {
     console.error('[cron:refresh-matchday] query error', queryErr);
     return NextResponse.json(
@@ -66,9 +58,54 @@ export async function GET(request: Request) {
     );
   }
 
+  // EARLY EXIT 1 : Aucun match dans la fenêtre → on n'a rien à faire,
+  // pas d'appel AF/FD du tout. Économise massivement le quota en periode
+  // creuse (matin, nuit, jours sans match).
+  if (!pending || pending.length === 0) {
+    return NextResponse.json({
+      ok: true,
+      stats: { candidates: 0, skipped: 'no_matches_in_window' },
+    });
+  }
+
+  // EARLY EXIT 2 : Aucun match live ET aucun match dans les 30 min → on
+  // peut tout skip aussi. Les seuls candidats sont des matchs scheduled
+  // déjà enrichis ou des finished qui n'ont plus rien à apprendre.
+  const hasLive = pending.some((m) => m.status === 'live');
+  const hasImminent = pending.some(
+    (m) =>
+      m.status === 'scheduled' &&
+      new Date(m.kickoff_at).getTime() - now < ACTIVITY_WINDOW_MS,
+  );
+  // On garde aussi les matchs "récemment finished" pour rattraper la
+  // dernière update post-match (mais sans cycler à chaque tick) :
+  // on les traite UNE FOIS post-match (le check alreadyStatsSet gère ça).
+  const hasFreshlyFinished = pending.some(
+    (m) =>
+      m.status === 'finished' &&
+      now - new Date(m.kickoff_at).getTime() < POST_KICKOFF_WINDOW_MS,
+  );
+  if (!hasLive && !hasImminent && !hasFreshlyFinished) {
+    return NextResponse.json({
+      ok: true,
+      stats: {
+        candidates: pending.length,
+        skipped: 'no_live_no_imminent_no_fresh',
+      },
+    });
+  }
+
+  // Tri : on traite les matchs live EN PREMIER, puis les imminents, puis les autres.
+  pending.sort((a, b) => {
+    const aLive = a.status === 'live' ? 0 : 1;
+    const bLive = b.status === 'live' ? 0 : 1;
+    if (aLive !== bLive) return aLive - bLive;
+    return new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime();
+  });
+
   type CronError = { match_id: number; step: string; message: string };
   const stats = {
-    candidates: pending?.length ?? 0,
+    candidates: pending.length,
     refreshed: 0,
     enriched: 0,
     enriched_live: 0,
