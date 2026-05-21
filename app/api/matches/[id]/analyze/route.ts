@@ -155,9 +155,10 @@ export async function POST(
     );
   }
 
-  // Cache check
+  // Cache check — bypass en mode what-if (exclusions actives) car le résultat
+  // dépend de la sélection live de l'utilisateur, pas du cache canonique.
   const existing = await getAnalysis(supabase, matchId, type);
-  if (existing && !force) {
+  if (existing && !force && excludedPlayerIds.length === 0) {
     // Pour pre_match, regen si compo confirmée arrivée APRÈS la dernière analyse
     let shouldRegen = false;
     if (type === 'pre_match') {
