@@ -10,6 +10,10 @@ import {
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import {
+  MatchTeamsNewsSection,
+  type MatchNewsItem,
+} from '@/components/match/MatchTeamsNewsSection';
 import { buildSportsEventJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { getAnalysis } from '@/lib/data/analysis';
 import { isFavorite } from '@/lib/data/favorites';
@@ -20,6 +24,7 @@ import {
 } from '@/lib/data/match';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { teamHref } from '@/lib/url';
 import type {
   DeepPreMatchAnalysis,
   PostMatchAnalysis,
@@ -200,6 +205,41 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
 
+  // Dernières news pour les 2 équipes (maillage interne + valeur pour le lecteur)
+  const teamIdsForNews = [homeId, awayId].filter((id): id is number => id != null);
+  const newsByTeam = new Map<number, MatchNewsItem[]>();
+  if (teamIdsForNews.length > 0) {
+    const { data: newsRows } = await supabase
+      .from('team_narratives')
+      .select('id, team_id, title, slug, ai_summary, ai_content, scraped_at')
+      .in('team_id', teamIdsForNews)
+      .order('scraped_at', { ascending: false })
+      .limit(20);
+    type Row = {
+      id: number;
+      team_id: number;
+      title: string;
+      slug: string | null;
+      ai_summary: string | null;
+      ai_content: string | null;
+      scraped_at: string;
+    };
+    for (const r of (newsRows ?? []) as Row[]) {
+      const list = newsByTeam.get(r.team_id) ?? [];
+      if (list.length < 3) {
+        list.push({
+          id: r.id,
+          title: r.title,
+          slug: r.slug,
+          ai_summary: r.ai_summary,
+          scraped_at: r.scraped_at,
+          has_ai_content: Boolean(r.ai_content),
+        });
+        newsByTeam.set(r.team_id, list);
+      }
+    }
+  }
+
   // Tracking passif : log un "viewed" si user logged-in et qu'une analyse existe.
   // Throttle : un seul event "viewed" par user/match/type/jour (anti-spam).
   // Le write passe par admin client (table protégée par RLS write).
@@ -379,6 +419,35 @@ export default async function MatchPage({ params }: MatchPageParams) {
           away_stats={awayStats}
         />
       )}
+
+      <MatchTeamsNewsSection
+        home={
+          match.home_team && homeId != null
+            ? {
+                id: homeId,
+                name: match.home_team.name,
+                slug: teamHref(homeId, match.home_team.name).replace(
+                  '/teams/',
+                  '',
+                ),
+                items: newsByTeam.get(homeId) ?? [],
+              }
+            : null
+        }
+        away={
+          match.away_team && awayId != null
+            ? {
+                id: awayId,
+                name: match.away_team.name,
+                slug: teamHref(awayId, match.away_team.name).replace(
+                  '/teams/',
+                  '',
+                ),
+                items: newsByTeam.get(awayId) ?? [],
+              }
+            : null
+        }
+      />
     </main>
   );
 }
