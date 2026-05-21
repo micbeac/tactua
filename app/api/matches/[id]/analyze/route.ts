@@ -313,6 +313,7 @@ export async function POST(
                 return true;
               });
               if (transferredOut.length > 0) {
+                ctx.transferred_out = transferredOut;
                 console.log(
                   `[analyze ${m.id}] retire ${transferredOut.length} joueur(s) transferes : ${transferredOut.join(', ')}`,
                 );

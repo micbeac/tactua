@@ -178,6 +178,9 @@ export type DeepTeamContext = {
   active_injuries: Array<{ player_name: string; reason: string | null }>;
   // XI titulaire si dispo (sinon vide)
   starting_eleven: string[];
+  /** Joueurs qui ont joué pour cette équipe cette saison mais sont
+   *  partis au mercato. L'IA doit explicitement NE PAS les mentionner. */
+  transferred_out?: string[];
 };
 
 export type RecentNarrative = {
@@ -234,6 +237,12 @@ Règles :
   * Si l'actu mentionne des matchs récents perdus/gagnés, intègre-les dans la lecture de la forme ("La défaite en Ligue Europa s'ajoute aux X défaites de la série…").
   * Si l'actu n'est PAS pertinente pour ce match précis, ignore-la — mais évite ce cas autant que possible, il y a toujours un angle.
 
+- RÈGLE CRITIQUE — INTÉGRITÉ DES JOUEURS :
+  * Tu ne peux mentionner QUE des joueurs présents dans "Top performers" OU "XI titulaire annoncé" OU "Indisponibles" pour leur équipe respective.
+  * Si une ligne "⚠ NE PAS MENTIONNER" est fournie pour une équipe, ces joueurs sont PARTIS AU MERCATO et ne jouent plus pour cette équipe. Tu ne dois JAMAIS les citer comme acteurs du match à venir.
+  * N'invente AUCUN nom de joueur, même si tu penses connaître l'effectif. Tes connaissances peuvent être dépassées par rapport au mercato.
+  * En cas de doute sur un joueur, utilise un terme générique ("l'attaquant", "le milieu créatif", "la défense").
+
 Reste mesuré, c'est de l'analyse pas du pari sportif.`;
 
 function fmtSquad(squad: string[]): string {
@@ -287,7 +296,11 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Formation principale : ${t.primary_formation ?? '—'}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
-- XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}`.trim();
+- XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${
+    t.transferred_out && t.transferred_out.length > 0
+      ? `\n- ⚠ NE PAS MENTIONNER (partis au mercato, ne jouent plus pour cette équipe) : ${t.transferred_out.join(', ')}`
+      : ''
+  }`.trim();
 
   const h2hLines =
     ctx.head_to_head.length === 0
