@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { LandingCoverage } from '@/components/landing/LandingCoverage';
 import { LandingDemo } from '@/components/landing/LandingDemo';
 import { LandingFAQ } from '@/components/landing/LandingFAQ';
@@ -203,68 +204,18 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Une section par compétition trackée */}
-      {competitionMatches.map((c) => (
-        <CompetitionSection
-          key={c.id}
-          label={c.label}
-          flag={c.flag}
-          code={c.code}
-          matches={c.matches}
-        />
-      ))}
+      {/* Une section accordéon par compétition trackée — repliable, état persisté */}
+      <div className="space-y-3">
+        {competitionMatches.map((c) => (
+          <CompetitionAccordion
+            key={c.id}
+            code={c.code}
+            label={c.label}
+            flag={c.flag}
+            matches={c.matches.map(toCardProps)}
+          />
+        ))}
+      </div>
     </main>
-  );
-}
-
-function CompetitionSection({
-  label,
-  flag,
-  code,
-  matches,
-}: {
-  label: string;
-  flag: string;
-  code: string;
-  matches: MatchRow[];
-}) {
-  return (
-    <section className="mb-12">
-      <header className="bg-primary/10 border-primary/20 relative mb-4 overflow-hidden rounded-xl border px-4 py-3">
-        {/* Halo léger pour homogénéité avec les autres headers */}
-        <div className="bg-primary/15 pointer-events-none absolute -top-8 -right-8 size-32 rounded-full blur-2xl" />
-        <div className="relative flex items-end justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <span aria-hidden className="text-xl">
-              {flag}
-            </span>
-            {label}
-          </h2>
-          <Link
-            href={`/competitions/${code}`}
-            className="text-muted-foreground hover:text-foreground text-xs underline"
-          >
-            Voir tout
-          </Link>
-        </div>
-      </header>
-      {matches.length === 0 ? (
-        <EmptyState label={`Aucun match ${label} à venir.`} />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {matches.map((m) => (
-            <MatchCard key={m.id} {...toCardProps(m)} />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function EmptyState({ label }: { label: string }) {
-  return (
-    <div className="bg-card text-muted-foreground border-border rounded-xl border p-6 text-center text-sm">
-      {label}
-    </div>
   );
 }
