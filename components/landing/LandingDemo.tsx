@@ -3,49 +3,77 @@
 import { motion, useInView, useScroll, useTransform } from 'motion/react';
 import { useRef } from 'react';
 import {
-  Sparkles,
-  TrendingUp,
-  Goal,
-  Shield,
   Activity,
   AlertTriangle,
-  Users,
-  Trophy,
   BarChart3,
+  Goal,
+  Shield,
+  Sparkles,
   Star,
+  Swords,
+  TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react';
+import { FormationPitch } from '@/components/match/FormationPitch';
+import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 
-const PROBABILITIES = [
-  { label: 'FC Internazionale', value: 65, color: 'bg-primary' },
-  { label: 'Match nul', value: 20, color: 'bg-muted-foreground/60' },
-  { label: 'Bologna FC 1909', value: 15, color: 'bg-primary/70' },
-];
+// ============================================================================
+// Données mockées — reflète exactement la sortie réelle d'une analyse deep
+// (DeepPreMatchAnalysis + MatchRichData). Match : Bologna - Inter.
+// ============================================================================
+
+const PREDICTION: {
+  summary: string;
+  scoreline_guess: string;
+  probabilities: { home_win: number; draw: number; away_win: number };
+  btts: 'yes' | 'no';
+  btts_reason: string;
+  over_2_5: 'yes' | 'no';
+  over_2_5_reason: string;
+  confidence: 'low' | 'medium' | 'high';
+} = {
+  summary:
+    "L'Inter aborde ce déplacement à Bologne en favori clair. Leur supériorité statistique se traduit autant à l'avant qu'en défense, et la dynamique récente confirme la hiérarchie. Bologne reste capable d'inquiéter à domicile mais doit composer avec des absences qui pèsent.",
+  scoreline_guess: '0 - 2',
+  probabilities: { home_win: 15, draw: 20, away_win: 65 },
+  btts: 'no',
+  btts_reason: '18 clean sheets cette saison côté Inter, Bologne muet 11 fois.',
+  over_2_5: 'yes',
+  over_2_5_reason: 'Inter cumule 2,3 buts/match cette saison, et 4 des 5 derniers ont dépassé 2,5 buts.',
+  confidence: 'high',
+};
 
 const SCENARIOS = [
   {
-    n: 1,
-    title: 'Domination de l’Inter, victoire confortable',
-    likelihood: 'élevée',
-    color: 'border-primary/30 bg-primary/5',
-    badge: 'text-primary',
+    title: 'Domination Inter, but tardif des visiteurs',
+    narrative:
+      "Inter contrôle la possession dès l'entame et étouffe les sorties de balle adverses. Bologne tient le 0-0 jusqu'à la mi-temps mais cède sur un débordement de Dimarco. Lautaro double la mise dans le money time.",
+    likelihood: 'élevée' as const,
   },
   {
-    n: 2,
-    title: 'Match disputé, Bologne sur le fil',
-    likelihood: 'moyenne',
-    color: 'border-amber-500/30 bg-amber-500/5',
-    badge: 'text-amber-600',
+    title: "Match fermé décidé sur coup de pied arrêté",
+    narrative:
+      "Bologne défend bas et limite l'Inter à la tentative lointaine. Le match s'enlise puis bascule sur un corner pour les visiteurs. 0-1, Inter gère.",
+    likelihood: 'moyenne' as const,
   },
   {
-    n: 3,
-    title: 'Match nul avec occasions manquées',
-    likelihood: 'faible',
-    color: 'border-border bg-muted/40',
-    badge: 'text-muted-foreground',
+    title: 'Bologne réagit, partage des points',
+    narrative:
+      "Orsolini s'allume tôt et trouve la lucarne, mettant Bologne devant. L'Inter égalise rapidement et la fin de match s'équilibre. Nul logique.",
+    likelihood: 'faible' as const,
   },
 ];
 
-const STATS_COMPARE = [
+const DATA_INSIGHT =
+  "Le différentiel offensif est massif (+92 % de buts pour l'Inter) mais le facteur déterminant reste la fragilité défensive bolognaise à domicile (1,5 but encaissé/match). Les indisponibles côté maison amplifient ce déséquilibre.";
+
+const STATS_COMPARE: Array<{
+  label: string;
+  home: string;
+  away: string;
+  advantage: 'home' | 'away' | 'equal';
+}> = [
   { label: 'Buts/match (saison)', home: '1.2', away: '2.3', advantage: 'away' },
   { label: 'Buts encaissés/match', home: '1.5', away: '0.9', advantage: 'away' },
   { label: 'Clean sheets', home: '8', away: '18', advantage: 'away' },
@@ -53,43 +81,128 @@ const STATS_COMPARE = [
   { label: 'Possession moyenne', home: '47 %', away: '58 %', advantage: 'away' },
 ];
 
-const KEY_PLAYERS = {
-  home: [
-    { name: 'R. Orsolini', pos: 'AD', stat: '10 buts · 8 passes déc.' },
-    { name: 'L. Ferguson', pos: 'MC', stat: '7 buts · note 7.2' },
-  ],
-  away: [
-    { name: 'Lautaro Martínez', pos: 'BU', stat: '17 buts · capitaine' },
-    { name: 'N. Barella', pos: 'MC', stat: '9 passes déc. · note 7.4' },
-  ],
-};
-
-// Graphe comparatif (vue Visifoot) : barres verticales pour 5 dimensions.
-const RADAR_CATEGORIES = [
+const RADAR_DIMS = [
   { label: 'Attaque', home: 58, away: 82 },
   { label: 'Défense', home: 62, away: 88 },
   { label: 'Forme', home: 45, away: 86 },
-  { label: 'Discipline', home: 71, away: 69 },
+  { label: 'Régularité', home: 71, away: 79 },
   { label: 'Globale', home: 59, away: 82 },
 ];
 
-// Forme des joueurs clés : note sur les 5 derniers matchs
-const PLAYER_FORM = [
-  { name: 'R. Orsolini', team: 'home', ratings: [7.2, 6.5, 7.8, 7.4, 6.1] },
-  { name: 'Lautaro Martínez', team: 'away', ratings: [8.4, 7.6, 8.1, 7.2, 8.6] },
-  { name: 'L. Ferguson', team: 'home', ratings: [6.8, 7.0, 6.4, 6.9, 6.5] },
-  { name: 'N. Barella', team: 'away', ratings: [7.4, 7.8, 7.1, 8.0, 7.4] },
-];
+const FORM_HOME: ('W' | 'D' | 'L')[] = ['W', 'W', 'D', 'L', 'L'];
+const FORM_AWAY: ('W' | 'D' | 'L')[] = ['W', 'D', 'W', 'W', 'D'];
 
-function ratingColor(r: number): string {
-  if (r >= 7.5) return 'bg-primary text-primary-foreground';
-  if (r >= 6.8) return 'bg-emerald-500/30 text-emerald-300';
-  if (r >= 6.0) return 'bg-amber-500/30 text-amber-300';
-  return 'bg-destructive/30 text-destructive';
-}
+const H2H = { home_wins: 3, draws: 4, away_wins: 8, total: 15 };
 
-const FORM_HOME = ['W', 'W', 'D', 'L', 'L'];
-const FORM_AWAY = ['W', 'D', 'W', 'W', 'D'];
+const FORMATIONS = { home: '4-2-3-1', away: '3-5-2' };
+
+const TOP_PLAYERS = {
+  home: [
+    {
+      name: 'R. Orsolini',
+      position: 'AD',
+      is_captain: false,
+      appearances: 31,
+      goals: 10,
+      assists: 8,
+      rating: 7.1,
+      key_passes: 47,
+    },
+    {
+      name: 'L. Ferguson',
+      position: 'MC',
+      is_captain: true,
+      appearances: 28,
+      goals: 7,
+      assists: 4,
+      rating: 7.0,
+      key_passes: 32,
+    },
+  ],
+  away: [
+    {
+      name: 'Lautaro Martínez',
+      position: 'BU',
+      is_captain: true,
+      appearances: 34,
+      goals: 17,
+      assists: 5,
+      rating: 7.6,
+      key_passes: 41,
+    },
+    {
+      name: 'N. Barella',
+      position: 'MC',
+      is_captain: false,
+      appearances: 30,
+      goals: 4,
+      assists: 9,
+      rating: 7.4,
+      key_passes: 55,
+    },
+  ],
+};
+
+const ABSENTS = {
+  home: [
+    { name: 'Calafiori', reason: 'suspendu' },
+    { name: 'Saelemaekers', reason: 'blessure cuisse' },
+    { name: 'El Azzouzi', reason: 'reprise individuelle' },
+  ],
+  away: [{ name: 'Acerbi', reason: 'blessure mollet' }],
+};
+
+const TACTICAL = {
+  home_approach:
+    "Bologne va défendre bas dans un 4-2-3-1 compact, comptant sur les transitions rapides via Orsolini sur le côté droit pour exploiter l'espace dans le dos d'Acerbi.",
+  away_approach:
+    "L'Inter prend la possession dans son 3-5-2 habituel, avec Dimarco-Dumfries qui apportent la largeur et Calhanoglu qui distribue depuis l'axe.",
+  key_battle:
+    'Lautaro Martínez vs Calafiori absent : la défense bolognaise est rebattue, ouvrant des couloirs centraux que l\'Inter sait exploiter.',
+};
+
+const FORM_NARRATIVE = {
+  home:
+    "Bologne sort d'une série mitigée (2V-1N-2D sur 5) avec deux défaites consécutives à l'extérieur. À domicile la dynamique est meilleure mais les blessures pèsent.",
+  away:
+    "L'Inter aligne 4 victoires sur les 5 derniers matchs et n'a encaissé qu'un seul but sur cette série. Confiance et automatismes en place.",
+};
+
+const KEY_PLAYERS_AI = {
+  home: [
+    {
+      name: 'R. Orsolini',
+      why: "Principal danger offensif, capable de débloquer sur action individuelle. Sa forme dépendra de la qualité de couverture défensive bolognaise.",
+    },
+  ],
+  away: [
+    {
+      name: 'Lautaro Martínez',
+      why: 'Capitaine et premier buteur de la saison, profitera de l\'absence de Calafiori pour attaquer la profondeur.',
+    },
+    {
+      name: 'N. Barella',
+      why: 'Récupération + projection : il dictera le tempo des transitions inter-lignes.',
+    },
+  ],
+};
+
+const WEAK_POINTS = {
+  home:
+    '11 matchs sans marquer cette saison, dont 4 à domicile. La perte de Calafiori désorganise la charnière centrale au pire moment.',
+  away:
+    "3 défaites sur 18 matchs à l'extérieur. L'Inter peut relâcher quand la victoire semble acquise et se faire surprendre en fin de rencontre.",
+};
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+const LIKELIHOOD_STYLES = {
+  élevée: { bg: 'border-primary/30 bg-primary/5', text: 'text-primary', label: 'Probabilité élevée' },
+  moyenne: { bg: 'border-amber-500/30 bg-amber-500/5', text: 'text-amber-500', label: 'Probabilité moyenne' },
+  faible: { bg: 'border-border bg-muted/40', text: 'text-muted-foreground', label: 'Probabilité faible' },
+} as const;
 
 const formColor = (r: string) =>
   r === 'W'
@@ -97,6 +210,20 @@ const formColor = (r: string) =>
     : r === 'D'
       ? 'bg-amber-500/20 text-amber-500'
       : 'bg-destructive/20 text-destructive';
+
+const ratingColor = (r: number): string => {
+  if (r >= 7.5) return 'bg-primary text-primary-foreground';
+  if (r >= 6.8) return 'bg-emerald-500/30 text-emerald-300';
+  if (r >= 6.0) return 'bg-amber-500/30 text-amber-300';
+  return 'bg-destructive/30 text-destructive';
+};
+
+const HOME = 'Bologna FC 1909';
+const AWAY = 'FC Internazionale Milano';
+
+// ============================================================================
+// Composant
+// ============================================================================
 
 export function LandingDemo() {
   const ref = useRef<HTMLDivElement>(null);
@@ -124,12 +251,12 @@ export function LandingDemo() {
             Une vraie analyse, pas une fiche de stats
           </p>
           <h2 className="mb-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Ce qu’on te livre en 15 secondes
+            Ce qu&apos;on te livre en 15 secondes
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Notre IA ne te jette pas des chiffres bruts. Elle synthétise les
-            stats détaillées des deux équipes, identifie les joueurs clés, te
-            propose plusieurs scénarios crédibles, et explique pourquoi.
+            Verdict, scénarios, probabilités, comparaison statistique, formations,
+            top joueurs, indisponibles, lecture tactique. Pas un chiffre brut sans
+            contexte.
           </p>
         </motion.div>
 
@@ -141,24 +268,13 @@ export function LandingDemo() {
           {/* Halos respirants */}
           <motion.div
             className="bg-primary/15 pointer-events-none absolute -inset-6 -z-10 rounded-3xl blur-3xl"
-            animate={{
-              scale: [1, 1.08, 1],
-              opacity: [0.5, 0.9, 0.5],
-            }}
+            animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.9, 0.5] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.div
             className="bg-emerald-400/10 pointer-events-none absolute -inset-2 -z-10 rounded-3xl blur-2xl"
-            animate={{
-              scale: [1.05, 1, 1.05],
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 0.5,
-            }}
+            animate={{ scale: [1.05, 1, 1.05], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
           />
 
           <motion.div
@@ -172,13 +288,11 @@ export function LandingDemo() {
             }}
             className="bg-card border-border space-y-7 rounded-2xl border p-6 shadow-2xl sm:p-8"
           >
-            {/* Header de la carte */}
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="text-primary size-5" aria-hidden />
-                <h3 className="text-sm font-semibold">
-                  Analyse pré-match · IA
-                </h3>
+                <h3 className="text-sm font-semibold">Analyse pré-match</h3>
               </div>
               <div className="flex items-center gap-2">
                 <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
@@ -190,11 +304,11 @@ export function LandingDemo() {
               </div>
             </div>
 
-            {/* Match en tête */}
+            {/* Match meta */}
             <div className="border-border flex items-center justify-between border-y py-4">
               <div>
                 <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                  Serie A · Journée 38 · Stadio Renato Dall’Ara
+                  Serie A · Journée 38 · Stadio Renato Dall&apos;Ara
                 </p>
                 <p className="mt-1 text-lg font-semibold sm:text-xl">
                   Bologna FC <span className="text-muted-foreground">vs</span>{' '}
@@ -206,53 +320,210 @@ export function LandingDemo() {
               </p>
             </div>
 
-            {/* === Bandeau de stats clés comparées === */}
+            {/* === 1. VERDICT === */}
+
+            {/* Prédiction synthétique */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.15, duration: 0.5 }}
+              className="border-primary/30 rounded-lg border border-dashed p-4"
             >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <Activity className="size-3" aria-hidden />
-                Comparaison statistique
+              <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
+                Prédiction
+              </p>
+              <p className="text-sm leading-relaxed">{PREDICTION.summary}</p>
+              <p className="text-primary mt-2 text-sm font-semibold tabular-nums">
+                Score plausible : {PREDICTION.scoreline_guess}
+              </p>
+            </motion.div>
+
+            {/* Scénarios */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.25, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
+                Scénarios possibles
+              </h4>
+              <div className="space-y-3">
+                {SCENARIOS.map((s, i) => {
+                  const style = LIKELIHOOD_STYLES[s.likelihood];
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={inView ? { opacity: 1, x: 0 } : {}}
+                      transition={{ delay: 0.4 + i * 0.12, duration: 0.4 }}
+                      className={`rounded-lg border p-4 ${style.bg}`}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">
+                          Scénario #{i + 1} — {s.title}
+                        </p>
+                        <span
+                          className={`shrink-0 text-[10px] font-semibold tracking-wide uppercase ${style.text}`}
+                        >
+                          {style.label}
+                        </span>
+                      </div>
+                      <p className="text-sm">{s.narrative}</p>
+                    </motion.div>
+                  );
+                })}
               </div>
+            </motion.div>
+
+            {/* Probabilités */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 0.7, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-2 flex items-center gap-1 text-xs font-medium tracking-wide uppercase">
+                <Trophy className="size-3.5" aria-hidden />
+                Probabilités d&apos;issue
+              </h4>
+              <div className="space-y-2">
+                {[
+                  {
+                    label: `${HOME} (dom.)`,
+                    value: PREDICTION.probabilities.home_win,
+                    color: 'bg-primary',
+                  },
+                  {
+                    label: 'Match nul',
+                    value: PREDICTION.probabilities.draw,
+                    color: 'bg-muted-foreground/60',
+                  },
+                  {
+                    label: `${AWAY} (ext.)`,
+                    value: PREDICTION.probabilities.away_win,
+                    color: 'bg-primary',
+                  },
+                ].map((row, i) => (
+                  <div key={row.label}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="truncate">{row.label}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.value}%
+                      </span>
+                    </div>
+                    <div className="bg-muted h-2 overflow-hidden rounded-full">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={inView ? { width: `${row.value}%` } : {}}
+                        transition={{ delay: 0.85 + i * 0.15, duration: 0.9, ease: 'easeOut' }}
+                        className={`h-full ${row.color}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* BTTS + Over */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.1, duration: 0.5 }}
+              className="grid gap-3 sm:grid-cols-2"
+            >
+              <div className="border-border rounded-lg border p-3">
+                <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] uppercase">
+                  <Goal className="size-3" aria-hidden />
+                  Les 2 équipes marquent
+                </p>
+                <p className="text-sm font-semibold">{PREDICTION.btts === 'yes' ? 'Oui' : 'Non'}</p>
+                <p className="text-muted-foreground mt-1 text-xs">{PREDICTION.btts_reason}</p>
+              </div>
+              <div className="border-border rounded-lg border p-3">
+                <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] uppercase">
+                  <TrendingUp className="size-3" aria-hidden />
+                  Plus de 2.5 buts
+                </p>
+                <p className="text-sm font-semibold">{PREDICTION.over_2_5 === 'yes' ? 'Oui' : 'Non'}</p>
+                <p className="text-muted-foreground mt-1 text-xs">{PREDICTION.over_2_5_reason}</p>
+              </div>
+            </motion.div>
+
+            {/* Confiance */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.25, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-2 flex items-center gap-1 text-xs font-medium tracking-wide uppercase">
+                <Shield className="size-3.5" aria-hidden />
+                Confiance de l&apos;IA
+              </h4>
+              <div className="bg-muted h-2 overflow-hidden rounded-full">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={inView ? { width: '90%' } : {}}
+                  transition={{ delay: 1.35, duration: 0.8, ease: 'easeOut' }}
+                  className="bg-primary h-full"
+                />
+              </div>
+              <p className="text-muted-foreground mt-1 text-right text-xs">Élevée</p>
+            </motion.div>
+
+            {/* Insight */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.4, duration: 0.5 }}
+              className="bg-muted/40 rounded-lg p-4"
+            >
+              <h4 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                Ce que disent les chiffres
+              </h4>
+              <p className="text-sm leading-relaxed">{DATA_INSIGHT}</p>
+            </motion.div>
+
+            {/* Séparateur */}
+            <div className="border-border border-t pt-1">
+              <p className="text-muted-foreground/60 -mb-1 text-center text-[10px] tracking-widest uppercase">
+                ◆ Données détaillées ◆
+              </p>
+            </div>
+
+            {/* === 2. DONNÉES === */}
+
+            {/* Comparaison statistique */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 1.55, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <Activity className="size-3.5" aria-hidden />
+                Comparaison statistique
+              </h4>
               <div className="border-border overflow-hidden rounded-xl border">
                 <div className="bg-muted/30 grid grid-cols-[1fr_2fr_1fr] items-center border-b px-3 py-2 text-[10px] font-semibold tracking-wide uppercase">
                   <span className="text-primary text-right">Bologna</span>
-                  <span className="text-muted-foreground text-center">
-                    Statistique
-                  </span>
+                  <span className="text-muted-foreground text-center">Statistique</span>
                   <span className="text-primary">Inter</span>
                 </div>
                 {STATS_COMPARE.map((s, i) => {
-                  const homeWin = s.advantage === 'home';
+                  const homeBest = s.advantage === 'home';
                   return (
                     <motion.div
                       key={s.label}
                       initial={{ opacity: 0, x: -10 }}
                       animate={inView ? { opacity: 1, x: 0 } : {}}
-                      transition={{ delay: 0.3 + i * 0.06, duration: 0.4 }}
+                      transition={{ delay: 1.65 + i * 0.05, duration: 0.4 }}
                       className="border-border grid grid-cols-[1fr_2fr_1fr] items-center border-b px-3 py-2.5 text-sm last:border-b-0"
                     >
-                      <span
-                        className={`text-right tabular-nums ${
-                          homeWin
-                            ? 'text-primary font-semibold'
-                            : 'text-foreground/80'
-                        }`}
-                      >
+                      <span className={`text-right tabular-nums ${homeBest ? 'text-primary font-semibold' : 'text-foreground/80'}`}>
                         {s.home}
                       </span>
                       <span className="text-muted-foreground text-center text-xs">
                         {s.label}
                       </span>
-                      <span
-                        className={`tabular-nums ${
-                          !homeWin
-                            ? 'text-primary font-semibold'
-                            : 'text-foreground/80'
-                        }`}
-                      >
+                      <span className={`tabular-nums ${!homeBest ? 'text-primary font-semibold' : 'text-foreground/80'}`}>
                         {s.away}
                       </span>
                     </motion.div>
@@ -261,136 +532,53 @@ export function LandingDemo() {
               </div>
             </motion.div>
 
-            {/* === Graphe comparatif vertical (radar dépiauté) === */}
+            {/* Radar pentagonal — le vrai composant de prod */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.4, duration: 0.5 }}
+              transition={{ delay: 1.9, duration: 0.5 }}
             >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <BarChart3 className="size-3" aria-hidden />
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <BarChart3 className="size-3.5" aria-hidden />
                 Comparaison globale
-              </div>
-              {/* Légende */}
-              <div className="mb-3 flex items-center justify-center gap-4 text-[11px]">
-                <span className="flex items-center gap-1.5">
-                  <span className="bg-primary/60 size-3 rounded-sm" />
-                  Bologna
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="bg-emerald-400 size-3 rounded-sm" />
-                  Inter
-                </span>
-              </div>
-              {/* Bars verticales */}
-              <div className="border-border bg-muted/20 grid grid-cols-5 items-end gap-3 rounded-xl border p-4">
-                {RADAR_CATEGORIES.map((cat, i) => (
-                  <div
-                    key={cat.label}
-                    className="flex flex-col items-center gap-2"
-                  >
-                    <div className="flex h-32 w-full items-end justify-center gap-1.5">
-                      {/* Barre Bologna */}
-                      <div className="relative flex h-full w-3 flex-col justify-end">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={
-                            inView ? { height: `${cat.home}%` } : { height: 0 }
-                          }
-                          transition={{
-                            delay: 0.6 + i * 0.08,
-                            duration: 0.8,
-                            ease: 'easeOut',
-                          }}
-                          className="bg-primary/60 w-full rounded-t-sm"
-                        />
-                        <motion.span
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={
-                            inView ? { opacity: 1, y: 0 } : { opacity: 0 }
-                          }
-                          transition={{ delay: 1.4 + i * 0.08, duration: 0.3 }}
-                          className="text-foreground/80 absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold tabular-nums"
-                          style={{ bottom: `${cat.home}%` }}
-                        >
-                          {cat.home}
-                        </motion.span>
-                      </div>
-                      {/* Barre Inter */}
-                      <div className="relative flex h-full w-3 flex-col justify-end">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={
-                            inView ? { height: `${cat.away}%` } : { height: 0 }
-                          }
-                          transition={{
-                            delay: 0.65 + i * 0.08,
-                            duration: 0.8,
-                            ease: 'easeOut',
-                          }}
-                          className="w-full rounded-t-sm bg-emerald-400"
-                        />
-                        <motion.span
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={
-                            inView ? { opacity: 1, y: 0 } : { opacity: 0 }
-                          }
-                          transition={{ delay: 1.45 + i * 0.08, duration: 0.3 }}
-                          className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold tabular-nums text-emerald-300"
-                          style={{ bottom: `${cat.away}%` }}
-                        >
-                          {cat.away}
-                        </motion.span>
-                      </div>
-                    </div>
-                    <span className="text-muted-foreground text-center text-[10px] font-medium">
-                      {cat.label}
-                    </span>
-                  </div>
-                ))}
+              </h4>
+              <div className="bg-muted/20 border-border rounded-xl border p-4">
+                <RichRadarPentagon
+                  dimensions={RADAR_DIMS}
+                  home_team_name={HOME}
+                  away_team_name={AWAY}
+                />
               </div>
             </motion.div>
 
-            {/* === Forme récente côte à côte === */}
+            {/* Forme récente */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.5, duration: 0.5 }}
+              transition={{ delay: 2.1, duration: 0.5 }}
             >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <TrendingUp className="size-3" aria-hidden />
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <TrendingUp className="size-3.5" aria-hidden />
                 Forme récente · 5 derniers
-              </div>
+              </h4>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { name: 'Bologna', form: FORM_HOME, label: '2V-1N-2D' },
-                  { name: 'Inter Milano', form: FORM_AWAY, label: '3V-2N-0D' },
-                ].map((t, ti) => (
-                  <div
-                    key={t.name}
-                    className="border-border rounded-lg border p-3"
-                  >
+                  { name: 'Bologna', form: FORM_HOME, bilan: '2V-1N-2D' },
+                  { name: 'Inter', form: FORM_AWAY, bilan: '3V-2N-0D' },
+                ].map((t) => (
+                  <div key={t.name} className="border-border rounded-lg border p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-semibold">{t.name}</span>
-                      <span className="text-muted-foreground text-[10px] tabular-nums">
-                        {t.label}
-                      </span>
+                      <span className="text-muted-foreground text-[10px] tabular-nums">{t.bilan}</span>
                     </div>
                     <div className="flex gap-1.5">
                       {t.form.map((r, ri) => (
-                        <motion.span
+                        <span
                           key={ri}
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={inView ? { scale: 1, opacity: 1 } : {}}
-                          transition={{
-                            delay: 0.7 + ti * 0.1 + ri * 0.06,
-                            duration: 0.3,
-                            type: 'spring',
-                          }}
                           className={`flex size-7 items-center justify-center rounded-md text-[11px] font-bold ${formColor(r)}`}
                         >
                           {r}
-                        </motion.span>
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -398,306 +586,235 @@ export function LandingDemo() {
               </div>
             </motion.div>
 
-            {/* === Ce que disent les chiffres === */}
+            {/* H2H */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="bg-muted/40 rounded-lg p-4"
+              transition={{ delay: 2.25, duration: 0.5 }}
             >
-              <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">
-                Ce que disent les chiffres
-              </p>
-              <p className="text-sm leading-relaxed">
-                L’Inter affiche une attaque plus efficace (2,3 buts/match
-                saison) et une défense solide (0,9 but encaissé/match). Bologne
-                peine à marquer à domicile (0,9 but/match) et compte 5
-                indisponibles, ce qui pèse sur son XI.
-              </p>
-            </motion.div>
-
-            {/* === Joueurs clés === */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.7, duration: 0.5 }}
-            >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <Users className="size-3" aria-hidden />
-                Joueurs clés à surveiller
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {[
-                  { team: 'Bologna', players: KEY_PLAYERS.home },
-                  { team: 'Inter Milano', players: KEY_PLAYERS.away },
-                ].map((side, si) => (
-                  <div
-                    key={side.team}
-                    className="border-border bg-muted/20 space-y-2 rounded-lg border p-3"
-                  >
-                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      {side.team}
-                    </p>
-                    {side.players.map((p, pi) => (
-                      <motion.div
-                        key={p.name}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={inView ? { opacity: 1, x: 0 } : {}}
-                        transition={{
-                          delay: 0.85 + si * 0.1 + pi * 0.07,
-                          duration: 0.35,
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="bg-primary/15 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                          {p.pos}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">
-                            {p.name}
-                          </p>
-                          <p className="text-muted-foreground truncate text-[11px]">
-                            {p.stat}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ))}
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <Swords className="size-3.5" aria-hidden />
+                Confrontations directes · {H2H.total} matchs
+              </h4>
+              <div className="border-border bg-muted/20 grid grid-cols-3 overflow-hidden rounded-lg border">
+                <div className="border-border border-r p-3 text-center">
+                  <p className="text-primary text-2xl font-bold tabular-nums">{H2H.home_wins}</p>
+                  <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">Bologna</p>
+                </div>
+                <div className="border-border border-r p-3 text-center">
+                  <p className="text-muted-foreground text-2xl font-bold tabular-nums">{H2H.draws}</p>
+                  <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">Nuls</p>
+                </div>
+                <div className="p-3 text-center">
+                  <p className="text-primary text-2xl font-bold tabular-nums">{H2H.away_wins}</p>
+                  <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">Inter</p>
+                </div>
               </div>
             </motion.div>
 
-            {/* === Forme des joueurs clés (notes 5 derniers matchs) === */}
+            {/* Formations type */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.8, duration: 0.5 }}
+              transition={{ delay: 2.4, duration: 0.5 }}
             >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <Star className="size-3" aria-hidden />
-                Forme des joueurs · notes des 5 derniers matchs
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <Users className="size-3.5" aria-hidden />
+                Formations type
+              </h4>
+              <div className="flex flex-wrap items-start justify-center gap-4">
+                <FormationPitch
+                  formation={FORMATIONS.home}
+                  team_name="Bologna"
+                  variant="primary"
+                />
+                <FormationPitch
+                  formation={FORMATIONS.away}
+                  team_name="Inter"
+                  variant="emerald"
+                />
               </div>
-              <div className="border-border bg-muted/20 overflow-hidden rounded-xl border">
-                {PLAYER_FORM.map((p, i) => {
-                  const avg =
-                    p.ratings.reduce((s, r) => s + r, 0) / p.ratings.length;
+            </motion.div>
+
+            {/* Top joueurs avec ratings */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 2.55, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <Star className="size-3.5" aria-hidden />
+                Top joueurs saison
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(['home', 'away'] as const).map((side) => {
+                  const list = side === 'home' ? TOP_PLAYERS.home : TOP_PLAYERS.away;
+                  const teamName = side === 'home' ? 'Bologna' : 'Inter';
                   return (
-                    <motion.div
-                      key={p.name}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={inView ? { opacity: 1, x: 0 } : {}}
-                      transition={{ delay: 0.95 + i * 0.08, duration: 0.4 }}
-                      className="border-border grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {p.name}
-                        </p>
-                        <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                          {p.team === 'home' ? 'Bologna' : 'Inter'}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        {p.ratings.map((r, ri) => (
-                          <motion.div
-                            key={ri}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={inView ? { scale: 1, opacity: 1 } : {}}
-                            transition={{
-                              delay: 1.1 + i * 0.08 + ri * 0.04,
-                              duration: 0.3,
-                            }}
-                            className={`flex size-7 items-center justify-center rounded-md text-[10px] font-bold tabular-nums ${ratingColor(r)}`}
-                          >
-                            {r.toFixed(1)}
-                          </motion.div>
-                        ))}
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-muted-foreground text-[9px] tracking-wide uppercase">
-                          Moy.
-                        </span>
-                        <span
-                          className={`text-sm font-bold tabular-nums ${
-                            avg >= 7.5
-                              ? 'text-primary'
-                              : avg >= 6.8
-                                ? 'text-emerald-300'
-                                : 'text-amber-300'
-                          }`}
+                    <div key={side} className="border-border bg-muted/20 rounded-lg border p-3">
+                      <p className="text-muted-foreground mb-2 text-[10px] tracking-wide uppercase">{teamName}</p>
+                      {list.map((p, pi) => (
+                        <div
+                          key={p.name}
+                          className="border-border/60 flex items-center gap-3 border-t py-2 first:border-t-0 first:pt-0"
                         >
-                          {avg.toFixed(2)}
-                        </span>
-                      </div>
-                    </motion.div>
+                          <div className="bg-primary/15 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                            {p.position}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">
+                              {p.name}
+                              {p.is_captain && <span className="text-primary ml-1.5 text-[10px] font-bold">(C)</span>}
+                            </p>
+                            <p className="text-muted-foreground truncate text-[11px]">
+                              {p.appearances} titu · {p.goals}b/{p.assists}a · {p.key_passes} passes clés
+                            </p>
+                          </div>
+                          <div className={`flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${ratingColor(p.rating)}`}>
+                            {p.rating.toFixed(1)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   );
                 })}
               </div>
             </motion.div>
 
-            {/* === Scénarios === */}
+            {/* Indisponibles */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.85, duration: 0.5 }}
+              transition={{ delay: 2.7, duration: 0.5 }}
             >
-              <p className="text-muted-foreground mb-3 text-[10px] tracking-wide uppercase">
-                Scénarios possibles
+              <h4 className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <AlertTriangle className="size-3.5" aria-hidden />
+                Indisponibles ({ABSENTS.home.length + ABSENTS.away.length})
+              </h4>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(['home', 'away'] as const).map((side) => {
+                  const list = side === 'home' ? ABSENTS.home : ABSENTS.away;
+                  const teamName = side === 'home' ? 'Bologna' : 'Inter';
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={side} className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
+                      <p className="text-muted-foreground mb-1.5 text-[10px] uppercase">{teamName}</p>
+                      <ul className="space-y-1">
+                        {list.map((p, i) => (
+                          <li key={i} className="text-xs">
+                            <span className="font-semibold">{p.name}</span>
+                            <span className="text-muted-foreground"> — {p.reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* === 3. NARRATIFS IA === */}
+
+            {/* Tactique */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 2.85, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                Tactique
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="bg-muted/40 rounded-lg p-3">
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Bologna (dom.)</p>
+                  <p className="text-sm">{TACTICAL.home_approach}</p>
+                </div>
+                <div className="bg-muted/40 rounded-lg p-3">
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Inter (ext.)</p>
+                  <p className="text-sm">{TACTICAL.away_approach}</p>
+                </div>
+              </div>
+              <p className="text-foreground mt-3 text-sm">
+                <span className="text-primary font-semibold">Duel clé : </span>
+                {TACTICAL.key_battle}
               </p>
-              <div className="space-y-2">
-                {SCENARIOS.map((s, i) => (
-                  <motion.div
-                    key={s.n}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={inView ? { opacity: 1, x: 0 } : {}}
-                    transition={{ delay: 1 + i * 0.12, duration: 0.4 }}
-                    className={`flex items-center justify-between rounded-lg border p-3 ${s.color}`}
-                  >
-                    <p className="text-sm font-semibold">
-                      Scénario #{s.n} — {s.title}
-                    </p>
-                    <span
-                      className={`shrink-0 text-[10px] font-semibold tracking-wide uppercase ${s.badge}`}
-                    >
-                      {s.likelihood}
-                    </span>
-                  </motion.div>
+            </motion.div>
+
+            {/* Lecture de la forme */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 3.0, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                Lecture de la forme
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="border-border rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Bologna</p>
+                  <p className="text-sm">{FORM_NARRATIVE.home}</p>
+                </div>
+                <div className="border-border rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Inter</p>
+                  <p className="text-sm">{FORM_NARRATIVE.away}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Joueurs à surveiller (IA) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: 3.15, duration: 0.5 }}
+            >
+              <h4 className="text-muted-foreground mb-2 flex items-center gap-1 text-xs font-medium tracking-wide uppercase">
+                <Users className="size-3.5" aria-hidden />
+                Joueurs à surveiller
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {([
+                  { label: 'Bologna', list: KEY_PLAYERS_AI.home },
+                  { label: 'Inter', list: KEY_PLAYERS_AI.away },
+                ]).map(({ label, list }) => (
+                  <div key={label}>
+                    <p className="text-muted-foreground mb-2 text-[10px] uppercase">{label}</p>
+                    <ul className="space-y-2">
+                      {list.map((p) => (
+                        <li key={p.name} className="text-sm">
+                          <span className="text-primary font-semibold">{p.name}</span> — {p.why}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
               </div>
             </motion.div>
 
-            {/* === Points faibles === */}
+            {/* Points faibles */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 1.1, duration: 0.5 }}
+              transition={{ delay: 3.3, duration: 0.5 }}
             >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <AlertTriangle className="size-3" aria-hidden />
+              <h4 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
                 Points faibles
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
-                  <p className="text-muted-foreground mb-0.5 text-[10px] uppercase">
-                    Bologna
-                  </p>
-                  <p className="text-xs">
-                    11 matchs sans marquer cette saison · 5 absences
-                  </p>
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Bologna</p>
+                  <p className="text-sm">{WEAK_POINTS.home}</p>
                 </div>
                 <div className="bg-destructive/5 border-destructive/20 rounded-lg border p-3">
-                  <p className="text-muted-foreground mb-0.5 text-[10px] uppercase">
-                    Inter Milano
-                  </p>
-                  <p className="text-xs">
-                    3 défaites sur 18 matchs à l’extérieur
-                  </p>
+                  <p className="text-muted-foreground mb-1 text-[10px] uppercase">Inter</p>
+                  <p className="text-sm">{WEAK_POINTS.away}</p>
                 </div>
               </div>
             </motion.div>
 
-            {/* === Probabilités === */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 1.25, duration: 0.5 }}
-            >
-              <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-                <Trophy className="size-3" aria-hidden />
-                Probabilités d’issue
-              </div>
-              <div className="space-y-3">
-                {PROBABILITIES.map((p, i) => (
-                  <div key={p.label}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span>{p.label}</span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {p.value}%
-                      </span>
-                    </div>
-                    <div className="bg-muted h-2 overflow-hidden rounded-full">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={inView ? { width: `${p.value}%` } : {}}
-                        transition={{
-                          delay: 1.4 + i * 0.2,
-                          duration: 0.9,
-                          ease: 'easeOut',
-                        }}
-                        className={`h-full ${p.color}`}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* === Tuiles BTTS / Over + Score plausible === */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {[
-                {
-                  icon: Goal,
-                  label: 'Les 2 marquent',
-                  value: 'Non',
-                  why: '18 clean sheets Inter.',
-                },
-                {
-                  icon: TrendingUp,
-                  label: 'Plus de 2.5 buts',
-                  value: 'Oui',
-                  why: '2,3 buts/match Inter.',
-                },
-                {
-                  icon: Trophy,
-                  label: 'Score plausible',
-                  value: '0 - 2',
-                  why: 'Cohérent avec les probas.',
-                },
-              ].map((t, i) => (
-                <motion.div
-                  key={t.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={inView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ delay: 1.9 + i * 0.1, duration: 0.4 }}
-                  className="border-border rounded-lg border p-3"
-                >
-                  <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] uppercase">
-                    <t.icon className="size-3" aria-hidden />
-                    {t.label}
-                  </div>
-                  <p className="text-base font-bold">{t.value}</p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px]">
-                    {t.why}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* === Confiance === */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={inView ? { opacity: 1 } : {}}
-              transition={{ delay: 2.2, duration: 0.5 }}
-            >
-              <div className="mb-1 flex items-center justify-between text-[10px] tracking-wide uppercase">
-                <span className="text-muted-foreground">
-                  <Shield className="mr-1 inline size-3" aria-hidden />
-                  Confiance de l’IA
-                </span>
-                <span className="text-primary font-semibold">Élevée</span>
-              </div>
-              <div className="bg-muted h-2 overflow-hidden rounded-full">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={inView ? { width: '90%' } : {}}
-                  transition={{ delay: 2.3, duration: 0.8, ease: 'easeOut' }}
-                  className="bg-primary h-full"
-                />
-              </div>
-              <p className="text-muted-foreground mt-2 text-[11px] italic">
-                Basée sur 37 matchs joués · 14 critères croisés · GPT-4o-mini
-              </p>
-            </motion.div>
+            {/* Footer démo */}
+            <p className="text-muted-foreground/70 text-right text-[10px]">
+              Démonstration · Basée sur la sortie réelle d&apos;une analyse pré-match deep · GPT-4o-mini
+            </p>
           </motion.div>
         </div>
       </div>
