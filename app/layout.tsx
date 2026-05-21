@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
+import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { RefCapture } from '@/components/shared/RefCapture';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import './globals.css';
@@ -25,6 +26,12 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   authors: [{ name: SITE_NAME }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'black-translucent',
+  },
   keywords: [
     'coupe du monde 2026',
     'analyse foot',
@@ -62,6 +69,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: '#0d1620',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -86,6 +99,7 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <RefCapture />
+        <PWAInstallPrompt />
         <Header />
         <div className="flex-1">{children}</div>
         <Footer />

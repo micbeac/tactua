@@ -10,6 +10,7 @@ const NAV = [
   { href: '/admin/partners', label: 'Partenaires' },
   { href: '/admin/promo-codes', label: 'Codes promo' },
   { href: '/admin/emails', label: 'Emails' },
+  { href: '/admin/push', label: 'Push' },
 ];
 
 export default async function AdminLayout({

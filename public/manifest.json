@@ -1,0 +1,27 @@
+{
+  "name": "Tactuo — Analyse foot augmentée par l'IA",
+  "short_name": "Tactuo",
+  "description": "Tout ce qu'il faut comprendre avant le match : compositions, analyses tactiques IA, classements, stats joueurs et équipes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1620",
+  "theme_color": "#0d1620",
+  "lang": "fr-FR",
+  "categories": ["sports", "news"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "1024x564",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

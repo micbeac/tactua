@@ -90,6 +90,7 @@ export type Database = {
           position: string | null
           shirt_number: number | null
           team_id: number
+          pushed_at: string | null
         }
         Insert: {
           created_at?: string
@@ -101,6 +102,7 @@ export type Database = {
           position?: string | null
           shirt_number?: number | null
           team_id: number
+          pushed_at?: string | null
         }
         Update: {
           created_at?: string
@@ -112,6 +114,7 @@ export type Database = {
           position?: string | null
           shirt_number?: number | null
           team_id?: number
+          pushed_at?: string | null
         }
         Relationships: [
           {
@@ -786,6 +789,99 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          id: number
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+          last_seen_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+          last_seen_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+          last_seen_at?: string
+        }
+        Relationships: []
+      }
+      push_preferences: {
+        Row: {
+          user_id: string
+          notify_goals: boolean
+          notify_lineup_confirmed: boolean
+          notify_admin_broadcast: boolean
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          notify_goals?: boolean
+          notify_lineup_confirmed?: boolean
+          notify_admin_broadcast?: boolean
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          notify_goals?: boolean
+          notify_lineup_confirmed?: boolean
+          notify_admin_broadcast?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_log: {
+        Row: {
+          id: number
+          user_id: string | null
+          type: string
+          title: string | null
+          body: string | null
+          url: string | null
+          status: string
+          error: string | null
+          sent_at: string
+        }
+        Insert: {
+          id?: number
+          user_id?: string | null
+          type: string
+          title?: string | null
+          body?: string | null
+          url?: string | null
+          status: string
+          error?: string | null
+          sent_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string | null
+          type?: string
+          title?: string | null
+          body?: string | null
+          url?: string | null
+          status?: string
+          error?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
       match_events: {
         Row: {
           id: number
@@ -799,6 +895,7 @@ export type Database = {
           detail: string | null
           comments: string | null
           created_at: string
+          pushed_at: string | null
         }
         Insert: {
           id?: number
@@ -812,6 +909,7 @@ export type Database = {
           detail?: string | null
           comments?: string | null
           created_at?: string
+          pushed_at?: string | null
         }
         Update: {
           id?: number
@@ -825,6 +923,7 @@ export type Database = {
           detail?: string | null
           comments?: string | null
           created_at?: string
+          pushed_at?: string | null
         }
         Relationships: []
       }

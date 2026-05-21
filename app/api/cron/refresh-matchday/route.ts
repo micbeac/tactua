@@ -18,6 +18,7 @@ import { enrichMatchFromApiFootball } from '@/lib/api-football/enrich';
 import { requireCronAuth } from '@/lib/cron/auth';
 import { createFootballClient } from '@/lib/football-api/client';
 import { mapMatch } from '@/lib/football-api/mappers';
+import { autoNotifyAfterTick } from '@/lib/push/auto-notify';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -150,6 +151,20 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log('[cron:refresh-matchday]', stats);
-  return NextResponse.json({ ok: stats.errors.length === 0, stats });
+  // ============================================================================
+  // 3. Auto push notifications (buts + compos officielles)
+  // ============================================================================
+  let pushStats = null;
+  try {
+    pushStats = await autoNotifyAfterTick(supabase);
+  } catch (e) {
+    console.error('[cron:refresh-matchday] auto-notify failed', e);
+  }
+
+  console.log('[cron:refresh-matchday]', stats, 'push:', pushStats);
+  return NextResponse.json({
+    ok: stats.errors.length === 0,
+    stats,
+    push: pushStats,
+  });
 }

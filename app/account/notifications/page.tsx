@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { NotificationPreferences } from '@/components/account/NotificationPreferences';
+import { PushSubscribeButton } from '@/components/push/PushSubscribeButton';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -56,17 +57,35 @@ export default async function NotificationsPage({
     .eq('id', user.id)
     .maybeSingle();
 
+  const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+
   return (
-    <main className="mx-auto max-w-md px-4 py-12">
-      <header className="mb-6">
+    <main className="mx-auto max-w-md space-y-6 px-4 py-12">
+      <header>
         <h1 className="text-2xl font-semibold">Préférences notifications</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Gère les emails que tu reçois de Tactuo.
+          Gère les emails et les notifications push de Tactuo.
         </p>
       </header>
-      <NotificationPreferences
-        initial_enabled={profile?.daily_digest_enabled ?? true}
-      />
+
+      <section className="bg-card border-border rounded-2xl border p-5">
+        <h2 className="mb-3 text-sm font-semibold">Notifications push</h2>
+        {vapidKey ? (
+          <PushSubscribeButton vapid_public_key={vapidKey} />
+        ) : (
+          <p className="text-muted-foreground text-xs italic">
+            Les notifications push ne sont pas encore configurées sur ce
+            déploiement.
+          </p>
+        )}
+      </section>
+
+      <section className="bg-card border-border rounded-2xl border p-5">
+        <h2 className="mb-3 text-sm font-semibold">Email digest matinal</h2>
+        <NotificationPreferences
+          initial_enabled={profile?.daily_digest_enabled ?? true}
+        />
+      </section>
     </main>
   );
 }
