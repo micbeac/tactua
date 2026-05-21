@@ -6,6 +6,7 @@ import {
   TeamMatchesList,
   type TeamMatchItem,
 } from '@/components/team/TeamMatchesList';
+import { FormationPitch } from '@/components/match/FormationPitch';
 import {
   TeamNarrativesSection,
   type TeamNarrativeItem,
@@ -81,24 +82,69 @@ export default async function TeamPage({ params }: TeamPageParams) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [seasonStatsRows, upcoming, recent, squad, favorite, narrativesRes] =
-    await Promise.all([
-      getTeamSeasonStats(supabase, teamId),
-      getTeamUpcomingMatches(supabase, teamId, 5),
-      getTeamRecentMatches(supabase, teamId, 5),
-      getTeamSquad(supabase, teamId),
-      isFavorite(supabase, user?.id ?? null, 'team', teamId),
-      supabase
-        .from('team_narratives')
-        .select('title, url, snippet, scraped_at')
-        .eq('team_id', teamId)
-        .order('scraped_at', { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    seasonStatsRows,
+    upcoming,
+    recent,
+    squad,
+    favorite,
+    narrativesRes,
+    analysisRes,
+  ] = await Promise.all([
+    getTeamSeasonStats(supabase, teamId),
+    getTeamUpcomingMatches(supabase, teamId, 5),
+    getTeamRecentMatches(supabase, teamId, 5),
+    getTeamSquad(supabase, teamId),
+    isFavorite(supabase, user?.id ?? null, 'team', teamId),
+    supabase
+      .from('team_narratives')
+      .select('title, url, snippet, scraped_at')
+      .eq('team_id', teamId)
+      .order('scraped_at', { ascending: false })
+      .limit(5),
+    // Récupère la formation type via la dernière analyse impliquant l'équipe.
+    // Pas besoin de colonne dédiée : rich_data.formation_home/away est déjà calculé
+    // à chaque analyse pré-match et stocké dans match_analyses.content_json.
+    supabase
+      .from('match_analyses')
+      .select(
+        'content_json, generated_at, match:matches!inner(home_team_id, away_team_id)',
+      )
+      .eq('type', 'pre_match')
+      .or(
+        `home_team_id.eq.${teamId},away_team_id.eq.${teamId}`,
+        { referencedTable: 'matches' },
+      )
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   const narratives = ((narrativesRes.data ?? []) as TeamNarrativeItem[]).filter(
     (n) => Boolean(n.title),
   );
+
+  // Extrait la formation depuis l'analyse récente (côté correspondant à teamId)
+  type AnalysisWithMatch = {
+    content_json: {
+      rich_data?: {
+        formation_home: string | null;
+        formation_away: string | null;
+      };
+    };
+    match: {
+      home_team_id: number;
+      away_team_id: number;
+    };
+  };
+  const analysisRow = analysisRes.data as unknown as AnalysisWithMatch | null;
+  let teamFormation: string | null = null;
+  if (analysisRow?.content_json?.rich_data) {
+    teamFormation =
+      analysisRow.match.home_team_id === teamId
+        ? analysisRow.content_json.rich_data.formation_home
+        : analysisRow.content_json.rich_data.formation_away;
+  }
 
   // Compétition principale : la 1re du tri (points DESC, position ASC).
   const main = seasonStatsRows[0] ?? null;
@@ -185,6 +231,23 @@ export default async function TeamPage({ params }: TeamPageParams) {
       )}
 
       <TeamNarrativesSection team_name={team.name} items={narratives} />
+
+      {teamFormation && (
+        <section className="bg-card border-border rounded-2xl border p-6">
+          <h2 className="mb-4 text-base font-semibold">Formation type</h2>
+          <div className="flex justify-center">
+            <FormationPitch
+              formation={teamFormation}
+              team_name={team.name}
+              variant="primary"
+              width={260}
+            />
+          </div>
+          <p className="text-muted-foreground/70 mt-3 text-center text-xs">
+            Formation principale calculée sur les derniers matchs joués
+          </p>
+        </section>
+      )}
 
       <TeamMatchesList
         title="Prochains matchs"

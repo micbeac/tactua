@@ -15,6 +15,8 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
+import { FormationPitch } from '@/components/match/FormationPitch';
+import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import type {
   DeepPreMatchAnalysis,
   MatchRichData,
@@ -708,13 +710,21 @@ export function PreMatchAnalysisSection({
         />
       )}
 
-      {/* Radar comparatif */}
-      {rich && (
-        <RichRadarChart
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
+      {/* Radar comparatif PENTAGONAL — vrai polygone superposé */}
+      {rich && rich.radar.length >= 5 && (
+        <div>
+          <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+            <BarChart3 className="size-3.5" aria-hidden />
+            Comparaison globale
+          </div>
+          <div className="bg-muted/20 border-border rounded-xl border p-4">
+            <RichRadarPentagon
+              dimensions={rich.radar}
+              home_team_name={home_team_name}
+              away_team_name={away_team_name}
+            />
+          </div>
+        </div>
       )}
 
       {/* Forme récente */}
@@ -735,13 +745,26 @@ export function PreMatchAnalysisSection({
         />
       )}
 
-      {/* Formations */}
-      {rich && (
-        <RichFormations
-          rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
+      {/* Formations type — mini-terrains côte à côte */}
+      {rich && (rich.formation_home || rich.formation_away) && (
+        <div>
+          <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+            <Users className="size-3.5" aria-hidden />
+            Formations type
+          </div>
+          <div className="flex flex-wrap items-start justify-center gap-4">
+            <FormationPitch
+              formation={rich.formation_home}
+              team_name={home_team_name}
+              variant="primary"
+            />
+            <FormationPitch
+              formation={rich.formation_away}
+              team_name={away_team_name}
+              variant="emerald"
+            />
+          </div>
+        </div>
       )}
 
       {/* Top joueurs détaillés */}
