@@ -272,6 +272,61 @@ export async function POST(
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
 
+        // Fallback team_season_stats : si AF retourne des stats vides
+        // (played.total === 0), on patche depuis Football-Data
+        // (notre table team_season_stats). Couvre Jupiler League où
+        // AF n'a pas la couverture saison 2025-26.
+        async function patchFromTeamSeasonStats(
+          ctx: typeof homeCtx,
+          teamDbId: number,
+        ): Promise<void> {
+          if (ctx.played.total > 0) return; // AF avait des stats, rien à faire
+          const { data: ts } = await supabase
+            .from('team_season_stats')
+            .select(
+              'position, played, wins, draws, losses, goals_for, goals_against, form_last_5',
+            )
+            .eq('team_id', teamDbId)
+            .order('points', { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+          if (!ts || !ts.played) return;
+          const played = ts.played ?? 0;
+          const wins = ts.wins ?? 0;
+          const draws = ts.draws ?? 0;
+          const losses = ts.losses ?? 0;
+          const gf = ts.goals_for ?? 0;
+          const ga = ts.goals_against ?? 0;
+          ctx.played = { total: played, home: 0, away: 0 };
+          ctx.wins = { total: wins, home: 0, away: 0 };
+          ctx.draws = { total: draws, home: 0, away: 0 };
+          ctx.loses = { total: losses, home: 0, away: 0 };
+          if (played > 0) {
+            const forAvg = (gf / played).toFixed(2);
+            const againstAvg = (ga / played).toFixed(2);
+            ctx.goals_for_avg = {
+              total: forAvg,
+              home: forAvg,
+              away: forAvg,
+            };
+            ctx.goals_against_avg = {
+              total: againstAvg,
+              home: againstAvg,
+              away: againstAvg,
+            };
+          }
+          if (ts.form_last_5 && ts.form_last_5.length > 0) {
+            ctx.form_long = ts.form_last_5.join('');
+          }
+          console.log(
+            `[analyze ${matchId}] patched team ${teamDbId} from team_season_stats : ${played}p ${wins}V ${draws}N ${losses}D`,
+          );
+        }
+        await Promise.all([
+          patchFromTeamSeasonStats(homeCtx, m.home_team_id!),
+          patchFromTeamSeasonStats(awayCtx, m.away_team_id!),
+        ]);
+
         // Fix anti-mercato : l'endpoint AF /players?team=X&season=Y retourne
         // TOUS les joueurs ayant joué cette saison, y compris ceux partis au
         // mercato. On filtre via notre DB pour ne garder que ceux dont
