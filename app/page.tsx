@@ -13,15 +13,24 @@ import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
 
-const WC_COMPETITION_ID = 2000;
-const TOP5_COMPETITION_IDS = [
-  2021, // Premier League
-  2014, // La Liga
-  2002, // Bundesliga
-  2019, // Serie A
-  2015, // Ligue 1
+// Compétitions affichées sur le dashboard, dans cet ordre.
+// Chaque entrée a son propre header coloré + lien vers /competitions/[code].
+const DASHBOARD_COMPETITIONS: Array<{
+  id: number;
+  code: string;
+  label: string;
+  flag: string;
+  limit: number;
+}> = [
+  { id: 2000, code: 'wc', label: 'Coupe du Monde 2026', flag: '🌍', limit: 6 },
+  { id: 2001, code: 'cl', label: 'Champions League', flag: '🇪🇺', limit: 4 },
+  { id: 2021, code: 'pl', label: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', limit: 4 },
+  { id: 2014, code: 'pd', label: 'La Liga', flag: '🇪🇸', limit: 4 },
+  { id: 2019, code: 'sa', label: 'Serie A', flag: '🇮🇹', limit: 4 },
+  { id: 2002, code: 'bl1', label: 'Bundesliga', flag: '🇩🇪', limit: 4 },
+  { id: 2015, code: 'fl1', label: 'Ligue 1', flag: '🇫🇷', limit: 4 },
+  { id: 9001, code: 'bjl', label: 'Jupiler Pro League', flag: '🇧🇪', limit: 4 },
 ];
-const JPL_COMPETITION_ID = 9001; // Jupiler Pro League
 
 type TeamEmbed = {
   id: number;
@@ -85,13 +94,10 @@ export default async function HomePage() {
     // Landing forcée en thème sombre (le design est conçu pour le dark).
     // `dark` redéfinit les CSS vars (--background, --foreground, --primary…)
     // pour tous les descendants, peu importe la préférence OS.
-    // Le style inline garantit la couleur de fond même si une extension
-    // navigateur tente d'imposer un autre thème.
     return (
       <div
         className="dark bg-background text-foreground"
         style={{
-          // Dark navy explicite — équivalent oklch(0.16 0.025 255).
           backgroundColor: 'oklch(0.16 0.025 255)',
           color: 'oklch(0.985 0 0)',
         }}
@@ -107,38 +113,35 @@ export default async function HomePage() {
     );
   }
 
-  // === Dashboard utilisateur connecté ===
-  const [wcRes, top5Res, jplRes, personal] = await Promise.all([
+  // ============================================================================
+  // Dashboard utilisateur connecté
+  // ============================================================================
+  const nowIso = new Date().toISOString();
+
+  // Fetch les prochains matchs de chaque compétition en parallèle + favoris
+  const competitionQueries = DASHBOARD_COMPETITIONS.map((c) =>
     supabase
       .from('matches')
       .select(SELECT_FRAGMENT)
-      .eq('competition_id', WC_COMPETITION_ID)
+      .eq('competition_id', c.id)
       .eq('status', 'scheduled')
-      .gte('kickoff_at', new Date().toISOString())
+      .gte('kickoff_at', nowIso)
       .order('kickoff_at', { ascending: true })
-      .limit(10),
-    supabase
-      .from('matches')
-      .select(SELECT_FRAGMENT)
-      .in('competition_id', TOP5_COMPETITION_IDS)
-      .eq('status', 'scheduled')
-      .gte('kickoff_at', new Date().toISOString())
-      .order('kickoff_at', { ascending: true })
-      .limit(6),
-    supabase
-      .from('matches')
-      .select(SELECT_FRAGMENT)
-      .eq('competition_id', JPL_COMPETITION_ID)
-      .eq('status', 'scheduled')
-      .gte('kickoff_at', new Date().toISOString())
-      .order('kickoff_at', { ascending: true })
-      .limit(6),
+      .limit(c.limit),
+  );
+
+  const results = await Promise.all([
+    ...competitionQueries,
     getPersonalUpcomingMatches(supabase, user.id, 8),
   ]);
 
-  const wcMatches = (wcRes.data ?? []) as unknown as MatchRow[];
-  const top5Matches = (top5Res.data ?? []) as unknown as MatchRow[];
-  const jplMatches = (jplRes.data ?? []) as unknown as MatchRow[];
+  const personal = results[results.length - 1] as Awaited<
+    ReturnType<typeof getPersonalUpcomingMatches>
+  >;
+  const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => ({
+    ...c,
+    matches: ((results[i] as { data: unknown }).data ?? []) as MatchRow[],
+  }));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -157,6 +160,7 @@ export default async function HomePage() {
         </p>
       </section>
 
+      {/* Bloc "Tes matchs" — favoris en tête */}
       {personal.length > 0 && (
         <section className="mb-12">
           <header className="mb-4 flex items-end justify-between">
@@ -199,67 +203,61 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="mb-12">
-        <header className="mb-4 flex items-end justify-between">
-          <h2 className="text-lg font-semibold">Prochains matchs CDM</h2>
-          <Link
-            href={`/competitions/wc`}
-            className="text-muted-foreground hover:text-foreground text-xs underline"
-          >
-            Voir tout
-          </Link>
-        </header>
-        {wcMatches.length === 0 ? (
-          <EmptyState label="Aucun match CDM programmé pour l'instant." />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {wcMatches.map((m) => (
-              <MatchCard key={m.id} {...toCardProps(m)} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="mb-12">
-        <header className="mb-4 flex items-end justify-between">
-          <h2 className="text-lg font-semibold">
-            Top 5 européen — Prochains matchs
-          </h2>
-        </header>
-        {top5Matches.length === 0 ? (
-          <EmptyState label="Aucun match à venir dans le top 5 européen." />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {top5Matches.map((m) => (
-              <MatchCard key={m.id} {...toCardProps(m)} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="mb-12">
-        <header className="mb-4 flex items-end justify-between">
-          <h2 className="text-lg font-semibold">
-            🇧🇪 Jupiler Pro League — Prochains matchs
-          </h2>
-          <Link
-            href="/competitions/bjl"
-            className="text-muted-foreground hover:text-foreground text-xs underline"
-          >
-            Voir tout
-          </Link>
-        </header>
-        {jplMatches.length === 0 ? (
-          <EmptyState label="Aucun match Jupiler Pro League à venir." />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {jplMatches.map((m) => (
-              <MatchCard key={m.id} {...toCardProps(m)} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Une section par compétition trackée */}
+      {competitionMatches.map((c) => (
+        <CompetitionSection
+          key={c.id}
+          label={c.label}
+          flag={c.flag}
+          code={c.code}
+          matches={c.matches}
+        />
+      ))}
     </main>
+  );
+}
+
+function CompetitionSection({
+  label,
+  flag,
+  code,
+  matches,
+}: {
+  label: string;
+  flag: string;
+  code: string;
+  matches: MatchRow[];
+}) {
+  return (
+    <section className="mb-12">
+      <header className="bg-primary/10 border-primary/20 relative mb-4 overflow-hidden rounded-xl border px-4 py-3">
+        {/* Halo léger pour homogénéité avec les autres headers */}
+        <div className="bg-primary/15 pointer-events-none absolute -top-8 -right-8 size-32 rounded-full blur-2xl" />
+        <div className="relative flex items-end justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <span aria-hidden className="text-xl">
+              {flag}
+            </span>
+            {label}
+          </h2>
+          <Link
+            href={`/competitions/${code}`}
+            className="text-muted-foreground hover:text-foreground text-xs underline"
+          >
+            Voir tout
+          </Link>
+        </div>
+      </header>
+      {matches.length === 0 ? (
+        <EmptyState label={`Aucun match ${label} à venir.`} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {matches.map((m) => (
+            <MatchCard key={m.id} {...toCardProps(m)} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
