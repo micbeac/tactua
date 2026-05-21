@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import Script from 'next/script';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
@@ -62,6 +63,17 @@ export default function RootLayout({
       lang="fr"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <Script
+          defer
+          data-domain="tactuo.com"
+          src="https://plausible.io/js/script.outbound-links.tagged-events.js"
+          strategy="afterInteractive"
+        />
+        <Script id="plausible-init" strategy="afterInteractive">
+          {`window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments); }`}
+        </Script>
+      </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <Header />
         <div className="flex-1">{children}</div>
