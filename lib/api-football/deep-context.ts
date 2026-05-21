@@ -18,6 +18,11 @@ export type BuildDeepTeamContextInput = {
   match_date: Date;
 };
 
+// Valeurs par défaut quand AF retourne un objet vide (équipe sans données
+// pour cette saison/compétition). Évite les crashes "Cannot read 'played'".
+const EMPTY_SPLIT = { home: 0, away: 0, total: 0 };
+const EMPTY_AVG = { home: '0', away: '0', total: '0' };
+
 export async function buildDeepTeamContext(
   input: BuildDeepTeamContextInput,
 ): Promise<DeepTeamContext> {
@@ -29,24 +34,48 @@ export async function buildDeepTeamContext(
     fetchActiveInjuries(af_team_id, season, input.match_date),
   ]);
 
+  // AF peut retourner un objet quasi-vide si pas de stats pour la
+  // saison/compétition. On garantit des fallbacks pour ne pas crasher.
+  const safeStats = stats ?? ({} as Partial<typeof stats>);
+  const fx = safeStats.fixtures ?? {
+    played: EMPTY_SPLIT,
+    wins: EMPTY_SPLIT,
+    draws: EMPTY_SPLIT,
+    loses: EMPTY_SPLIT,
+  };
+  const gls = safeStats.goals ?? {
+    for: { total: EMPTY_SPLIT, average: EMPTY_AVG },
+    against: { total: EMPTY_SPLIT, average: EMPTY_AVG },
+  };
+  const cs = safeStats.clean_sheet ?? EMPTY_SPLIT;
+  const fts = safeStats.failed_to_score ?? EMPTY_SPLIT;
+  const big = safeStats.biggest ?? {
+    streak: { wins: 0, draws: 0, loses: 0 },
+    wins: { home: null, away: null },
+    loses: { home: null, away: null },
+    goals: { for: { home: 0, away: 0 }, against: { home: 0, away: 0 } },
+  };
+
   const primaryFormation =
-    stats.lineups && stats.lineups.length > 0 ? stats.lineups[0].formation : null;
+    safeStats.lineups && safeStats.lineups.length > 0
+      ? safeStats.lineups[0].formation
+      : null;
 
   return {
-    name: stats.team?.name ?? team_name,
+    name: safeStats.team?.name ?? team_name,
     country: team_country,
-    form_long: stats.form ?? '',
-    played: stats.fixtures.played,
-    wins: stats.fixtures.wins,
-    draws: stats.fixtures.draws,
-    loses: stats.fixtures.loses,
-    goals_for_avg: stats.goals.for.average,
-    goals_against_avg: stats.goals.against.average,
-    clean_sheets: stats.clean_sheet.total,
-    failed_to_score: stats.failed_to_score.total,
+    form_long: safeStats.form ?? '',
+    played: fx.played,
+    wins: fx.wins,
+    draws: fx.draws,
+    loses: fx.loses,
+    goals_for_avg: gls.for.average,
+    goals_against_avg: gls.against.average,
+    clean_sheets: cs.total,
+    failed_to_score: fts.total,
     biggest_streak: {
-      wins: stats.biggest.streak.wins,
-      loses: stats.biggest.streak.loses,
+      wins: big.streak.wins,
+      loses: big.streak.loses,
     },
     primary_formation: primaryFormation,
     top_performers: top.map((p) => ({
