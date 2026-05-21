@@ -136,7 +136,7 @@ export function PlayerCareerTimeline({
         )}
       </header>
 
-      {sorted.length === 0 ? (
+      {sorted.length === 0 && !current_team ? (
         <p className="text-muted-foreground py-4 text-center text-sm">
           Aucun transfert enregistré pour le moment.
         </p>

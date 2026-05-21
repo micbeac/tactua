@@ -40,6 +40,14 @@ export async function getPlayerEfficiency(
   supabase: Supa,
   playerId: number,
 ): Promise<PlayerEfficiency | null> {
+  // On charge aussi la position pour calibrer le profil dominant
+  const { data: playerRow } = await supabase
+    .from('players')
+    .select('position')
+    .eq('id', playerId)
+    .maybeSingle();
+  const position = (playerRow?.position ?? '').toLowerCase();
+
   const { data } = await supabase
     .from('player_season_stats')
     .select('appearances, minutes, goals, assists, yellow_cards, red_cards')
@@ -99,18 +107,45 @@ export async function getPlayerEfficiency(
     100 - (totals.yellow_cards * 8 + totals.red_cards * 25),
   );
 
-  // Profil dominant
+  // Profil dominant — combine position (si dispo) et stats
+  const isGK = position.includes('keeper') || position === 'goalkeeper';
+  const isDef =
+    position.includes('back') ||
+    position.includes('defender') ||
+    position === 'centre-back';
+  const isMid = position.includes('midfield');
+  const isAtt =
+    position.includes('forward') ||
+    position.includes('winger') ||
+    position.includes('striker') ||
+    position.includes('attack');
+
   let profile_label = 'Régulier';
-  if (productivityPerMatch >= 0.7) {
-    profile_label = goalsPerMatch > assistsPerMatch ? 'Finisseur' : 'Créateur';
-  } else if (assistsPerMatch >= 0.25 && goalsPerMatch < 0.15) {
-    profile_label = 'Créateur';
-  } else if (goalsPerMatch >= 0.3 && assistsPerMatch < 0.15) {
+  if (isGK && minutesPct >= 70) {
+    profile_label = 'Gardien titulaire';
+  } else if (isDef && minutesPct >= 75) {
+    // Défenseur titulaire = pilier (les cartons font partie du job)
+    profile_label = 'Pilier défensif';
+  } else if (isDef) {
+    profile_label = 'Défenseur';
+  } else if (isAtt && goalsPerMatch >= 0.4) {
     profile_label = 'Finisseur';
+  } else if (isAtt && assistsPerMatch >= 0.25) {
+    profile_label = 'Créateur';
+  } else if (isAtt) {
+    profile_label = 'Attaquant';
+  } else if (isMid && productivityPerMatch >= 0.4) {
+    profile_label = 'Milieu offensif';
+  } else if (isMid && minutesPct >= 75) {
+    profile_label = 'Milieu titulaire';
+  } else if (isMid) {
+    profile_label = 'Milieu';
+  } else if (productivityPerMatch >= 0.7) {
+    profile_label = goalsPerMatch > assistsPerMatch ? 'Finisseur' : 'Créateur';
   } else if (productivityPerMatch >= 0.4) {
     profile_label = 'Box-to-box';
-  } else if (minutesPct >= 85 && discipline >= 80) {
-    profile_label = 'Pilier défensif';
+  } else if (minutesPct >= 85) {
+    profile_label = 'Pilier de l’effectif';
   }
 
   return {
