@@ -39,21 +39,34 @@ const ORDER: Category[] = [
 
 function categorize(position: string | null): Category {
   if (!position) return 'Autres';
-  const p = position.toLowerCase();
-  if (p.includes('keeper') || p === 'goalkeeper') return 'Gardiens';
+  const p = position.toLowerCase().trim();
+
+  // Abréviations 1-2 lettres (API-Football pour certaines compétitions)
+  if (p === 'g' || p === 'gk') return 'Gardiens';
+  if (p === 'd' || p === 'df') return 'Défenseurs';
+  if (p === 'm' || p === 'mf') return 'Milieux';
+  if (p === 'f' || p === 'a' || p === 'fw' || p === 'att')
+    return 'Attaquants';
+
+  // Mots complets (la plupart des sources)
+  if (p.includes('keeper') || p.includes('gardien')) return 'Gardiens';
   if (
     p.includes('back') ||
     p.includes('defender') ||
+    p.includes('défenseur') ||
     p === 'centre-back' ||
     p === 'sweeper'
   )
     return 'Défenseurs';
-  if (p.includes('midfield')) return 'Milieux';
+  if (p.includes('midfield') || p.includes('milieu')) return 'Milieux';
   if (
     p.includes('forward') ||
     p.includes('winger') ||
     p.includes('striker') ||
-    p.includes('attack')
+    p.includes('attack') ||
+    p.includes('attaquant') ||
+    p.includes('ailier') ||
+    p.includes('avant')
   )
     return 'Attaquants';
   return 'Autres';
