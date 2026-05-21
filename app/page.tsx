@@ -16,7 +16,6 @@ import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
-import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { getPersonalUpcomingMatches, getUserFavorites } from '@/lib/data/favorites';
 import { buildForYouFeed } from '@/lib/data/for-you-feed';
 import { getDailyRecap } from '@/lib/data/recap';
@@ -196,8 +195,7 @@ export default async function HomePage() {
         <h1 className="mb-4 text-3xl font-semibold tracking-tight sm:text-4xl">
           Tout ce qu&apos;il faut comprendre avant le match.
         </h1>
-        <WorldCupCountdown />
-        <p className="text-muted-foreground mt-5 max-w-2xl text-sm">
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
           Compositions, classements en direct et analyses tactiques générées par
           l&apos;IA. Suis tes équipes et joueurs préférés et reçois les notifs
           essentielles.
@@ -256,6 +254,7 @@ export default async function HomePage() {
             label={c.label}
             flag={c.flag}
             matches={c.matches.map(toCardProps)}
+            default_open={false}
           />
         ))}
       </div>

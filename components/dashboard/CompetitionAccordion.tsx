@@ -18,31 +18,35 @@ export type CompetitionAccordionProps = {
   default_open?: boolean;
 };
 
-const STORAGE_KEY = 'tactuo-dashboard-collapsed';
+const STORAGE_KEY = 'tactuo-dashboard-state';
 
 /**
- * Lit l'état "replié" depuis localStorage, format JSON :
- * { "wc": false, "cl": true, ... } — true = replié
+ * Stocke l'état explicite de l'utilisateur : `'open' | 'closed'` pour chaque code.
+ * Si un code n'a jamais été cliqué, il est absent du store et on retombe
+ * sur `default_open`. Cette stratégie est plus prévisible que de stocker
+ * uniquement les replis.
  */
-function readCollapsedSet(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
+function readStoredState(code: string): 'open' | 'closed' | null {
+  if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return new Set();
-    const data = JSON.parse(raw) as Record<string, boolean>;
-    return new Set(Object.entries(data).filter(([, v]) => v).map(([k]) => k));
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Record<string, 'open' | 'closed'>;
+    return data[code] ?? null;
   } catch {
-    return new Set();
+    return null;
   }
 }
 
-function writeCollapsed(code: string, collapsed: boolean) {
+function writeState(code: string, state: 'open' | 'closed') {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const data = (raw ? JSON.parse(raw) : {}) as Record<string, boolean>;
-    if (collapsed) data[code] = true;
-    else delete data[code];
+    const data = (raw ? JSON.parse(raw) : {}) as Record<
+      string,
+      'open' | 'closed'
+    >;
+    data[code] = state;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // ignore
@@ -62,15 +66,15 @@ export function CompetitionAccordion({
 
   // Hydratation depuis localStorage au mount (évite mismatch SSR/CSR)
   useEffect(() => {
-    const collapsed = readCollapsedSet();
-    setOpen(!collapsed.has(code));
+    const stored = readStoredState(code);
+    if (stored != null) setOpen(stored === 'open');
     setHydrated(true);
   }, [code]);
 
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (hydrated) writeCollapsed(code, !next);
+    if (hydrated) writeState(code, next ? 'open' : 'closed');
   }
 
   const count = upcoming_count ?? matches.length;
