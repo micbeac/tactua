@@ -1,6 +1,8 @@
+import { Swords } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { Button } from '@/components/ui/button';
 import { teamHref } from '@/lib/url';
 
 export type PlayerHeaderProps = {
@@ -136,7 +138,13 @@ export function PlayerHeader({
           </Link>
         )}
       </div>
-      <div className="relative mt-4">
+      <div className="relative mt-4 flex flex-wrap items-center gap-2">
+        <Link href={`/compare/players?a=${id}`}>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Swords className="size-3.5" aria-hidden />
+            Comparer
+          </Button>
+        </Link>
         <FavoriteButton
           entity_type="player"
           entity_id={id}
