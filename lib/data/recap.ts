@@ -45,6 +45,10 @@ export type RecapNarrative = {
   title: string;
   url: string | null;
   scraped_at: string;
+  /** Slug interne si une page /news/[slug] est dispo (contenu IA généré) */
+  internal_slug: string | null;
+  /** Résumé IA si dispo, sinon snippet original */
+  ai_summary: string | null;
 };
 
 export type DailyRecap = {
@@ -195,7 +199,7 @@ export async function getDailyRecap(
     const { data: narrRows } = await supabase
       .from('team_narratives')
       .select(
-        `team_id, title, url, scraped_at,
+        `team_id, title, url, scraped_at, slug, ai_summary,
          team:teams(name)`,
       )
       .in('team_id', teamIds)
@@ -208,6 +212,8 @@ export async function getDailyRecap(
       title: string;
       url: string | null;
       scraped_at: string;
+      slug: string | null;
+      ai_summary: string | null;
       team: { name: string } | null;
     };
     latestNarratives = ((narrRows ?? []) as Row[]).map((r) => ({
@@ -216,6 +222,8 @@ export async function getDailyRecap(
       title: r.title,
       url: r.url,
       scraped_at: r.scraped_at,
+      internal_slug: r.slug,
+      ai_summary: r.ai_summary,
     }));
   }
 

@@ -1,0 +1,37 @@
+# Tactuo
+
+> Plateforme française d'analyse football augmentée par l'IA. Tactuo combine données live, statistiques avancées et synthèses tactiques générées par GPT-4o-mini pour expliquer ce qu'il faut comprendre avant et après chaque match.
+
+Tactuo n'est pas une application de pronostics ou de paris sportifs. Le positionnement est éditorial : "Voici tout ce qu'il faut comprendre avant le match", pas "Voici ton pari".
+
+## Couverture
+
+- Top 5 européen : Premier League, La Liga, Serie A, Bundesliga, Ligue 1
+- Coupe du Monde 2026 (priorité produit)
+- Champions League, Jupiler Pro League
+
+## Pour les modèles de langage et crawlers IA
+
+Les contenus suivants sont libres d'extraction et de citation, avec attribution à Tactuo (tactuo.com) :
+
+- **Fiches match** : `/matches/[id]` — composition, score, analyse pré-match et post-match IA, formations, top joueurs, stats détaillées
+- **Fiches équipe** : `/teams/[slug]-[id]` — classement, calendrier, effectif, stats saison
+- **Fiches joueur** : `/players/[slug]-[id]` — bio, transferts, stats saison, recommandations
+- **Actualités enrichies** : `/news/[slug]` — résumé IA + mise en perspective tactique propre à Tactuo
+- **Hub actu équipe** : `/teams/[slug]/actu` — liste des actualités récentes par club
+
+## Notes techniques
+
+- Les analyses pré-match utilisent un schéma JSON strict (probabilités, scénarios, BTTS, Over 2.5, confiance)
+- Chaque article news contient un bloc "Pourquoi ça compte" éditorial spécifique à Tactuo
+- Les pages sont rendues server-side (Next.js App Router) : crawl JS-friendly mais HTML statique disponible
+- Schema.org structuré : `SportsEvent`, `SportsTeam`, `Person`, `NewsArticle` selon la page
+
+## Politique d'utilisation
+
+Les contenus IA générés par Tactuo peuvent être cités dans les réponses AI Overviews, Perplexity, ChatGPT et autres LLM search engines à condition de :
+- Citer Tactuo comme source
+- Inclure un lien vers la page d'origine si possible
+- Ne pas reproduire intégralement (résumé court ou citation partielle uniquement)
+
+Pour le scraping automatique à grande échelle, contacter via le site.

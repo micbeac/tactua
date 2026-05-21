@@ -11,6 +11,11 @@
 import { NextResponse } from 'next/server';
 import { ragWebSearch, type RagBrowserResult } from '@/lib/apify/client';
 import { requireCronAuth } from '@/lib/cron/auth';
+import {
+  buildNewsSlug,
+  generateNewsContent,
+  type NewsContext,
+} from '@/lib/openai/news-content';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -132,9 +137,120 @@ export async function GET(request: Request) {
   const stats = {
     teams_processed: 0,
     narratives_inserted: 0,
+    ai_generated: 0,
+    ai_failed: 0,
     skipped_recent: alreadyScrapedIds.size,
     errors: [] as CronError[],
   };
+
+  // Récupère contexte équipe (compétition + forme + classement + prochain match)
+  // pour l'IA. Une seule query par équipe → cache local.
+  async function getTeamContext(teamId: number, teamName: string): Promise<{
+    competition_name: string | null;
+    league_position: number | null;
+    next_match: NewsContext['next_match'];
+  }> {
+    const [seasonRes, nextRes] = await Promise.all([
+      supabase
+        .from('team_season_stats')
+        .select('position, competition:competitions(name)')
+        .eq('team_id', teamId)
+        .order('points', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('matches')
+        .select(
+          `id, kickoff_at, home_team_id, away_team_id,
+           home_team:teams!matches_home_team_id_fkey(name),
+           away_team:teams!matches_away_team_id_fkey(name)`,
+        )
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .eq('status', 'scheduled')
+        .gte('kickoff_at', new Date().toISOString())
+        .order('kickoff_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    type SeasonRow = {
+      position: number | null;
+      competition: { name: string } | null;
+    };
+    type NextRow = {
+      kickoff_at: string;
+      home_team_id: number | null;
+      away_team_id: number | null;
+      home_team: { name: string } | null;
+      away_team: { name: string } | null;
+    };
+    const season = seasonRes.data as unknown as SeasonRow | null;
+    const next = nextRes.data as unknown as NextRow | null;
+    let opponent: string | null = null;
+    if (next) {
+      opponent =
+        next.home_team_id === teamId
+          ? (next.away_team?.name ?? null)
+          : (next.home_team?.name ?? null);
+    }
+    return {
+      competition_name: season?.competition?.name ?? null,
+      league_position: season?.position ?? null,
+      next_match:
+        next && opponent
+          ? { opponent, date_iso: next.kickoff_at }
+          : null,
+    };
+  }
+
+  // Génère le contenu IA pour les news fraîchement insérées (par url).
+  // Coût : ~$0.0005/news (gpt-4o-mini, ~500 tokens in, ~600 out).
+  async function generateForTeam(team: TeamRow, urls: string[]) {
+    if (urls.length === 0) return;
+    // Recharge les rows insérées pour avoir leurs ids
+    const { data: inserted } = await supabase
+      .from('team_narratives')
+      .select('id, title, snippet, url')
+      .eq('team_id', team.id)
+      .in('url', urls)
+      .is('ai_content', null);
+    if (!inserted || inserted.length === 0) return;
+
+    const ctx = await getTeamContext(team.id, team.name);
+
+    for (const row of inserted) {
+      try {
+        const { content, model } = await generateNewsContent({
+          title: row.title,
+          snippet: row.snippet,
+          source_url: row.url,
+          team_name: team.name,
+          competition_name: ctx.competition_name,
+          league_position: ctx.league_position,
+          next_match: ctx.next_match,
+        });
+        const slug = buildNewsSlug(row.title, row.id);
+        await supabase
+          .from('team_narratives')
+          .update({
+            slug,
+            ai_summary: content.summary.slice(0, 500),
+            ai_content: content.content,
+            ai_perspective: content.perspective,
+            ai_generated_at: new Date().toISOString(),
+            ai_model: model,
+          })
+          .eq('id', row.id);
+        stats.ai_generated += 1;
+      } catch (e) {
+        stats.ai_failed += 1;
+        stats.errors.push({
+          team: `${team.name} (news ${row.id})`,
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  }
 
   // Concurrence à 1 : le plan Apify free a une limite de 8 GB de mémoire
   // cumulée. rag-web-browser alloue ~2-3 GB par run → 3 en parallèle dépasse.
@@ -164,6 +280,19 @@ export async function GET(request: Request) {
       if (error) throw new Error(`upsert: ${error.message}`);
       stats.narratives_inserted += rows.length;
       stats.teams_processed += 1;
+
+      // Génération IA des pages internes (non-bloquant si ça échoue)
+      try {
+        await generateForTeam(
+          team,
+          rows.map((r) => r.url).filter((u): u is string => Boolean(u)),
+        );
+      } catch (e) {
+        console.error(
+          `[cron:refresh-narratives] generateForTeam ${team.name}:`,
+          e,
+        );
+      }
     } catch (e) {
       stats.errors.push({
         team: team.name,

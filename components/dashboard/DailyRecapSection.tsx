@@ -250,26 +250,41 @@ export function DailyRecapSection({
           </h3>
           <ul className="space-y-1.5">
             {recap.latest_favorite_narratives.slice(0, 4).map((n, i) => {
-              const Tag = n.url ? 'a' : 'div';
+              // Priorité au lien interne /news/[slug] si dispo (contenu IA),
+              // sinon lien externe vers la source originale.
+              const internalHref = n.internal_slug
+                ? `/news/${n.internal_slug}`
+                : null;
+              const href = internalHref ?? n.url ?? null;
+              const isExternal = !internalHref && n.url;
               return (
                 <li key={i}>
-                  <Tag
-                    href={n.url ?? undefined}
-                    target={n.url ? '_blank' : undefined}
-                    rel={n.url ? 'noopener noreferrer' : undefined}
-                    className="bg-card hover:bg-card/80 border-border group flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition-colors"
-                  >
-                    <span className="bg-primary/15 text-primary mt-0.5 shrink-0 rounded px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase">
-                      {n.team_name}
-                    </span>
-                    <p className="line-clamp-2 flex-1">{n.title}</p>
-                    {n.url && (
-                      <ExternalLink
-                        className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
-                        aria-hidden
-                      />
-                    )}
-                  </Tag>
+                  {href ? (
+                    <a
+                      href={href}
+                      target={isExternal ? '_blank' : undefined}
+                      rel={isExternal ? 'noopener noreferrer' : undefined}
+                      className="bg-card hover:bg-card/80 border-border group flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition-colors"
+                    >
+                      <span className="bg-primary/15 text-primary mt-0.5 shrink-0 rounded px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase">
+                        {n.team_name}
+                      </span>
+                      <p className="line-clamp-2 flex-1">{n.title}</p>
+                      {isExternal && (
+                        <ExternalLink
+                          className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
+                          aria-hidden
+                        />
+                      )}
+                    </a>
+                  ) : (
+                    <div className="bg-card border-border flex items-start gap-3 rounded-lg border px-3 py-2 text-sm">
+                      <span className="bg-primary/15 text-primary mt-0.5 shrink-0 rounded px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase">
+                        {n.team_name}
+                      </span>
+                      <p className="line-clamp-2 flex-1">{n.title}</p>
+                    </div>
+                  )}
                 </li>
               );
             })}

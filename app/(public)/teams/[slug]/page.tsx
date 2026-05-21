@@ -102,7 +102,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
     isFavorite(supabase, user?.id ?? null, 'team', teamId),
     supabase
       .from('team_narratives')
-      .select('title, url, snippet, scraped_at')
+      .select('title, url, snippet, scraped_at, slug, ai_summary')
       .eq('team_id', teamId)
       .order('scraped_at', { ascending: false })
       .limit(5),
@@ -134,9 +134,17 @@ export default async function TeamPage({ params }: TeamPageParams) {
     getTeamSplits(supabase, teamId),
   ]);
 
-  const narratives = ((narrativesRes.data ?? []) as TeamNarrativeItem[]).filter(
-    (n) => Boolean(n.title),
-  );
+  const narratives = (
+    (narrativesRes.data ?? []) as Array<
+      TeamNarrativeItem & { slug: string | null; ai_summary: string | null }
+    >
+  )
+    .filter((n) => Boolean(n.title))
+    .map((n) => ({
+      ...n,
+      internal_slug: n.slug,
+      ai_summary: n.ai_summary,
+    }));
 
   // Extrait la formation depuis l'analyse récente (côté correspondant à teamId)
   type AnalysisWithMatch = {
@@ -273,7 +281,11 @@ export default async function TeamPage({ params }: TeamPageParams) {
 
       <TeamSplitsSection splits={teamSplits} team_name={team.name} />
 
-      <TeamNarrativesSection team_name={team.name} items={narratives} />
+      <TeamNarrativesSection
+        team_name={team.name}
+        team_slug={slug}
+        items={narratives}
+      />
 
       {teamFormation && (
         <section className="bg-card border-border rounded-2xl border p-6">

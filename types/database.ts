@@ -791,6 +791,12 @@ export type Database = {
           title: string
           url: string | null
           url_hash: string | null
+          slug: string | null
+          ai_summary: string | null
+          ai_content: string | null
+          ai_perspective: string | null
+          ai_generated_at: string | null
+          ai_model: string | null
         }
         Insert: {
           id?: number
@@ -802,6 +808,12 @@ export type Database = {
           title: string
           url?: string | null
           url_hash?: string | null
+          slug?: string | null
+          ai_summary?: string | null
+          ai_content?: string | null
+          ai_perspective?: string | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
         }
         Update: {
           id?: number
@@ -813,6 +825,12 @@ export type Database = {
           title?: string
           url?: string | null
           url_hash?: string | null
+          slug?: string | null
+          ai_summary?: string | null
+          ai_content?: string | null
+          ai_perspective?: string | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
         }
         Relationships: [
           {
