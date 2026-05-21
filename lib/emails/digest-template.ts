@@ -1,5 +1,6 @@
 import { SITE_URL } from '@/lib/site';
 import type { FeedItem } from '@/lib/data/for-you-feed';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
@@ -12,17 +13,44 @@ const TIME_FMT = new Intl.DateTimeFormat('fr-FR', {
   minute: '2-digit',
 });
 
+// Lit le template daily_digest depuis la DB (sujet + intro/outro éditables
+// depuis /admin/emails). Fallback sur les valeurs en dur si la table est vide.
+async function loadDigestTemplate(): Promise<{
+  subject: string;
+  body_md: string;
+} | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from('email_templates')
+      .select('subject, body_md, is_active')
+      .eq('key', 'daily_digest')
+      .maybeSingle();
+    if (!data || !data.is_active) return null;
+    return { subject: data.subject, body_md: data.body_md };
+  } catch {
+    return null;
+  }
+}
+
+function applyVars(s: string, vars: Record<string, string>): string {
+  return s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '');
+}
+
 /**
  * Génère le HTML d'un digest matinal.
  * Volontairement compatible avec les principaux clients mail (table-based,
  * inline styles). On n'utilise PAS React Email côté MVP — du HTML brut suffit.
+ *
+ * Sujet et intro/outro (le texte autour de la liste) sont configurables
+ * depuis /admin/emails. La liste elle-même reste générée dynamiquement.
  */
-export function renderDailyDigest(params: {
+export async function renderDailyDigest(params: {
   user_label: string | null;
   feed: FeedItem[];
   matches_today_count: number;
   unsubscribe_url: string;
-}): { subject: string; html: string; text: string } {
+}): Promise<{ subject: string; html: string; text: string }> {
   const { user_label, feed, matches_today_count, unsubscribe_url } = params;
 
   const today = DATE_FMT.format(new Date());
@@ -31,15 +59,35 @@ export function renderDailyDigest(params: {
     ? `Salut ${user_label} 👋`
     : 'Bonjour 👋';
 
-  // Sujet contextuel
-  const subject = matches_today_count > 0
+  // Sujet : DB > fallback contextuel
+  const tpl = await loadDigestTemplate();
+  const fallbackSubject = matches_today_count > 0
     ? `🏟️ ${matches_today_count} match${matches_today_count > 1 ? 's' : ''} aujourd'hui — Ton digest Tactuo`
     : '☕ Ton foot du jour — Tactuo';
+  const subject = tpl
+    ? applyVars(tpl.subject, {
+        greeting,
+        matches_count: String(matches_today_count),
+        date: todayLabel,
+      })
+    : fallbackSubject;
+
+  // Intro/outro depuis le template (séparés par {{items}})
+  let introText = '';
+  let outroText = '';
+  if (tpl) {
+    const parts = tpl.body_md.split(/\{\{\s*items\s*\}\}/);
+    introText = applyVars(parts[0] ?? '', { greeting });
+    outroText = applyVars(parts[1] ?? '', { greeting });
+  }
 
   // On garde max 5 items dans l'email (le reste est sur le site)
   const featured = feed.slice(0, 5);
 
   const itemsHtml = featured.map((item) => renderFeedItem(item)).join('\n');
+
+  const introHtml = introText ? mdInlineToHtml(introText) : '';
+  const outroHtml = outroText ? mdInlineToHtml(outroText) : '';
 
   const html = `<!doctype html>
 <html lang="fr">
@@ -63,12 +111,28 @@ export function renderDailyDigest(params: {
               </td>
             </tr>
 
+            ${introHtml ? `
+            <!-- Intro éditable -->
+            <tr>
+              <td style="padding:16px 32px 0;color:#d1d5db;font-size:14px;line-height:1.55;">
+                ${introHtml}
+              </td>
+            </tr>` : ''}
+
             <!-- Items -->
             <tr>
               <td style="padding:8px 32px 24px;">
                 ${itemsHtml || '<p style="color:#a8b4d4;text-align:center;padding:32px 0;font-size:14px;">Pas grand-chose à signaler aujourd\'hui. Profite du calme avant la tempête de la Coupe du Monde 🌍</p>'}
               </td>
             </tr>
+
+            ${outroHtml ? `
+            <!-- Outro éditable -->
+            <tr>
+              <td style="padding:0 32px 8px;color:#d1d5db;font-size:14px;line-height:1.55;">
+                ${outroHtml}
+              </td>
+            </tr>` : ''}
 
             <!-- CTA -->
             <tr>
@@ -195,6 +259,35 @@ function textForItem(item: FeedItem): string {
     return `Suggestion : ${item.player.name} (${item.player.reason})`;
   }
   return '';
+}
+
+// Mini-markdown pour les sections intro/outro éditables : titres, gras,
+// liens, paragraphes. Pas de table complète, pas de listes — pour rester
+// safe dans les clients mail.
+function mdInlineToHtml(md: string): string {
+  const safe = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const withBold = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const withLinks = withBold.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" style="color:#22c55e;text-decoration:underline;">$1</a>',
+  );
+  return withLinks
+    .split(/\n\n+/)
+    .map((p) => {
+      const trimmed = p.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('## ')) {
+        return `<h2 style="margin:8px 0;color:#ffffff;font-size:18px;font-weight:600;">${trimmed.slice(3)}</h2>`;
+      }
+      if (trimmed.startsWith('# ')) {
+        return `<h1 style="margin:8px 0;color:#ffffff;font-size:22px;font-weight:700;">${trimmed.slice(2)}</h1>`;
+      }
+      return `<p style="margin:8px 0;">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+    })
+    .join('\n');
 }
 
 function escapeHtml(s: string): string {

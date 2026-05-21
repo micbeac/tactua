@@ -25,7 +25,7 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
 
 const KEY_LABELS: Record<string, string> = {
   welcome: 'Email de bienvenue (post-signup)',
-  daily_digest: 'Digest matinal',
+  daily_digest: 'Digest matinal (cron 7h)',
   partner_promo: 'Campagne partenaire / influenceur',
 };
 

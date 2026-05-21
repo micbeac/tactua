@@ -118,7 +118,7 @@ export async function GET(request: Request) {
       }
 
       const unsubscribeUrl = `${SITE_URL}/account/notifications?action=unsubscribe&token=${profile.id}`;
-      const { subject, html, text } = renderDailyDigest({
+      const { subject, html, text } = await renderDailyDigest({
         user_label: profile.username ?? null,
         feed,
         matches_today_count: matchesTodayCount,
