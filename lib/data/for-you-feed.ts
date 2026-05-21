@@ -79,21 +79,8 @@ export function buildForYouFeed(input: {
     });
   }
 
-  // 3. News fraîches
-  for (const n of input.recap.latest_favorite_narratives) {
-    const hours =
-      (now - new Date(n.scraped_at).getTime()) / (1000 * 60 * 60);
-    let score: number;
-    if (hours < 12) score = 95;
-    else if (hours < 24) score = 80;
-    else score = 65;
-    items.push({
-      type: 'news',
-      score,
-      key: `news-${n.team_id}-${n.title.slice(0, 30)}`,
-      news: n,
-    });
-  }
+  // Note : les news étaient ici, mais elles sont déjà dans la section
+  // "Ton foot du jour" → on évite le doublon en les retirant du feed.
 
   // 4. Recommandations joueurs (max 3 pour ne pas noyer le feed)
   for (let i = 0; i < Math.min(3, input.recommendations.length); i++) {

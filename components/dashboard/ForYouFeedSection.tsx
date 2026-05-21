@@ -1,16 +1,16 @@
 'use client';
 
-import { motion } from 'motion/react';
 import {
   CalendarClock,
   ExternalLink,
-  Newspaper,
   Sparkles,
   Trophy,
   UserPlus,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { PlayerPopup } from '@/components/match/PlayerPopup';
 import type { FeedItem } from '@/lib/data/for-you-feed';
 
@@ -18,7 +18,7 @@ export type ForYouFeedSectionProps = {
   items: FeedItem[];
 };
 
-const DAY_FMT = new Intl.DateTimeFormat('fr-FR', {
+const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
@@ -31,90 +31,85 @@ const SHORT_DATE = new Intl.DateTimeFormat('fr-FR', {
   month: 'short',
 });
 
-function relativeTime(iso: string): string {
-  const diff = new Date(iso).getTime() - Date.now();
-  const absMin = Math.abs(diff) / (1000 * 60);
-  const isPast = diff < 0;
-  if (absMin < 60)
-    return isPast ? `Il y a ${Math.round(absMin)}min` : `Dans ${Math.round(absMin)}min`;
-  const absHours = absMin / 60;
-  if (absHours < 24)
-    return isPast
-      ? `Il y a ${Math.round(absHours)}h`
-      : `Dans ${Math.round(absHours)}h`;
-  const absDays = absHours / 24;
-  if (absDays < 7)
-    return isPast
-      ? `Il y a ${Math.round(absDays)}j`
-      : `Dans ${Math.round(absDays)}j`;
-  return SHORT_DATE.format(new Date(iso));
-}
+type TileId = 'matches' | 'results' | 'players';
 
-function TeamMini({
-  name,
-  logo_url,
+function TileButton({
+  value,
+  label,
+  highlight,
+  icon,
+  onClick,
+  disabled,
 }: {
-  name: string;
-  logo_url: string | null;
+  value: number | string;
+  label: string;
+  highlight?: boolean;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
-      {logo_url && (
-        <div className="bg-muted/50 relative size-5 shrink-0 overflow-hidden rounded-full">
-          <Image
-            src={logo_url}
-            alt=""
-            fill
-            sizes="20px"
-            className="object-contain p-0.5"
-            unoptimized
-          />
-        </div>
-      )}
-      <span className="truncate text-sm font-medium">{name}</span>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`border-border bg-card relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
+        highlight ? 'ring-primary/30 ring-2' : ''
+      } ${
+        disabled
+          ? 'cursor-not-allowed opacity-60'
+          : 'hover:bg-card/80 hover:border-primary/40 hover:shadow-lg cursor-pointer'
+      }`}
+    >
+      <div
+        className={`absolute top-3 right-3 ${
+          highlight ? 'text-primary' : 'text-muted-foreground/40'
+        }`}
+      >
+        {icon}
+      </div>
+      <p
+        className={`text-2xl font-bold tabular-nums sm:text-3xl ${
+          highlight ? 'text-primary' : 'text-foreground'
+        }`}
+      >
+        {value}
+      </p>
+      <p className="text-muted-foreground mt-1 text-xs">{label}</p>
+    </button>
   );
 }
 
-function UpcomingMatchCard({
+function UpcomingMatchRow({
   item,
 }: {
   item: Extract<FeedItem, { type: 'upcoming_match' }>;
 }) {
   const m = item.match;
-  const home = {
-    name: m.home_team?.name ?? 'À déterminer',
-    logo_url: m.home_team?.logo_url ?? null,
-  };
-  const away = {
-    name: m.away_team?.name ?? 'À déterminer',
-    logo_url: m.away_team?.logo_url ?? null,
-  };
   return (
     <Link
       href={`/matches/${m.id}#analyse`}
-      className="bg-card hover:border-primary/40 border-border block rounded-xl border p-3 transition-all hover:shadow-md"
+      className="bg-card hover:bg-card/80 border-border block rounded-lg border px-3 py-2.5 transition-colors"
     >
-      <div className="text-muted-foreground mb-2 flex items-center justify-between text-[10px] tracking-wide uppercase">
+      <div className="text-muted-foreground mb-1 flex items-center justify-between text-[10px] tracking-wide uppercase">
         <span className="flex items-center gap-1">
-          <CalendarClock className="size-3" aria-hidden />À venir ·{' '}
+          <CalendarClock className="size-3" aria-hidden />
           {m.competition?.name ?? '—'}
         </span>
-        <span className="text-primary">{relativeTime(m.kickoff_at)}</span>
+        <span className="text-primary tabular-nums">
+          {DATE_FMT.format(new Date(m.kickoff_at))}
+        </span>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <TeamMini name={home.name} logo_url={home.logo_url} />
-        <span className="text-muted-foreground text-xs">vs</span>
-        <TeamMini name={away.name} logo_url={away.logo_url} />
-      </div>
-      <p className="text-muted-foreground mt-2 text-[10px] tabular-nums">
-        {DAY_FMT.format(new Date(m.kickoff_at))}
+      <p className="text-sm font-semibold">
+        {m.home_team?.name ?? 'À déterminer'}
+        <span className="text-muted-foreground mx-2 text-xs">vs</span>
+        {m.away_team?.name ?? 'À déterminer'}
       </p>
     </Link>
   );
 }
 
-function RecentResultCard({
+function ResultRow({
   item,
 }: {
   item: Extract<FeedItem, { type: 'recent_result' }>;
@@ -123,30 +118,31 @@ function RecentResultCard({
   const isWin = r.result === 'W';
   const isLoss = r.result === 'L';
   const accent = isWin
-    ? 'bg-primary/5 border-primary/30'
+    ? 'border-primary/30 bg-primary/5'
     : isLoss
-      ? 'bg-destructive/5 border-destructive/30'
-      : 'bg-card border-border';
-  const resultLabel = isWin ? 'Victoire' : isLoss ? 'Défaite' : 'Match nul';
+      ? 'border-destructive/30 bg-destructive/5'
+      : 'border-border bg-card';
   return (
     <Link
       href={`/matches/${r.match_id}`}
-      className={`block rounded-xl border p-3 transition-all hover:shadow-md ${accent}`}
+      className={`block rounded-lg border px-3 py-2.5 transition-colors hover:opacity-80 ${accent}`}
     >
-      <div className="text-muted-foreground mb-2 flex items-center justify-between text-[10px] tracking-wide uppercase">
+      <div className="text-muted-foreground mb-1 flex items-center justify-between text-[10px] tracking-wide uppercase">
         <span className="flex items-center gap-1">
           <Trophy className="size-3" aria-hidden />
-          {resultLabel} · {r.competition_name ?? '—'}
+          {r.competition_name ?? '—'}
         </span>
-        <span>{relativeTime(r.date)}</span>
+        <span className="tabular-nums">
+          {SHORT_DATE.format(new Date(r.date))}
+        </span>
       </div>
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="truncate font-semibold">{r.favorite_team.name}</span>
-        <span className="text-primary mx-1 font-bold tabular-nums">
+        <span className="text-primary font-bold tabular-nums">
           {r.goals_for}
         </span>
         <span className="text-muted-foreground">–</span>
-        <span className="text-primary mx-1 font-bold tabular-nums">
+        <span className="text-primary font-bold tabular-nums">
           {r.goals_against}
         </span>
         <span className="text-foreground/80 truncate">{r.opponent.name}</span>
@@ -155,44 +151,7 @@ function RecentResultCard({
   );
 }
 
-function NewsCard({
-  item,
-}: {
-  item: Extract<FeedItem, { type: 'news' }>;
-}) {
-  const n = item.news;
-  const Tag = n.url ? 'a' : 'div';
-  return (
-    <Tag
-      href={n.url ?? undefined}
-      target={n.url ? '_blank' : undefined}
-      rel={n.url ? 'noopener noreferrer' : undefined}
-      className="bg-card hover:border-primary/40 border-border group block rounded-xl border p-3 transition-all hover:shadow-md"
-    >
-      <div className="text-muted-foreground mb-2 flex items-center justify-between text-[10px] tracking-wide uppercase">
-        <span className="flex items-center gap-1">
-          <Newspaper className="size-3" aria-hidden />
-          Actu ·{' '}
-          <span className="bg-primary/15 text-primary rounded px-1.5 py-0.5 text-[10px] font-bold">
-            {n.team_name}
-          </span>
-        </span>
-        <span>{relativeTime(n.scraped_at)}</span>
-      </div>
-      <div className="flex items-start gap-2">
-        <p className="line-clamp-2 flex-1 text-sm font-medium">{n.title}</p>
-        {n.url && (
-          <ExternalLink
-            className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
-            aria-hidden
-          />
-        )}
-      </div>
-    </Tag>
-  );
-}
-
-function PlayerRecoCard({
+function PlayerRow({
   item,
 }: {
   item: Extract<FeedItem, { type: 'player_reco' }>;
@@ -212,41 +171,33 @@ function PlayerRecoCard({
       }}
       team_name={p.team_name}
     >
-      <div className="bg-card hover:border-primary/40 border-border block cursor-pointer rounded-xl border p-3 transition-all hover:shadow-md">
-        <div className="text-muted-foreground mb-2 flex items-center justify-between text-[10px] tracking-wide uppercase">
-          <span className="flex items-center gap-1">
-            <UserPlus className="size-3" aria-hidden />
-            Suggestion
-          </span>
+      <div className="bg-card hover:bg-card/80 border-border flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors">
+        <div className="border-primary/30 bg-muted relative size-10 shrink-0 overflow-hidden rounded-full border">
+          {p.photo_url ? (
+            <Image
+              src={p.photo_url}
+              alt=""
+              fill
+              sizes="40px"
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
+            <span className="text-muted-foreground flex h-full w-full items-center justify-center text-xs font-bold">
+              {p.name.charAt(0)}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="border-primary/30 bg-muted relative size-10 shrink-0 overflow-hidden rounded-full border">
-            {p.photo_url ? (
-              <Image
-                src={p.photo_url}
-                alt=""
-                fill
-                sizes="40px"
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <span className="text-muted-foreground flex h-full w-full items-center justify-center text-xs font-bold">
-                {p.name.charAt(0)}
-              </span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{p.name}</p>
-            <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
-              {p.reason}
-            </p>
-          </div>
-          <div className="text-muted-foreground text-right text-[10px] tracking-wide uppercase">
-            <p className="text-primary font-bold tabular-nums">
-              {p.goals}b · {p.assists}a
-            </p>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{p.name}</p>
+          <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
+            {p.reason}
+          </p>
+        </div>
+        <div className="text-right text-[10px] tracking-wide uppercase">
+          <p className="text-primary font-bold tabular-nums">
+            {p.goals}b · {p.assists}a
+          </p>
         </div>
       </div>
     </PlayerPopup>
@@ -254,7 +205,34 @@ function PlayerRecoCard({
 }
 
 export function ForYouFeedSection({ items }: ForYouFeedSectionProps) {
-  if (items.length === 0) return null;
+  const [activeTile, setActiveTile] = useState<TileId | null>(null);
+
+  // Catégorise les items par type
+  const upcomingMatches = items.filter(
+    (i): i is Extract<FeedItem, { type: 'upcoming_match' }> =>
+      i.type === 'upcoming_match',
+  );
+  const recentResults = items.filter(
+    (i): i is Extract<FeedItem, { type: 'recent_result' }> =>
+      i.type === 'recent_result',
+  );
+  const playerRecos = items.filter(
+    (i): i is Extract<FeedItem, { type: 'player_reco' }> =>
+      i.type === 'player_reco',
+  );
+
+  // Top suggestion à mettre en avant comme highlight de tuile
+  const topUpcoming = upcomingMatches[0] ?? null;
+
+  const totalContent =
+    upcomingMatches.length + recentResults.length + playerRecos.length;
+  if (totalContent === 0) return null;
+
+  const dialogTitles: Record<TileId, string> = {
+    matches: `${upcomingMatches.length} matchs imminents`,
+    results: `${recentResults.length} résultats récents`,
+    players: `${playerRecos.length} suggestions joueurs`,
+  };
 
   return (
     <section className="mb-12">
@@ -264,28 +242,77 @@ export function ForYouFeedSection({ items }: ForYouFeedSectionProps) {
           Pour toi
         </h2>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          Le mix personnalisé : matchs imminents, résultats, actu et
-          suggestions
+          Clique sur une tuile pour voir le détail
         </p>
       </header>
 
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {items.map((item, i) => (
-          <motion.div
-            key={item.key}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03, duration: 0.3 }}
-          >
-            {item.type === 'upcoming_match' && (
-              <UpcomingMatchCard item={item} />
-            )}
-            {item.type === 'recent_result' && <RecentResultCard item={item} />}
-            {item.type === 'news' && <NewsCard item={item} />}
-            {item.type === 'player_reco' && <PlayerRecoCard item={item} />}
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-3 gap-3">
+        <TileButton
+          value={upcomingMatches.length}
+          label="matchs imminents"
+          highlight={Boolean(topUpcoming)}
+          icon={<CalendarClock className="size-4" aria-hidden />}
+          onClick={() => setActiveTile('matches')}
+          disabled={upcomingMatches.length === 0}
+        />
+        <TileButton
+          value={recentResults.length}
+          label="résultats récents"
+          icon={<Trophy className="size-4" aria-hidden />}
+          onClick={() => setActiveTile('results')}
+          disabled={recentResults.length === 0}
+        />
+        <TileButton
+          value={playerRecos.length}
+          label="suggestions joueurs"
+          icon={<UserPlus className="size-4" aria-hidden />}
+          onClick={() => setActiveTile('players')}
+          disabled={playerRecos.length === 0}
+        />
       </div>
+
+      <Dialog
+        open={activeTile !== null}
+        onOpenChange={(o) => !o && setActiveTile(null)}
+      >
+        <DialogContent className="bg-card border-border max-w-2xl border sm:max-w-2xl">
+          <DialogTitle className="mb-3 text-base font-semibold">
+            {activeTile && dialogTitles[activeTile]}
+          </DialogTitle>
+
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            {activeTile === 'matches' && (
+              <ul className="space-y-2">
+                {upcomingMatches.map((it) => (
+                  <li key={it.key}>
+                    <UpcomingMatchRow item={it} />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {activeTile === 'results' && (
+              <ul className="space-y-2">
+                {recentResults.map((it) => (
+                  <li key={it.key}>
+                    <ResultRow item={it} />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {activeTile === 'players' && (
+              <ul className="space-y-2">
+                {playerRecos.map((it) => (
+                  <li key={it.key}>
+                    <PlayerRow item={it} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
