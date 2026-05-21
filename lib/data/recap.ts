@@ -19,6 +19,17 @@ function dayBoundsUtc(offsetDays: number): { start: string; end: string } {
 /** Identifiants des compétitions trackées (= toutes celles affichées au dashboard). */
 const TRACKED_IDS = [2000, 2001, 2002, 2014, 2015, 2019, 2021, 9001];
 
+export type RecapMatchListItem = {
+  match_id: number;
+  kickoff_at: string;
+  competition_name: string | null;
+  status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+  home: { id: number | null; name: string; tla: string | null; logo_url: string | null };
+  away: { id: number | null; name: string; tla: string | null; logo_url: string | null };
+  /** Indique si ce match concerne un favori (favorite_team / favorite_match) */
+  is_favorite: boolean;
+};
+
 export type RecapFavoriteResult = {
   match_id: number;
   competition_name: string | null;
@@ -37,10 +48,10 @@ export type RecapNarrative = {
 };
 
 export type DailyRecap = {
-  /** Nb de matchs trackés aujourd'hui (toutes compétitions trackées) */
-  matches_today_total: number;
-  /** Nb parmi ces matchs aujourd'hui qui impliquent un favori (équipe ou match) */
-  matches_today_favorites: number;
+  /** Tous les matchs trackés aujourd'hui (toutes compétitions trackées) */
+  matches_today: RecapMatchListItem[];
+  /** Sous-ensemble : ceux qui impliquent un favori */
+  matches_today_favorites: RecapMatchListItem[];
   /** Résultats d'hier (24h passées) des équipes/matchs favoris */
   favorite_results_yesterday: RecapFavoriteResult[];
   /** Dernières news scrapées (< 36h) pour les équipes favorites */
@@ -65,30 +76,70 @@ export async function getDailyRecap(
     Date.now() - 36 * 60 * 60 * 1000,
   ).toISOString();
 
-  // 1. Matchs trackés aujourd'hui (toutes compétitions)
-  const todayAllRes = await supabase
+  // 1. Matchs trackés aujourd'hui (toutes compétitions) — liste complète
+  const { data: todayRaw } = await supabase
     .from('matches')
-    .select('id, home_team_id, away_team_id', { count: 'exact' })
+    .select(
+      `id, kickoff_at, status, home_team_id, away_team_id,
+       competition:competitions(name),
+       home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
+       away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)`,
+    )
     .in('competition_id', TRACKED_IDS)
     .gte('kickoff_at', today.start)
-    .lte('kickoff_at', today.end);
+    .lte('kickoff_at', today.end)
+    .order('kickoff_at', { ascending: true });
 
-  const todayAll = (todayAllRes.data ?? []) as Array<{
+  type TodayRow = {
     id: number;
+    kickoff_at: string;
+    status: RecapMatchListItem['status'];
     home_team_id: number | null;
     away_team_id: number | null;
-  }>;
-  const matchesTodayTotal = todayAllRes.count ?? todayAll.length;
-
-  // 2. Combien d'entre eux concernent des favoris
+    competition: { name: string } | null;
+    home_team: {
+      id: number;
+      name: string;
+      tla: string | null;
+      logo_url: string | null;
+    } | null;
+    away_team: {
+      id: number;
+      name: string;
+      tla: string | null;
+      logo_url: string | null;
+    } | null;
+  };
   const teamSet = new Set(teamIds);
   const matchSet = new Set(matchIds);
-  const matchesTodayFavorites = todayAll.filter(
-    (m) =>
-      matchSet.has(m.id) ||
-      (m.home_team_id != null && teamSet.has(m.home_team_id)) ||
-      (m.away_team_id != null && teamSet.has(m.away_team_id)),
-  ).length;
+  const matchesToday: RecapMatchListItem[] = ((todayRaw ?? []) as TodayRow[]).map(
+    (m) => {
+      const isFav =
+        matchSet.has(m.id) ||
+        (m.home_team_id != null && teamSet.has(m.home_team_id)) ||
+        (m.away_team_id != null && teamSet.has(m.away_team_id));
+      return {
+        match_id: m.id,
+        kickoff_at: m.kickoff_at,
+        competition_name: m.competition?.name ?? null,
+        status: m.status,
+        home: {
+          id: m.home_team?.id ?? m.home_team_id,
+          name: m.home_team?.name ?? 'À déterminer',
+          tla: m.home_team?.tla ?? null,
+          logo_url: m.home_team?.logo_url ?? null,
+        },
+        away: {
+          id: m.away_team?.id ?? m.away_team_id,
+          name: m.away_team?.name ?? 'À déterminer',
+          tla: m.away_team?.tla ?? null,
+          logo_url: m.away_team?.logo_url ?? null,
+        },
+        is_favorite: isFav,
+      };
+    },
+  );
+  const matchesTodayFavorites = matchesToday.filter((m) => m.is_favorite);
 
   // 3. Résultats d'hier des favoris
   let favoriteResultsYesterday: RecapFavoriteResult[] = [];
@@ -169,7 +220,7 @@ export async function getDailyRecap(
   }
 
   return {
-    matches_today_total: matchesTodayTotal,
+    matches_today: matchesToday,
     matches_today_favorites: matchesTodayFavorites,
     favorite_results_yesterday: favoriteResultsYesterday,
     latest_favorite_narratives: latestNarratives,
