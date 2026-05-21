@@ -12,6 +12,9 @@ import {
   fetchPlayerTransfers,
 } from '../lib/api-football/deep-stats.ts';
 import { createAdminClient } from '../lib/supabase/admin.ts';
+import type { Database } from '../types/database.ts';
+
+type PlayerUpdate = Database['public']['Tables']['players']['Update'];
 
 const TOP_PER_TEAM = 5;
 const supabase = createAdminClient();
@@ -95,7 +98,9 @@ async function main() {
         fetchPlayerTransfers(t.af_id),
       ]);
 
-      const updates: Record<string, unknown> = {};
+      const updates: PlayerUpdate = {
+        transfers_json: JSON.parse(JSON.stringify(transfers)),
+      };
       if (profile) {
         updates.height = profile.height_cm;
         updates.weight = profile.weight_kg;
@@ -103,7 +108,6 @@ async function main() {
         updates.birth_country = profile.birth_country;
         if (profile.birth_date) updates.date_of_birth = profile.birth_date;
       }
-      updates.transfers_json = JSON.parse(JSON.stringify(transfers));
 
       const { error } = await supabase
         .from('players')

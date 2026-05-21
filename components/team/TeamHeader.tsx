@@ -1,5 +1,8 @@
+import { Swords } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { Button } from '@/components/ui/button';
 
 export type TeamHeaderProps = {
   id: number;
@@ -64,7 +67,13 @@ export function TeamHeader({
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative flex flex-wrap items-center gap-2">
+          <Link href={`/compare/teams?a=${id}`}>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Swords className="size-3.5" aria-hidden />
+              Comparer
+            </Button>
+          </Link>
           <FavoriteButton
             entity_type="team"
             entity_id={id}
