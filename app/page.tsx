@@ -6,6 +6,7 @@ import {
   WatchlistSection,
   type WatchlistMatch,
 } from '@/components/dashboard/WatchlistSection';
+import { WeeklyRecapSection } from '@/components/dashboard/WeeklyRecapSection';
 import { LandingCoverage } from '@/components/landing/LandingCoverage';
 import { LandingDemo } from '@/components/landing/LandingDemo';
 import { LandingFAQ } from '@/components/landing/LandingFAQ';
@@ -18,6 +19,7 @@ import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { getPersonalUpcomingMatches, getUserFavorites } from '@/lib/data/favorites';
 import { getDailyRecap } from '@/lib/data/recap';
 import { getRecommendedPlayers } from '@/lib/data/recommendations';
+import { getWeeklyRecap } from '@/lib/data/weekly-recap';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -145,19 +147,23 @@ export default async function HomePage() {
     getDailyRecap(supabase, user.id),
     getRecommendedPlayers(supabase, user.id, 8),
     getUserFavorites(supabase, user.id),
+    getWeeklyRecap(supabase, user.id),
   ]);
 
-  const personal = results[results.length - 4] as Awaited<
+  const personal = results[results.length - 5] as Awaited<
     ReturnType<typeof getPersonalUpcomingMatches>
   >;
-  const recap = results[results.length - 3] as Awaited<
+  const recap = results[results.length - 4] as Awaited<
     ReturnType<typeof getDailyRecap>
   >;
-  const recommendations = results[results.length - 2] as Awaited<
+  const recommendations = results[results.length - 3] as Awaited<
     ReturnType<typeof getRecommendedPlayers>
   >;
-  const userFavs = results[results.length - 1] as Awaited<
+  const userFavs = results[results.length - 2] as Awaited<
     ReturnType<typeof getUserFavorites>
+  >;
+  const weeklyRecap = results[results.length - 1] as Awaited<
+    ReturnType<typeof getWeeklyRecap>
   >;
   const favoriteTeamsCount = userFavs.filter(
     (f) => f.entity_type === 'team',
@@ -190,6 +196,9 @@ export default async function HomePage() {
 
       {/* Récap quotidien — tuiles + résultats favoris hier + news fraîches */}
       <DailyRecapSection recap={recap} user_label={userLabel} />
+
+      {/* Récap hebdomadaire — bilan 7 derniers jours des favoris */}
+      <WeeklyRecapSection recap={weeklyRecap} />
 
       {/* Watchlist : favoris avec countdown live + bouton "Analyser" */}
       <WatchlistSection
