@@ -64,14 +64,14 @@ export default function RootLayout({
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Privacy-friendly analytics by Plausible */}
         <Script
-          defer
-          data-domain="tactuo.com"
-          src="https://plausible.io/js/script.outbound-links.tagged-events.js"
+          async
+          src="https://plausible.io/js/pa-QTle0QQknVnVhH2ifUMyI.js"
           strategy="afterInteractive"
         />
         <Script id="plausible-init" strategy="afterInteractive">
-          {`window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments); }`}
+          {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`}
         </Script>
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
