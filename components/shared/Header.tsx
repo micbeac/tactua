@@ -33,6 +33,12 @@ export async function Header() {
             >
               Matchs
             </Link>
+            <Link
+              href="/compare"
+              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
+            >
+              Comparer
+            </Link>
             {user && (
               <Link
                 href="/favoris"
