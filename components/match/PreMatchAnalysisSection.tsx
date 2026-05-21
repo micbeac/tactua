@@ -156,6 +156,9 @@ function RichStatsCompareTable({
   home_team_name: string;
   away_team_name: string;
 }) {
+  // Masque la table si toutes les lignes ont home==away (donnees absentes)
+  const hasDifferences = rich.stats_compare.some((s) => s.home !== s.away);
+  if (!hasDifferences) return null;
   return (
     <div>
       <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
@@ -766,21 +769,26 @@ export function PreMatchAnalysisSection({
       )}
 
       {/* Radar comparatif PENTAGONAL — vrai polygone superposé */}
-      {rich && rich.radar.length >= 5 && (
-        <div>
-          <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-            <BarChart3 className="size-3.5" aria-hidden />
-            Comparaison globale
+      {rich &&
+        rich.radar.length >= 5 &&
+        // Masque si les dimensions sont identiques pour les 2 equipes
+        // (signe que les stats sources ne sont pas disponibles -> fallback
+        // identique qui donne un radar superpose sans info)
+        rich.radar.some((d) => d.home !== d.away) && (
+          <div>
+            <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+              <BarChart3 className="size-3.5" aria-hidden />
+              Comparaison globale
+            </div>
+            <div className="bg-muted/20 border-border rounded-xl border p-4">
+              <RichRadarPentagon
+                dimensions={rich.radar}
+                home_team_name={home_team_name}
+                away_team_name={away_team_name}
+              />
+            </div>
           </div>
-          <div className="bg-muted/20 border-border rounded-xl border p-4">
-            <RichRadarPentagon
-              dimensions={rich.radar}
-              home_team_name={home_team_name}
-              away_team_name={away_team_name}
-            />
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Forme récente */}
       {rich && (
