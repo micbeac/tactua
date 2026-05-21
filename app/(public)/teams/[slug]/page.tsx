@@ -12,6 +12,7 @@ import {
   type TeamNarrativeItem,
 } from '@/components/team/TeamNarrativesSection';
 import { TeamSeasonStats } from '@/components/team/TeamSeasonStats';
+import { TeamSplitsSection } from '@/components/team/TeamSplitsSection';
 import { TeamSquadSection } from '@/components/team/TeamSquadSection';
 import {
   TeamStandingMini,
@@ -26,6 +27,7 @@ import {
   getTeamUpcomingMatches,
   type ScheduleMatch,
 } from '@/lib/data/team';
+import { getTeamSplits } from '@/lib/data/team-splits';
 import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
@@ -91,6 +93,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
     narrativesRes,
     analysisRes,
     playerStatsRes,
+    teamSplits,
   ] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
     getTeamUpcomingMatches(supabase, teamId, 5),
@@ -128,6 +131,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
         'player_id, appearances, goals, assists, players!inner(current_team_id)',
       )
       .eq('players.current_team_id', teamId),
+    getTeamSplits(supabase, teamId),
   ]);
 
   const narratives = ((narrativesRes.data ?? []) as TeamNarrativeItem[]).filter(
@@ -266,6 +270,8 @@ export default async function TeamPage({ params }: TeamPageParams) {
           rows={standingRows}
         />
       )}
+
+      <TeamSplitsSection splits={teamSplits} team_name={team.name} />
 
       <TeamNarrativesSection team_name={team.name} items={narratives} />
 
