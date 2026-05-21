@@ -234,18 +234,20 @@ export function LandingDemo() {
     target: sectionRef,
     offset: ['start end', 'end start'],
   });
-  const cardRotate = useTransform(scrollYProgress, [0, 0.4, 1], [8, 0, -5]);
-  const cardY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+  // Effet 3D plus subtil — l'ancienne config (rotate 8°, y +40) créait un
+  // grand vide visuel au-dessus de la carte sur mobile.
+  const cardRotate = useTransform(scrollYProgress, [0, 0.4, 1], [3, 0, -2]);
+  const cardY = useTransform(scrollYProgress, [0, 1], [15, -15]);
 
   return (
-    <section ref={sectionRef} id="demo" className="relative py-20 sm:py-28">
+    <section ref={sectionRef} id="demo" className="relative py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mx-auto mb-12 max-w-2xl text-center"
+          className="mx-auto mb-6 max-w-2xl text-center sm:mb-10"
         >
           <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
             Une vraie analyse, pas une fiche de stats
