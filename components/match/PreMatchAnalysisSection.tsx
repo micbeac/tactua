@@ -21,9 +21,55 @@ import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import type {
   DeepPreMatchAnalysis,
   MatchRichData,
+  PlayerSeasonStat,
   PreMatchAnalysis,
   RecentFormResult,
 } from '@/lib/openai/types';
+
+/**
+ * Cherche un joueur dans rich.top_players par nom (fuzzy : ignore casse,
+ * accents, initiales abrégées). Retourne le PlayerSeasonStat correspondant
+ * pour pouvoir wrapper le nom dans la liste "Joueurs à surveiller" avec un
+ * PlayerPopup interactif.
+ */
+function normalizeName(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchTopPlayer(
+  topPlayers: PlayerSeasonStat[],
+  side: 'home' | 'away',
+  rawName: string,
+): PlayerSeasonStat | null {
+  const target = normalizeName(rawName);
+  if (!target) return null;
+  const candidates = topPlayers.filter((p) => p.team === side);
+  // 1) Match exact
+  let found = candidates.find((p) => normalizeName(p.name) === target);
+  if (found) return found;
+  // 2) L'un contient l'autre (ex : "L. Martinez" vs "Lautaro Martinez")
+  found = candidates.find((p) => {
+    const n = normalizeName(p.name);
+    return n.includes(target) || target.includes(n);
+  });
+  if (found) return found;
+  // 3) Match par dernier mot (nom de famille)
+  const targetLast = target.split(' ').pop();
+  if (targetLast && targetLast.length >= 3) {
+    found = candidates.find((p) => {
+      const n = normalizeName(p.name);
+      return n.endsWith(targetLast) || n.split(' ').includes(targetLast);
+    });
+    if (found) return found;
+  }
+  return null;
+}
 
 export type PreMatchAnalysisSectionProps = {
   analysis: PreMatchAnalysis | DeepPreMatchAnalysis | null;
@@ -844,7 +890,7 @@ export function PreMatchAnalysisSection({
         </div>
       </div>
 
-      {/* Joueurs à surveiller (IA) */}
+      {/* Joueurs à surveiller (IA) — cliquable si match avec rich.top_players */}
       {analysis.key_players.length > 0 && (
         <div>
           <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
@@ -853,23 +899,42 @@ export function PreMatchAnalysisSection({
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { label: home_team_name, list: keyHome },
-              { label: away_team_name, list: keyAway },
-            ].map(({ label, list }) =>
+              { label: home_team_name, list: keyHome, side: 'home' as const },
+              { label: away_team_name, list: keyAway, side: 'away' as const },
+            ].map(({ label, list, side }) =>
               list.length > 0 ? (
                 <div key={label}>
                   <p className="text-muted-foreground mb-2 text-[10px] uppercase truncate">
                     {label}
                   </p>
                   <ul className="space-y-2">
-                    {list.map((p) => (
-                      <li key={p.name} className="text-sm">
-                        <span className="text-primary font-semibold">
-                          {p.name}
-                        </span>{' '}
-                        — {p.why}
-                      </li>
-                    ))}
+                    {list.map((p) => {
+                      // Cherche le joueur dans rich.top_players par nom (fuzzy)
+                      const matched = rich
+                        ? matchTopPlayer(rich.top_players, side, p.name)
+                        : null;
+                      const teamName =
+                        side === 'home' ? home_team_name : away_team_name;
+                      return (
+                        <li key={p.name} className="text-sm">
+                          {matched ? (
+                            <PlayerPopup
+                              player={fromSeasonStat(matched)}
+                              team_name={teamName}
+                            >
+                              <span className="text-primary font-semibold hover:underline">
+                                {p.name}
+                              </span>
+                            </PlayerPopup>
+                          ) : (
+                            <span className="text-primary font-semibold">
+                              {p.name}
+                            </span>
+                          )}{' '}
+                          — {p.why}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ) : null,
