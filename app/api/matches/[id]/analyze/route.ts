@@ -34,6 +34,10 @@ type AnalysisType = 'pre_match' | 'post_match';
 type Body = {
   type?: AnalysisType;
   force?: boolean;
+  /** Mode "what-if" : exclut ces joueurs (par DB id) du contexte AF avant l'analyse */
+  excluded_player_ids?: number[];
+  /** Si false, on ne persiste pas l'analyse (utile pour what-if simulator) */
+  save?: boolean;
 };
 
 const MATCH_SELECT = `
@@ -106,6 +110,10 @@ export async function POST(
     );
   }
   const force = Boolean(body.force);
+  const excludedPlayerIds = Array.isArray(body.excluded_player_ids)
+    ? body.excluded_player_ids
+    : [];
+  const shouldSave = body.save !== false && excludedPlayerIds.length === 0;
 
   // Vérification d'auth via le client user-scoped (cookie)
   const authClient = await createClient();
@@ -263,6 +271,53 @@ export async function POST(
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
 
+        // Mode what-if : exclut les joueurs spécifiés du contexte avant l'IA.
+        // 1. Récupère leurs api_football_id depuis la DB
+        // 2. Les retire des top_performers (pour ne plus apparaître dans l'analyse)
+        // 3. Les ajoute aux active_injuries (l'IA en tient compte dans les scénarios)
+        if (excludedPlayerIds.length > 0) {
+          const { data: excludedRows } = await supabase
+            .from('players')
+            .select('id, name, api_football_id')
+            .in('id', excludedPlayerIds);
+          type ExRow = {
+            id: number;
+            name: string;
+            api_football_id: number | null;
+          };
+          const excludedRowsList = (excludedRows ?? []) as ExRow[];
+          const excludedAfIds = new Set(
+            excludedRowsList
+              .map((r) => r.api_football_id)
+              .filter((x): x is number => x != null),
+          );
+
+          for (const ctx of [homeCtx, awayCtx]) {
+            // Liste des noms exclus présents dans ce ctx avant filtrage
+            const removedNames = ctx.top_performers
+              .filter((p) => excludedAfIds.has(p.af_player_id))
+              .map((p) => p.name);
+            // Filtre les performers
+            ctx.top_performers = ctx.top_performers.filter(
+              (p) => !excludedAfIds.has(p.af_player_id),
+            );
+            // Ajoute aux indispos (raison "simulation absence")
+            for (const name of removedNames) {
+              ctx.active_injuries = [
+                ...ctx.active_injuries,
+                { player_name: name, reason: 'Simulation : absence supposée' },
+              ];
+            }
+            // Retire aussi des compositions confirmées si présent
+            ctx.starting_eleven = ctx.starting_eleven.filter(
+              (n) => !removedNames.includes(n),
+            );
+          }
+          console.log(
+            `[analyze ${m.id}] what-if mode : ${excludedAfIds.size} joueur(s) exclu(s)`,
+          );
+        }
+
         // Charge les narratifs récents (scrapés via Apify) pour chaque équipe.
         // Permet d'ancrer l'analyse dans l'actu (transferts, blessures, etc.).
         const { data: narrativesRaw } = await supabase
@@ -335,13 +390,17 @@ export async function POST(
         const richData = buildRichData(deepCtx, afToDbPlayerId);
         const enrichedAnalysis = { ...analysis, rich_data: richData };
 
-        await upsertAnalysis(
-          supabase,
-          m.id,
-          'pre_match',
-          enrichedAnalysis,
-          model,
-        );
+        // Persiste uniquement si pas de mode what-if (sinon l'analyse "scenario"
+        // écraserait l'analyse canonique du match).
+        if (shouldSave) {
+          await upsertAnalysis(
+            supabase,
+            m.id,
+            'pre_match',
+            enrichedAnalysis,
+            model,
+          );
+        }
         return NextResponse.json({
           was_cached: false,
           mode: 'deep',

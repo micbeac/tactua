@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { PostMatchAnalysisSection } from '@/components/match/PostMatchAnalysisSection';
 import { PreMatchAnalysisSection } from '@/components/match/PreMatchAnalysisSection';
+import { WhatIfSimulator } from '@/components/match/WhatIfSimulator';
 import { Button } from '@/components/ui/button';
 import type {
   DeepPreMatchAnalysis,
@@ -144,6 +145,16 @@ export function MatchAnalysisOnDemand({
         Actualiser
       </Button>
     );
+    // Le simulateur what-if n'est dispo que sur l'analyse pré-match deep
+    // (besoin de rich_data.top_players pour la liste des joueurs sélectionnables)
+    const showWhatIf =
+      type === 'pre_match' &&
+      'rich_data' in (analysis as object) &&
+      Boolean(
+        (analysis as DeepPreMatchAnalysis).rich_data?.top_players?.some(
+          (p) => p.db_player_id != null,
+        ),
+      );
 
     return (
       <div className="space-y-3">
@@ -160,7 +171,17 @@ export function MatchAnalysisOnDemand({
               </span>
             )}
           </div>
-          {refreshButton}
+          <div className="flex items-center gap-2">
+            {showWhatIf && (
+              <WhatIfSimulator
+                match_id={match_id}
+                original_analysis={analysis as DeepPreMatchAnalysis}
+                home_team_name={home_team_name}
+                away_team_name={away_team_name}
+              />
+            )}
+            {refreshButton}
+          </div>
         </div>
 
         {type === 'pre_match' ? (
