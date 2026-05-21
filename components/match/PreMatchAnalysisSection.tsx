@@ -16,7 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { FormationPitch } from '@/components/match/FormationPitch';
-import { PlayerPopup } from '@/components/match/PlayerPopup';
+import { PlayerPopup, fromSeasonStat } from '@/components/match/PlayerPopup';
 import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import type {
   DeepPreMatchAnalysis,
@@ -325,7 +325,7 @@ function RichTopPlayers({
               {players.map((p) => (
                 <PlayerPopup
                   key={p.name}
-                  player={p}
+                  player={fromSeasonStat(p)}
                   team_name={
                     p.team === 'home' ? home_team_name : away_team_name
                   }

@@ -90,6 +90,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
     favorite,
     narrativesRes,
     analysisRes,
+    playerStatsRes,
   ] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
     getTeamUpcomingMatches(supabase, teamId, 5),
@@ -118,6 +119,15 @@ export default async function TeamPage({ params }: TeamPageParams) {
       .order('generated_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Stats saison de tous les joueurs de l'équipe (toutes compétitions
+    // confondues — agrégées côté JS). Permet d'afficher buts/passes dans le
+    // popup joueur depuis la fiche équipe.
+    supabase
+      .from('player_season_stats')
+      .select(
+        'player_id, appearances, goals, assists, players!inner(current_team_id)',
+      )
+      .eq('players.current_team_id', teamId),
   ]);
 
   const narratives = ((narrativesRes.data ?? []) as TeamNarrativeItem[]).filter(
@@ -144,6 +154,33 @@ export default async function TeamPage({ params }: TeamPageParams) {
       analysisRow.match.home_team_id === teamId
         ? analysisRow.content_json.rich_data.formation_home
         : analysisRow.content_json.rich_data.formation_away;
+  }
+
+  // Agrège les stats saison par joueur (somme sur toutes les compétitions)
+  type RawPlayerStatRow = {
+    player_id: number;
+    appearances: number | null;
+    goals: number | null;
+    assists: number | null;
+  };
+  const statsByPlayer = new Map<
+    number,
+    { player_id: number; appearances: number; goals: number; assists: number }
+  >();
+  for (const row of (playerStatsRes.data ?? []) as RawPlayerStatRow[]) {
+    const existing = statsByPlayer.get(row.player_id);
+    if (existing) {
+      existing.appearances += row.appearances ?? 0;
+      existing.goals += row.goals ?? 0;
+      existing.assists += row.assists ?? 0;
+    } else {
+      statsByPlayer.set(row.player_id, {
+        player_id: row.player_id,
+        appearances: row.appearances ?? 0,
+        goals: row.goals ?? 0,
+        assists: row.assists ?? 0,
+      });
+    }
   }
 
   // Compétition principale : la 1re du tri (points DESC, position ASC).
@@ -261,7 +298,11 @@ export default async function TeamPage({ params }: TeamPageParams) {
         matches={recent.map((m) => toMatchItem(teamId, m))}
       />
 
-      <TeamSquadSection players={squad} />
+      <TeamSquadSection
+        players={squad}
+        stats_by_player={statsByPlayer}
+        team_name={team.name}
+      />
     </main>
   );
 }

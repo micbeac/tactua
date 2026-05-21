@@ -1,6 +1,7 @@
+'use client';
+
 import Image from 'next/image';
-import Link from 'next/link';
-import { playerHref } from '@/lib/url';
+import { PlayerPopup } from '@/components/match/PlayerPopup';
 
 export type SquadPlayer = {
   id: number;
@@ -12,8 +13,18 @@ export type SquadPlayer = {
   shirt_number: number | null;
 };
 
+export type SquadPlayerStats = {
+  player_id: number;
+  appearances: number | null;
+  goals: number | null;
+  assists: number | null;
+};
+
 export type TeamSquadSectionProps = {
   players: SquadPlayer[];
+  /** Stats saison agrégées par player_id (toutes compétitions confondues). Optionnel. */
+  stats_by_player?: Map<number, SquadPlayerStats>;
+  team_name?: string;
 };
 
 type Category = 'Gardiens' | 'Défenseurs' | 'Milieux' | 'Attaquants' | 'Autres';
@@ -59,7 +70,11 @@ function computeAge(dob: string | null): number | null {
   return age;
 }
 
-export function TeamSquadSection({ players }: TeamSquadSectionProps) {
+export function TeamSquadSection({
+  players,
+  stats_by_player,
+  team_name,
+}: TeamSquadSectionProps) {
   const groups = new Map<Category, SquadPlayer[]>();
   for (const p of players) {
     const cat = categorize(p.position);
@@ -97,42 +112,56 @@ export function TeamSquadSection({ players }: TeamSquadSectionProps) {
                 <ul className="grid gap-1 sm:grid-cols-2">
                   {list.map((p) => {
                     const age = computeAge(p.date_of_birth);
+                    const stats = stats_by_player?.get(p.id);
                     return (
                       <li key={p.id}>
-                        <Link
-                          href={playerHref(p.id, p.name)}
-                          className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
+                        <PlayerPopup
+                          player={{
+                            name: p.name,
+                            photo: p.photo_url,
+                            position: p.position,
+                            db_player_id: p.id,
+                            shirt_number: p.shirt_number,
+                            date_of_birth: p.date_of_birth,
+                            nationality: p.nationality,
+                            appearances: stats?.appearances ?? undefined,
+                            goals: stats?.goals ?? undefined,
+                            assists: stats?.assists ?? undefined,
+                          }}
+                          team_name={team_name}
                         >
-                          <div className="bg-muted relative size-8 shrink-0 overflow-hidden rounded-full">
-                            {p.photo_url ? (
-                              <Image
-                                src={p.photo_url}
-                                alt=""
-                                fill
-                                sizes="32px"
-                                className="object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <span className="text-muted-foreground flex h-full w-full items-center justify-center text-[10px] font-semibold">
-                                {p.shirt_number ?? p.name.charAt(0)}
-                              </span>
-                            )}
+                          <div className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors">
+                            <div className="bg-muted relative size-8 shrink-0 overflow-hidden rounded-full">
+                              {p.photo_url ? (
+                                <Image
+                                  src={p.photo_url}
+                                  alt=""
+                                  fill
+                                  sizes="32px"
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <span className="text-muted-foreground flex h-full w-full items-center justify-center text-[10px] font-semibold">
+                                  {p.shirt_number ?? p.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <span className="flex-1 truncate text-sm font-medium">
+                              {p.shirt_number != null && (
+                                <span className="text-muted-foreground mr-2 tabular-nums">
+                                  {p.shirt_number}
+                                </span>
+                              )}
+                              {p.name}
+                            </span>
+                            <span className="text-muted-foreground hidden text-xs sm:inline">
+                              {[p.position, age != null ? `${age} a.` : null]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
                           </div>
-                          <span className="flex-1 truncate text-sm font-medium">
-                            {p.shirt_number != null && (
-                              <span className="text-muted-foreground mr-2 tabular-nums">
-                                {p.shirt_number}
-                              </span>
-                            )}
-                            {p.name}
-                          </span>
-                          <span className="text-muted-foreground hidden text-xs sm:inline">
-                            {[p.position, age != null ? `${age} a.` : null]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
-                        </Link>
+                        </PlayerPopup>
                       </li>
                     );
                   })}
