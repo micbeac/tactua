@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PlayerCareerSection } from '@/components/player/PlayerCareerSection';
 import { PlayerCareerTimeline } from '@/components/player/PlayerCareerTimeline';
+import { PlayerEfficiencyCard } from '@/components/player/PlayerEfficiencyCard';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import { buildPersonJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import {
@@ -17,6 +18,7 @@ import {
   getPlayerRecentPerformances,
   getPlayerSeasonStats,
 } from '@/lib/data/player';
+import { getPlayerEfficiency } from '@/lib/data/player-efficiency';
 import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
@@ -65,9 +67,10 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
     playerId,
   );
 
-  const [seasonStatsRaw, performancesRaw] = await Promise.all([
+  const [seasonStatsRaw, performancesRaw, efficiency] = await Promise.all([
     getPlayerSeasonStats(supabase, playerId),
     getPlayerRecentPerformances(supabase, playerId, 5),
+    getPlayerEfficiency(supabase, playerId),
   ]);
 
   const seasonStats: PlayerSeasonStats[] = seasonStatsRaw.map((s) => ({
@@ -174,6 +177,8 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
       />
 
       <PlayerSeasonStatsCard stats={seasonStats} />
+
+      {efficiency && <PlayerEfficiencyCard efficiency={efficiency} />}
 
       <PlayerRecentPerformances items={performances} />
     </main>
