@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PlayerCareerSection } from '@/components/player/PlayerCareerSection';
+import { PlayerCareerTimeline } from '@/components/player/PlayerCareerTimeline';
 import { PlayerHeader } from '@/components/player/PlayerHeader';
 import { buildPersonJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import {
@@ -152,8 +153,20 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
         }
       />
 
-      <PlayerCareerSection
+      <PlayerCareerTimeline
         transfers={player.transfers_json ?? []}
+        current_team={
+          player.current_team
+            ? {
+                name: player.current_team.name,
+                logo_url: player.current_team.logo_url,
+              }
+            : null
+        }
+      />
+
+      <PlayerCareerSection
+        transfers={[]}
         height_cm={player.height}
         weight_kg={player.weight}
         birth_place={player.birth_place}
