@@ -57,10 +57,14 @@ export function PlayerHeader({
   if (age != null) meta.push(`${age} ans`);
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 sm:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="bg-primary/10 border-primary/20 relative overflow-hidden rounded-2xl border p-6 sm:p-8">
+      {/* Halo décoratif (même look que PlayerPopup) */}
+      <div className="bg-primary/20 pointer-events-none absolute -top-16 -right-16 size-64 rounded-full blur-3xl" />
+      <div className="bg-emerald-400/10 pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full blur-3xl" />
+
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
-          <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-full sm:size-24">
+          <div className="border-primary/40 bg-muted relative size-20 shrink-0 overflow-hidden rounded-full border-2 sm:size-24">
             {photo_url ? (
               <Image
                 src={photo_url}
@@ -86,12 +90,21 @@ export function PlayerHeader({
               {name}
             </h1>
             {meta.length > 0 && (
-              <p className="text-muted-foreground mt-1 text-sm">
-                {meta.join(' · ')}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {position && (
+                  <span className="bg-primary/15 text-primary inline-block rounded px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase">
+                    {position}
+                  </span>
+                )}
+                <p className="text-muted-foreground text-sm">
+                  {[nationality, age != null ? `${age} ans` : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </div>
             )}
             {date_of_birth && (
-              <p className="text-muted-foreground/80 mt-0.5 text-xs">
+              <p className="text-muted-foreground/80 mt-1 text-xs">
                 Né le {DOB_FMT.format(new Date(date_of_birth))}
               </p>
             )}
@@ -101,7 +114,7 @@ export function PlayerHeader({
         {current_team && (
           <Link
             href={teamHref(current_team.id, current_team.name)}
-            className="bg-muted/40 hover:bg-muted border-border flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 transition-colors sm:self-auto"
+            className="bg-card/60 hover:bg-card border-border flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 backdrop-blur transition-colors sm:self-auto"
           >
             <div className="bg-background relative size-8 shrink-0 overflow-hidden rounded-full">
               {current_team.logo_url ? (
@@ -123,7 +136,7 @@ export function PlayerHeader({
           </Link>
         )}
       </div>
-      <div className="mt-4">
+      <div className="relative mt-4">
         <FavoriteButton
           entity_type="player"
           entity_id={id}

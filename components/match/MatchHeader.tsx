@@ -119,8 +119,12 @@ export function MatchHeader(props: MatchHeaderProps) {
   const { text: statusText, tone } = statusLabel(status);
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 sm:p-8">
-      <div className="mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+    <section className="bg-primary/10 border-primary/20 relative overflow-hidden rounded-2xl border p-6 sm:p-8">
+      {/* Halo décoratif (homogène avec PlayerHeader et TeamHeader) */}
+      <div className="bg-primary/20 pointer-events-none absolute -top-16 -right-16 size-64 rounded-full blur-3xl" />
+      <div className="bg-emerald-400/10 pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full blur-3xl" />
+
+      <div className="relative mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
         <p className="text-muted-foreground text-xs tracking-widest uppercase">
           {dateLabel}
         </p>
@@ -154,7 +158,7 @@ export function MatchHeader(props: MatchHeaderProps) {
         </span>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8">
+      <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8">
         <TeamBlock team={home} />
         <div className="text-foreground text-2xl font-bold tabular-nums sm:text-4xl">
           {showScore ? (
@@ -172,7 +176,7 @@ export function MatchHeader(props: MatchHeaderProps) {
         <TeamBlock team={away} />
       </div>
 
-      <div className="mt-6 flex justify-center">
+      <div className="relative mt-6 flex justify-center">
         <FavoriteButton
           entity_type="match"
           entity_id={id}

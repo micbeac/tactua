@@ -30,10 +30,14 @@ export function TeamHeader({
   if (venue) meta.push(venue);
 
   return (
-    <section className="bg-card border-border rounded-2xl border p-6 sm:p-8">
-      <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+    <section className="bg-primary/10 border-primary/20 relative overflow-hidden rounded-2xl border p-6 sm:p-8">
+      {/* Halo décoratif (homogène avec PlayerHeader et PlayerPopup) */}
+      <div className="bg-primary/20 pointer-events-none absolute -top-16 -right-16 size-64 rounded-full blur-3xl" />
+      <div className="bg-emerald-400/10 pointer-events-none absolute -bottom-20 -left-20 size-72 rounded-full blur-3xl" />
+
+      <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex min-w-0 items-center gap-5 sm:gap-6">
-          <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-full sm:size-24">
+          <div className="border-primary/40 bg-muted relative size-20 shrink-0 overflow-hidden rounded-full border-2 sm:size-24">
             {logo_url ? (
               <Image
                 src={logo_url}
@@ -60,12 +64,14 @@ export function TeamHeader({
           </div>
         </div>
 
-        <FavoriteButton
-          entity_type="team"
-          entity_id={id}
-          is_favorite={is_favorite}
-          is_logged_in={is_logged_in}
-        />
+        <div className="relative">
+          <FavoriteButton
+            entity_type="team"
+            entity_id={id}
+            is_favorite={is_favorite}
+            is_logged_in={is_logged_in}
+          />
+        </div>
       </div>
     </section>
   );
