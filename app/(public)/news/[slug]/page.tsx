@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
-import { ArrowLeft, Calendar, ExternalLink, Sparkles } from 'lucide-react';
+import { Calendar, ExternalLink, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { NewsBreadcrumb } from '@/components/news/NewsBreadcrumb';
+import { NewsContextCard } from '@/components/news/NewsContextCard';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { autolinkHtml, type LinkableEntity } from '@/lib/autolink';
+import { getNewsContext } from '@/lib/data/news-context';
 import { parseNewsSlug } from '@/lib/openai/news-content';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import { createClient } from '@/lib/supabase/server';
-import { teamHref } from '@/lib/url';
+import { playerHref, teamHref } from '@/lib/url';
 
 export const revalidate = 3600; // 1h
 
@@ -81,6 +86,7 @@ export async function generateMetadata({
       publishedTime: news.published_at ?? news.scraped_at,
       modifiedTime: news.ai_generated_at ?? news.scraped_at,
       authors: [SITE_NAME],
+      images: news.team?.logo_url ? [{ url: news.team.logo_url }] : undefined,
     },
     twitter: {
       card: 'summary_large_image',
@@ -91,8 +97,6 @@ export async function generateMetadata({
 }
 
 function renderMarkdown(md: string): string {
-  // Mini-renderer Markdown : ##, **bold**, paragraphes, listes.
-  // Pas de tableaux ni de code. Suffisant pour notre contenu IA.
   const escaped = md
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -171,15 +175,21 @@ export default async function NewsPage({
   const url = `${SITE_URL}/news/${news.slug ?? slug}`;
   const publishedAt = news.published_at ?? news.scraped_at;
   const modifiedAt = news.ai_generated_at ?? news.scraped_at;
-
-  // Si l'IA n'a pas encore généré le contenu, on affiche au moins le titre + snippet
-  // avec un disclaimer. Sinon on rend le contenu complet.
   const hasAiContent = Boolean(news.ai_content);
 
-  // Récupère 3 autres news récentes de la même équipe (related links — maillage interne)
-  let related: { id: number; title: string; slug: string | null; ai_summary: string | null }[] = [];
+  const supabase = await createClient();
+
+  // Contexte équipe (logo, classement, forme, prochain match, joueurs)
+  const ctx = team ? await getNewsContext(supabase, team.id) : null;
+
+  // Related news (maillage interne)
+  let related: {
+    id: number;
+    title: string;
+    slug: string | null;
+    ai_summary: string | null;
+  }[] = [];
   if (team) {
-    const supabase = await createClient();
     const { data } = await supabase
       .from('team_narratives')
       .select('id, title, slug, ai_summary')
@@ -191,9 +201,63 @@ export default async function NewsPage({
     related = (data ?? []) as typeof related;
   }
 
+  // Auto-link : transforme les noms d'équipes/joueurs/prochain match
+  // mentionnés dans le contenu IA en liens internes.
+  const entities: LinkableEntity[] = [];
+  if (ctx) {
+    // L'équipe elle-même (pour les variantes : "Inter", "Bologne", etc.)
+    entities.push({
+      type: 'team',
+      name: ctx.team.name,
+      href: teamHref(ctx.team.id, ctx.team.name),
+    });
+    // Prochain adversaire
+    if (ctx.next_match?.opponent) {
+      entities.push({
+        type: 'team',
+        name: ctx.next_match.opponent.name,
+        href: teamHref(
+          ctx.next_match.opponent.id,
+          ctx.next_match.opponent.name,
+        ),
+      });
+    }
+    // Joueurs de l'équipe
+    for (const p of ctx.players) {
+      entities.push({
+        type: 'player',
+        name: p.name,
+        href: playerHref(p.id, p.name),
+      });
+    }
+  }
+
+  const renderedHtml = hasAiContent ? renderMarkdown(news.ai_content!) : '';
+  const linkedHtml = renderedHtml
+    ? autolinkHtml(renderedHtml, entities)
+    : '';
+
+  // Crumbs : Accueil > Actualités > [Équipe] > [Titre]
+  const crumbs = [
+    { label: 'Accueil', href: '/' },
+    { label: 'Actualités' },
+    ...(team
+      ? [
+          {
+            label: team.name,
+            href: `/teams/${teamHref(team.id, team.name).split('/teams/')[1]}/actu`,
+          },
+        ]
+      : []),
+    { label: news.title },
+  ];
+
+  // Construit la liste des joueurs mentionnés (pour Schema.org `mentions`)
+  const mentionedPlayers = entities.filter((e) => e.type === 'player');
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      {/* JSON-LD NewsArticle (Google News + AI Overviews) */}
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      {/* JSON-LD NewsArticle enrichi */}
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -202,6 +266,7 @@ export default async function NewsPage({
           description: news.ai_summary ?? news.snippet ?? '',
           datePublished: publishedAt,
           dateModified: modifiedAt,
+          inLanguage: 'fr-FR',
           author: {
             '@type': 'Organization',
             name: SITE_NAME,
@@ -211,37 +276,75 @@ export default async function NewsPage({
             '@type': 'Organization',
             name: SITE_NAME,
             url: SITE_URL,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${SITE_URL}/logo.png`,
+            },
           },
           mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+          image: team?.logo_url ? [team.logo_url] : undefined,
           about: team
             ? {
                 '@type': 'SportsTeam',
                 name: team.name,
+                url: `${SITE_URL}${teamHref(team.id, team.name)}`,
                 logo: team.logo_url ?? undefined,
               }
             : undefined,
+          mentions:
+            mentionedPlayers.length > 0
+              ? mentionedPlayers.slice(0, 10).map((p) => ({
+                  '@type': 'Person',
+                  name: p.name,
+                  url: `${SITE_URL}${p.href}`,
+                }))
+              : undefined,
+          keywords: [
+            team?.name,
+            ctx?.competition?.name,
+            'football',
+            'analyse',
+            'actualité',
+          ]
+            .filter(Boolean)
+            .join(', '),
         }}
       />
 
-      <nav className="mb-6">
-        <Link
-          href="/"
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs"
-        >
-          <ArrowLeft className="size-3" aria-hidden />
-          Retour à l&apos;accueil
-        </Link>
-      </nav>
+      <NewsBreadcrumb crumbs={crumbs} />
 
       <article>
+        {/* Hero avec logo équipe en grand */}
         <header className="mb-8">
           {team && (
-            <Link
-              href={teamHref(team.id, team.name)}
-              className="bg-primary/15 text-primary mb-3 inline-block rounded-md px-2.5 py-1 text-[10px] font-semibold tracking-widest uppercase hover:underline"
-            >
-              {team.name}
-            </Link>
+            <div className="mb-5 flex items-center gap-4">
+              {team.logo_url && (
+                <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-full sm:size-20">
+                  <Image
+                    src={team.logo_url}
+                    alt={`Logo ${team.name}`}
+                    fill
+                    sizes="80px"
+                    className="object-contain p-2"
+                    unoptimized
+                    priority
+                  />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={teamHref(team.id, team.name)}
+                  className="bg-primary/15 text-primary inline-block rounded-md px-2.5 py-1 text-[10px] font-semibold tracking-widest uppercase hover:underline"
+                >
+                  {team.name}
+                </Link>
+                {ctx?.competition && (
+                  <p className="text-muted-foreground mt-1 truncate text-xs">
+                    {ctx.competition.name}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             {news.title}
@@ -272,12 +375,14 @@ export default async function NewsPage({
           </div>
         </header>
 
+        {/* Contexte club juste avant le corps (visuel + maillage) */}
+        {ctx && <NewsContextCard ctx={ctx} />}
+
+        {/* Corps de l'article */}
         {hasAiContent ? (
           <div
-            className="prose prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-3 prose-p:leading-relaxed prose-p:text-foreground/90 prose-strong:text-primary max-w-none text-sm sm:text-base"
-            dangerouslySetInnerHTML={{
-              __html: renderMarkdown(news.ai_content!),
-            }}
+            className="prose prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-3 prose-p:leading-relaxed prose-p:text-foreground/90 prose-strong:text-primary prose-a:text-primary max-w-none text-sm sm:text-base"
+            dangerouslySetInnerHTML={{ __html: linkedHtml }}
           />
         ) : (
           <div className="bg-muted/40 rounded-lg p-6 text-sm">
@@ -304,6 +409,40 @@ export default async function NewsPage({
           </section>
         )}
 
+        {/* Liens internes complémentaires sous le corps */}
+        {team && (
+          <section className="border-border mt-8 grid grid-cols-1 gap-3 border-t pt-6 sm:grid-cols-2">
+            <Link
+              href={teamHref(team.id, team.name)}
+              className="bg-card hover:border-primary/40 border-border block rounded-lg border p-4 transition-colors"
+            >
+              <p className="text-muted-foreground text-[10px] tracking-widest uppercase">
+                Découvrir
+              </p>
+              <p className="text-primary mt-1 text-sm font-semibold">
+                Fiche complète {team.name} →
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Classement, calendrier, effectif et stats
+              </p>
+            </Link>
+            <Link
+              href={`/teams/${teamHref(team.id, team.name).split('/teams/')[1]}/actu`}
+              className="bg-card hover:border-primary/40 border-border block rounded-lg border p-4 transition-colors"
+            >
+              <p className="text-muted-foreground text-[10px] tracking-widest uppercase">
+                Plus d&apos;actu
+              </p>
+              <p className="text-primary mt-1 text-sm font-semibold">
+                Toutes les news {team.name} →
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                L&apos;intégralité des actualités du club
+              </p>
+            </Link>
+          </section>
+        )}
+
         {/* Attribution source */}
         {news.url && (
           <footer className="border-border mt-10 border-t pt-5 text-xs">
@@ -325,7 +464,7 @@ export default async function NewsPage({
         )}
       </article>
 
-      {/* Maillage : autres news de l'équipe */}
+      {/* Related news */}
       {related.length > 0 && team && (
         <section className="mt-12">
           <div className="mb-4 flex items-center justify-between">
@@ -333,7 +472,7 @@ export default async function NewsPage({
               Plus d&apos;actualités {team.name}
             </h2>
             <Link
-              href={`/teams/${team.id}/actu`}
+              href={`/teams/${teamHref(team.id, team.name).split('/teams/')[1]}/actu`}
               className="text-primary text-xs hover:underline"
             >
               Toutes les news →
@@ -346,7 +485,9 @@ export default async function NewsPage({
                   href={`/news/${r.slug ?? `news-${r.id}`}`}
                   className="bg-card hover:border-primary/40 border-border block rounded-lg border p-3 transition-colors"
                 >
-                  <p className="line-clamp-2 text-sm font-semibold">{r.title}</p>
+                  <p className="line-clamp-2 text-sm font-semibold">
+                    {r.title}
+                  </p>
                   {r.ai_summary && (
                     <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                       {r.ai_summary}
