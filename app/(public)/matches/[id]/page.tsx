@@ -257,6 +257,8 @@ export default async function MatchPage({ params }: MatchPageParams) {
         referee={match.referee}
       />
 
+      <div id="analyse" className="scroll-mt-24" />
+
       {match.status === 'finished' && (
         <MatchAnalysisOnDemand
           match_id={match.id}

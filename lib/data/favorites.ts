@@ -37,6 +37,11 @@ export type PersonalUpcomingMatch = {
   score_away: number | null;
   home_team_id: number | null;
   away_team_id: number | null;
+  competition: {
+    id: number;
+    name: string;
+    code: string | null;
+  } | null;
   home_team: {
     id: number;
     name: string;
@@ -87,6 +92,7 @@ export async function getPersonalUpcomingMatches(
     .select(
       `id, kickoff_at, status, stage, matchday, score_home, score_away,
        home_team_id, away_team_id,
+       competition:competitions(id, name, code),
        home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
        away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)`,
     )

@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
+import {
+  WatchlistSection,
+  type WatchlistMatch,
+} from '@/components/dashboard/WatchlistSection';
 import { LandingCoverage } from '@/components/landing/LandingCoverage';
 import { LandingDemo } from '@/components/landing/LandingDemo';
 import { LandingFAQ } from '@/components/landing/LandingFAQ';
@@ -161,48 +165,33 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {/* Bloc "Tes matchs" — favoris en tête */}
-      {personal.length > 0 && (
-        <section className="mb-12">
-          <header className="mb-4 flex items-end justify-between">
-            <h2 className="text-lg font-semibold">
-              <span className="text-primary">★</span> Tes matchs
-            </h2>
-            <Link
-              href="/favoris"
-              className="text-muted-foreground hover:text-foreground text-xs underline"
-            >
-              Gérer mes favoris
-            </Link>
-          </header>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {personal.map((m) => (
-              <MatchCard
-                key={m.id}
-                id={m.id}
-                kickoff_at={m.kickoff_at}
-                status={m.status}
-                stage={m.stage}
-                matchday={m.matchday}
-                score_home={m.score_home}
-                score_away={m.score_away}
-                home={{
-                  id: m.home_team?.id ?? m.home_team_id,
-                  name: m.home_team?.name ?? 'À déterminer',
-                  tla: m.home_team?.tla ?? null,
-                  logo_url: m.home_team?.logo_url ?? null,
-                }}
-                away={{
-                  id: m.away_team?.id ?? m.away_team_id,
-                  name: m.away_team?.name ?? 'À déterminer',
-                  tla: m.away_team?.tla ?? null,
-                  logo_url: m.away_team?.logo_url ?? null,
-                }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Watchlist : favoris avec countdown live + bouton "Analyser" */}
+      <WatchlistSection
+        matches={personal.map(
+          (m): WatchlistMatch => ({
+            id: m.id,
+            kickoff_at: m.kickoff_at,
+            status: m.status,
+            stage: m.stage,
+            matchday: m.matchday,
+            score_home: m.score_home,
+            score_away: m.score_away,
+            competition_name: m.competition?.name ?? null,
+            home: {
+              id: m.home_team?.id ?? m.home_team_id,
+              name: m.home_team?.name ?? 'À déterminer',
+              tla: m.home_team?.tla ?? null,
+              logo_url: m.home_team?.logo_url ?? null,
+            },
+            away: {
+              id: m.away_team?.id ?? m.away_team_id,
+              name: m.away_team?.name ?? 'À déterminer',
+              tla: m.away_team?.tla ?? null,
+              logo_url: m.away_team?.logo_url ?? null,
+            },
+          }),
+        )}
+      />
 
       {/* Une section accordéon par compétition trackée — repliable, état persisté */}
       <div className="space-y-3">
