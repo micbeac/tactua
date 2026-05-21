@@ -295,27 +295,43 @@ export async function POST(
             for (const r of (rosterRows ?? []) as RR[]) {
               rosterByAfId.set(r.api_football_id, r);
             }
-            // Pour chaque équipe, retire les joueurs dont current_team_id != team
+            // Pour chaque équipe, identifie les joueurs dont current_team_id
+            // != team du match. ABORT si on enlèverait > 50% (signe probable
+            // d'un mismatch d'ID entre sources, pas un vrai exode mercato).
             for (const [ctx, teamDbId] of [
               [homeCtx, m.home_team_id!],
               [awayCtx, m.away_team_id!],
             ] as const) {
-              const transferredOut: string[] = [];
-              ctx.top_performers = ctx.top_performers.filter((p) => {
+              const originalCount = ctx.top_performers.length;
+              const candidates: typeof ctx.top_performers = [];
+              const wouldRemove: string[] = [];
+
+              for (const p of ctx.top_performers) {
                 const r = rosterByAfId.get(p.af_player_id);
-                // Si on n'a pas le joueur en DB, on garde (incertitude → mieux que silence)
-                if (!r) return true;
-                // Si current_team_id ne match pas, c'est un transfert sortant
-                if (r.current_team_id !== teamDbId) {
-                  transferredOut.push(p.name);
-                  return false;
+                if (!r) {
+                  candidates.push(p);
+                  continue;
                 }
-                return true;
-              });
-              if (transferredOut.length > 0) {
-                ctx.transferred_out = transferredOut;
+                if (r.current_team_id !== teamDbId) {
+                  wouldRemove.push(p.name);
+                } else {
+                  candidates.push(p);
+                }
+              }
+
+              const removeRatio =
+                originalCount > 0 ? wouldRemove.length / originalCount : 0;
+
+              if (removeRatio > 0.5) {
+                console.warn(
+                  `[analyze ${m.id}] filter transferred ABORT : aurait retiré ${wouldRemove.length}/${originalCount} joueurs (${Math.round(removeRatio * 100)}%) — probable mismatch ID, filtre désactivé`,
+                );
+                // On garde tous les top_performers tels quels (pas de transferred_out)
+              } else if (wouldRemove.length > 0) {
+                ctx.top_performers = candidates;
+                ctx.transferred_out = wouldRemove;
                 console.log(
-                  `[analyze ${m.id}] retire ${transferredOut.length} joueur(s) transferes : ${transferredOut.join(', ')}`,
+                  `[analyze ${m.id}] retire ${wouldRemove.length} joueur(s) transferes : ${wouldRemove.join(', ')}`,
                 );
               }
             }
