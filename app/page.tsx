@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { DailyRecapSection } from '@/components/dashboard/DailyRecapSection';
+import { ForYouFeedSection } from '@/components/dashboard/ForYouFeedSection';
 import { PlayerRecommendationsSection } from '@/components/dashboard/PlayerRecommendationsSection';
 import {
   WatchlistSection,
@@ -17,6 +18,7 @@ import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { getPersonalUpcomingMatches, getUserFavorites } from '@/lib/data/favorites';
+import { buildForYouFeed } from '@/lib/data/for-you-feed';
 import { getDailyRecap } from '@/lib/data/recap';
 import { getRecommendedPlayers } from '@/lib/data/recommendations';
 import { getWeeklyRecap } from '@/lib/data/weekly-recap';
@@ -177,6 +179,14 @@ export default async function HomePage() {
   // Prénom ou pseudonyme depuis email (avant le @)
   const userLabel = user.email?.split('@')[0] ?? null;
 
+  // Feed "Pour toi" — mix des sources existantes (pas de nouvelle query)
+  const feed = buildForYouFeed({
+    personal,
+    recap,
+    weeklyRecap,
+    recommendations,
+  });
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <section className="mb-10">
@@ -199,6 +209,9 @@ export default async function HomePage() {
 
       {/* Récap hebdomadaire — bilan 7 derniers jours des favoris */}
       <WeeklyRecapSection recap={weeklyRecap} />
+
+      {/* Feed "Pour toi" — mix personnalisé matchs/résultats/news/suggestions */}
+      <ForYouFeedSection items={feed} />
 
       {/* Watchlist : favoris avec countdown live + bouton "Analyser" */}
       <WatchlistSection
