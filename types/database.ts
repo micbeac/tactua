@@ -266,6 +266,8 @@ export type Database = {
           stage: string | null
           status: string
           venue: string | null
+          live_minute: number | null
+          live_updated_at: string | null
         }
         Insert: {
           api_football_fixture_id?: number | null
@@ -284,6 +286,8 @@ export type Database = {
           stage?: string | null
           status: string
           venue?: string | null
+          live_minute?: number | null
+          live_updated_at?: string | null
         }
         Update: {
           api_football_fixture_id?: number | null
@@ -302,6 +306,8 @@ export type Database = {
           stage?: string | null
           status?: string
           venue?: string | null
+          live_minute?: number | null
+          live_updated_at?: string | null
         }
         Relationships: [
           {
@@ -777,6 +783,48 @@ export type Database = {
           correct_answers?: number
           details_json?: Json
           completed_at?: string
+        }
+        Relationships: []
+      }
+      match_events: {
+        Row: {
+          id: number
+          match_id: number
+          team_id: number | null
+          player_id: number | null
+          assist_player_id: number | null
+          minute: number | null
+          extra_minute: number | null
+          type: string
+          detail: string | null
+          comments: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          match_id: number
+          team_id?: number | null
+          player_id?: number | null
+          assist_player_id?: number | null
+          minute?: number | null
+          extra_minute?: number | null
+          type: string
+          detail?: string | null
+          comments?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          match_id?: number
+          team_id?: number | null
+          player_id?: number | null
+          assist_player_id?: number | null
+          minute?: number | null
+          extra_minute?: number | null
+          type?: string
+          detail?: string | null
+          comments?: string | null
+          created_at?: string
         }
         Relationships: []
       }

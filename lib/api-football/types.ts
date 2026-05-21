@@ -89,3 +89,31 @@ export type AFPlayerStatsResponse = {
     players: AFPlayerStatLine[];
   }>;
 };
+
+export type AFEvent = {
+  time: { elapsed: number; extra: number | null };
+  team: { id: number; name: string; logo: string };
+  player: { id: number | null; name: string | null };
+  assist: { id: number | null; name: string | null };
+  type: string;      // 'Goal' | 'Card' | 'subst' | 'Var'
+  detail: string;    // 'Normal Goal' | 'Yellow Card' | 'Substitution 1' | etc.
+  comments: string | null;
+};
+
+export type AFEventsResponse = {
+  response: AFEvent[];
+};
+
+export type AFFixtureDetail = {
+  response: Array<{
+    fixture: {
+      id: number;
+      status: { short: string; long: string; elapsed: number | null };
+    };
+    goals: { home: number | null; away: number | null };
+    score: {
+      halftime: { home: number | null; away: number | null };
+      fulltime: { home: number | null; away: number | null };
+    };
+  }>;
+};

@@ -18,6 +18,8 @@ export type MatchHeaderProps = {
   matchday: number | null;
   score_home: number | null;
   score_away: number | null;
+  /** Minute en cours si live. Mis à jour par enrich.ts via fixture.status.elapsed */
+  live_minute?: number | null;
   home: Team;
   away: Team;
   is_favorite: boolean;
@@ -108,6 +110,7 @@ export function MatchHeader(props: MatchHeaderProps) {
     matchday,
     score_home,
     score_away,
+    live_minute,
     home,
     away,
     is_favorite,
@@ -155,6 +158,9 @@ export function MatchHeader(props: MatchHeaderProps) {
             <span className="bg-primary mr-1 inline-block size-1.5 animate-pulse rounded-full" />
           )}
           {statusText}
+          {tone === 'live' && live_minute != null && (
+            <span className="ml-1.5 tabular-nums">· {live_minute}&apos;</span>
+          )}
         </span>
       </div>
 

@@ -25,8 +25,8 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 const PRE_KICKOFF_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h avant
-const POST_KICKOFF_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h après
-const MAX_ENRICH_PER_RUN = 5;
+const POST_KICKOFF_WINDOW_MS = 3 * 60 * 60 * 1000; // 3h après (couvre les prolongations CDM)
+const MAX_ENRICH_PER_RUN = 10;
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -46,6 +46,17 @@ export async function GET(request: Request) {
     .lte('kickoff_at', upperBound)
     .order('kickoff_at', { ascending: true });
 
+  // Tri : on traite les matchs live EN PREMIER, puis les imminents, puis les autres.
+  // Sécurise le quota : si on a 10 matchs live + 5 imminents, les lives sont prioritaires.
+  if (pending) {
+    pending.sort((a, b) => {
+      const aLive = a.status === 'live' ? 0 : 1;
+      const bLive = b.status === 'live' ? 0 : 1;
+      if (aLive !== bLive) return aLive - bLive;
+      return new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime();
+    });
+  }
+
   if (queryErr) {
     console.error('[cron:refresh-matchday] query error', queryErr);
     return NextResponse.json(
@@ -59,6 +70,7 @@ export async function GET(request: Request) {
     candidates: pending?.length ?? 0,
     refreshed: 0,
     enriched: 0,
+    enriched_live: 0,
     enrich_skipped_already: 0,
     enrich_skipped_quota: 0,
     errors: [] as CronError[],
@@ -114,7 +126,10 @@ export async function GET(request: Request) {
       stats.enrich_skipped_quota += 1;
       continue;
     }
-    if (alreadyStatsSet.has(m.id)) {
+    // Re-enrich systématique pour les matchs LIVE (events / stats évoluent
+    // toutes les minutes). Pour les pré-match, skip si déjà fait.
+    const isLive = m.status === 'live';
+    if (alreadyStatsSet.has(m.id) && !isLive) {
       stats.enrich_skipped_already += 1;
       continue;
     }
@@ -122,12 +137,10 @@ export async function GET(request: Request) {
     try {
       const r = await enrichMatchFromApiFootball(supabase, m.id);
       if (r.fixture_id) {
-        stats.enriched += 1;
+        if (isLive) stats.enriched_live += 1;
+        else stats.enriched += 1;
         enrichBudget -= 1;
       }
-      // Note: si fixture_id null (free tier hors fenêtre), on ne décrémente
-      // pas le budget car aucune ressource n'a été consommée pour lineups/stats
-      // (1 req de recherche fixtures quand même — acceptable).
     } catch (e) {
       stats.errors.push({
         match_id: m.id,

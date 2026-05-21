@@ -10,6 +10,11 @@ import {
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import { LiveAutoRefresh } from '@/components/match/LiveAutoRefresh';
+import {
+  LiveEventTimeline,
+  type LiveMatchEvent,
+} from '@/components/match/LiveEventTimeline';
 import {
   MatchTeamsNewsSection,
   type MatchNewsItem,
@@ -56,6 +61,7 @@ type MatchRow = {
   matchday: number | null;
   score_home: number | null;
   score_away: number | null;
+  live_minute: number | null;
   venue: string | null;
   referee: string | null;
   home_team_id: number | null;
@@ -66,7 +72,7 @@ type MatchRow = {
 };
 
 const MATCH_SELECT = `
-  id, kickoff_at, status, stage, matchday, score_home, score_away,
+  id, kickoff_at, status, stage, matchday, score_home, score_away, live_minute,
   venue, referee, home_team_id, away_team_id,
   competition:competitions(id, name, country),
   home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
@@ -205,6 +211,50 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
 
+  // Events live / timeline
+  const { data: eventsData } = await supabase
+    .from('match_events')
+    .select(
+      `id, minute, extra_minute, type, detail, comments, team_id,
+       player:players!match_events_player_id_fkey(id, name),
+       assist:players!match_events_assist_player_id_fkey(id, name)`,
+    )
+    .eq('match_id', matchId)
+    .order('minute', { ascending: true });
+
+  type EventRowRaw = {
+    id: number;
+    minute: number | null;
+    extra_minute: number | null;
+    type: string;
+    detail: string | null;
+    comments: string | null;
+    team_id: number | null;
+    player: { id: number; name: string } | null;
+    assist: { id: number; name: string } | null;
+  };
+  const timelineEvents: LiveMatchEvent[] = (
+    (eventsData ?? []) as unknown as EventRowRaw[]
+  ).map((e) => ({
+    id: e.id,
+    minute: e.minute,
+    extra_minute: e.extra_minute,
+    type: e.type,
+    detail: e.detail,
+    comments: e.comments,
+    team_id: e.team_id,
+    team_side:
+      e.team_id === homeId ? 'home' : e.team_id === awayId ? 'away' : null,
+    player: {
+      id: e.player?.id ?? null,
+      name: e.player?.name ?? null,
+    },
+    assist: {
+      id: e.assist?.id ?? null,
+      name: e.assist?.name ?? null,
+    },
+  }));
+
   // Dernières news pour les 2 équipes (maillage interne + valeur pour le lecteur)
   const teamIdsForNews = [homeId, awayId].filter((id): id is number => id != null);
   const newsByTeam = new Map<number, MatchNewsItem[]>();
@@ -274,6 +324,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <LiveAutoRefresh enabled={match.status === 'live'} interval_seconds={60} />
       <JsonLd
         data={buildSportsEventJsonLd({
           match_id: match.id,
@@ -305,6 +356,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
         matchday={match.matchday}
         score_home={match.score_home}
         score_away={match.score_away}
+        live_minute={match.live_minute}
         is_favorite={favorite}
         is_logged_in={Boolean(user)}
         home={{
@@ -329,6 +381,16 @@ export default async function MatchPage({ params }: MatchPageParams) {
         venue={match.venue}
         referee={match.referee}
       />
+
+      {/* Timeline events (live ou post-match) */}
+      {(match.status === 'live' || match.status === 'finished') && (
+        <LiveEventTimeline
+          events={timelineEvents}
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          match_status={match.status}
+        />
+      )}
 
       <div id="analyse" className="scroll-mt-24" />
 

@@ -157,6 +157,18 @@ export function createApiFootballClient(
       request<import('./types').AFPlayerStatsResponse>('/fixtures/players', {
         fixture: fixtureId,
       }),
+
+    /** Timeline events : buts, cartons, subs, VAR. Pour le mode live. */
+    getEvents: (fixtureId: number) =>
+      request<import('./types').AFEventsResponse>('/fixtures/events', {
+        fixture: fixtureId,
+      }),
+
+    /** Détail d'un fixture : status (live/ht/ft), elapsed, score. */
+    getFixtureDetail: (fixtureId: number) =>
+      request<import('./types').AFFixtureDetail>('/fixtures', {
+        id: fixtureId,
+      }),
   };
 }
 

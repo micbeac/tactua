@@ -24,7 +24,10 @@ export type EnrichResult = {
   lineups_upserted: number;
   team_stats_upserted: number;
   player_stats_upserted: number;
+  events_upserted: number;
   players_upserted: number;
+  live_minute: number | null;
+  live_status: string | null;
   notes: string[];
 };
 
@@ -56,7 +59,10 @@ export async function enrichMatchFromApiFootball(
     lineups_upserted: 0,
     team_stats_upserted: 0,
     player_stats_upserted: 0,
+    events_upserted: 0,
     players_upserted: 0,
+    live_minute: null,
+    live_status: null,
     notes: [],
   };
 
@@ -202,7 +208,75 @@ export async function enrichMatchFromApiFootball(
     );
   }
 
-  // 6. Player stats
+  // 6.bis Events (timeline) + fixture detail (live minute / status)
+  // Fait avant les player stats car même endpoint /fixtures et bcp moins lourd.
+  try {
+    const detailResp = await client.getFixtureDetail(afFixtureId);
+    const fix = detailResp.response[0];
+    if (fix) {
+      result.live_status = fix.fixture.status.short;
+      result.live_minute = fix.fixture.status.elapsed;
+      // Update matches.live_minute + live_updated_at
+      const { error: mErr } = await supabase
+        .from('matches')
+        .update({
+          live_minute: fix.fixture.status.elapsed,
+          live_updated_at: new Date().toISOString(),
+        })
+        .eq('id', m.id);
+      if (mErr) {
+        result.notes.push(`Live minute update: ${mErr.message}`);
+      }
+    }
+  } catch (e) {
+    result.notes.push(
+      `Fixture detail: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  try {
+    const eventsResp = await client.getEvents(afFixtureId);
+    if (eventsResp.response.length > 0) {
+      // Mappe : AF team_id → DB team_id, AF player_id → DB player_id
+      type AFEvent = (typeof eventsResp.response)[number];
+      const rows = eventsResp.response
+        .map((e: AFEvent) => {
+          const teamDbId = teamIdMap.get(e.team.id) ?? null;
+          const playerDbId =
+            e.player.id != null ? (playerIdMap.get(e.player.id) ?? null) : null;
+          const assistDbId =
+            e.assist.id != null ? (playerIdMap.get(e.assist.id) ?? null) : null;
+          return {
+            match_id: m.id,
+            team_id: teamDbId,
+            player_id: playerDbId,
+            assist_player_id: assistDbId,
+            minute: e.time.elapsed,
+            extra_minute: e.time.extra,
+            type: e.type.toLowerCase(), // 'goal', 'card', 'subst', 'var'
+            detail: e.detail,
+            comments: e.comments,
+          };
+        })
+        // Filtre les events sans minute (cas rare mais existe)
+        .filter((r) => r.minute != null);
+
+      if (rows.length > 0) {
+        const { error: evErr } = await supabase
+          .from('match_events')
+          .upsert(rows, {
+            onConflict: 'match_id,minute,type,player_id,team_id,detail',
+            ignoreDuplicates: true,
+          });
+        if (evErr) throw new Error(`match_events upsert: ${evErr.message}`);
+        result.events_upserted = rows.length;
+      }
+    }
+  } catch (e) {
+    result.notes.push(`Events: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // 7. Player stats
   try {
     const playersResp = await client.getPlayerStats(afFixtureId);
     if (playersResp.response.length > 0) {
