@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
+import { DailyRecapSection } from '@/components/dashboard/DailyRecapSection';
 import {
   WatchlistSection,
   type WatchlistMatch,
@@ -14,6 +15,7 @@ import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
+import { getDailyRecap } from '@/lib/data/recap';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -138,15 +140,22 @@ export default async function HomePage() {
   const results = await Promise.all([
     ...competitionQueries,
     getPersonalUpcomingMatches(supabase, user.id, 8),
+    getDailyRecap(supabase, user.id),
   ]);
 
-  const personal = results[results.length - 1] as Awaited<
+  const personal = results[results.length - 2] as Awaited<
     ReturnType<typeof getPersonalUpcomingMatches>
+  >;
+  const recap = results[results.length - 1] as Awaited<
+    ReturnType<typeof getDailyRecap>
   >;
   const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => ({
     ...c,
     matches: ((results[i] as { data: unknown }).data ?? []) as MatchRow[],
   }));
+
+  // Prénom ou pseudonyme depuis email (avant le @)
+  const userLabel = user.email?.split('@')[0] ?? null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -164,6 +173,9 @@ export default async function HomePage() {
           essentielles.
         </p>
       </section>
+
+      {/* Récap quotidien — tuiles + résultats favoris hier + news fraîches */}
+      <DailyRecapSection recap={recap} user_label={userLabel} />
 
       {/* Watchlist : favoris avec countdown live + bouton "Analyser" */}
       <WatchlistSection
