@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useOptimistic, useTransition } from 'react';
 import { toggleFavorite } from '@/app/favoris/actions';
 import { buttonVariants } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 import type { FavoriteEntityType } from '@/lib/data/favorites';
 
 export type FavoriteButtonProps = {
@@ -48,13 +49,18 @@ export function FavoriteButton({
   }
 
   const onClick = () => {
+    const wasFavorite = optimistic;
     startTransition(async () => {
       setOptimistic(!optimistic);
       const res = await toggleFavorite(entity_type, entity_id);
       if (!res.ok) {
         // Revert si échec serveur
         setOptimistic(is_favorite);
+        return;
       }
+      track(wasFavorite ? 'Favori retiré' : 'Favori ajouté', {
+        entity_type,
+      });
     });
   };
 

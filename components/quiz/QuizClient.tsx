@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { submitQuizAttempt } from '@/app/quiz/actions';
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 import type { DailyQuiz, QuizQuestion } from '@/lib/data/quiz';
 
 type Props = {
@@ -43,6 +44,11 @@ export function QuizClient({ quiz, is_logged_in }: Props) {
     const score = Math.round((correct / quiz.questions.length) * 100);
     setResult({ score, correct_count: correct });
     setSubmitted(true);
+    track('Quiz complété', {
+      score,
+      correct,
+      total: quiz.questions.length,
+    });
 
     if (is_logged_in) {
       startTransition(async () => {

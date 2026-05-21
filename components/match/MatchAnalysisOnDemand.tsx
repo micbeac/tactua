@@ -7,6 +7,7 @@ import { PostMatchAnalysisSection } from '@/components/match/PostMatchAnalysisSe
 import { PreMatchAnalysisSection } from '@/components/match/PreMatchAnalysisSection';
 import { WhatIfSimulator } from '@/components/match/WhatIfSimulator';
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 import type {
   DeepPreMatchAnalysis,
   PostMatchAnalysis,
@@ -79,6 +80,10 @@ export function MatchAnalysisOnDemand({
       }
       setAnalysis(data.analysis);
       setGeneratedAt(data.generated_at);
+      track('Analyse générée', {
+        type,
+        was_cached: Boolean(data.was_cached),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

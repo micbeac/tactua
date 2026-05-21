@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 import type {
   DeepPreMatchAnalysis,
   PlayerSeasonStat,
@@ -93,6 +94,7 @@ export function WhatIfSimulator({
         );
       }
       setWhatIf(data.analysis as DeepPreMatchAnalysis);
+      track('What-if lancé', { excluded_count: excluded.size });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
