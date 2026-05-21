@@ -309,10 +309,30 @@ export async function POST(
 
         const { analysis, model } = await generateDeepPreMatchAnalysis(deepCtx);
 
+        // Construit le mapping AF player_id → DB player_id pour les top
+        // performers (permet de linker vers /players/[id] depuis le popup).
+        const afPlayerIds = [
+          ...homeCtx.top_performers.map((p) => p.af_player_id),
+          ...awayCtx.top_performers.map((p) => p.af_player_id),
+        ];
+        const afToDbPlayerId = new Map<number, number>();
+        if (afPlayerIds.length > 0) {
+          const { data: dbPlayers } = await supabase
+            .from('players')
+            .select('id, api_football_id')
+            .in('api_football_id', afPlayerIds);
+          for (const p of (dbPlayers ?? []) as Array<{
+            id: number;
+            api_football_id: number;
+          }>) {
+            afToDbPlayerId.set(p.api_football_id, p.id);
+          }
+        }
+
         // Enrichissement déterministe (chiffres exacts, pas d'IA) calculé
         // depuis les données API-Football. Permet d'afficher tableau comparatif,
         // radar, forme, joueurs avec stats détaillées, indispos, etc.
-        const richData = buildRichData(deepCtx);
+        const richData = buildRichData(deepCtx, afToDbPlayerId);
         const enrichedAnalysis = { ...analysis, rich_data: richData };
 
         await upsertAnalysis(

@@ -166,12 +166,17 @@ function buildStatsCompare(
 function buildTopPlayers(
   home: DeepTeamContext,
   away: DeepTeamContext,
+  afToDbPlayerId: Map<number, number>,
 ): PlayerSeasonStat[] {
   // Top 4 par équipe (au lieu de top 7 dans le contexte IA) pour le rendu compact.
-  const homeTop = home.top_performers.slice(0, 4).map(
-    (p): PlayerSeasonStat => ({
+  const mapPerf =
+    (team: 'home' | 'away') =>
+    (p: DeepTeamContext['top_performers'][number]): PlayerSeasonStat => ({
+      af_player_id: p.af_player_id,
+      db_player_id: afToDbPlayerId.get(p.af_player_id) ?? null,
+      photo: p.photo,
       name: p.name,
-      team: 'home',
+      team,
       position: p.position,
       is_captain: p.is_captain,
       appearances: p.lineups,
@@ -181,23 +186,9 @@ function buildTopPlayers(
       shots_on_target: p.shots_on_target,
       key_passes: p.key_passes,
       passes_accuracy: p.passes_accuracy,
-    }),
-  );
-  const awayTop = away.top_performers.slice(0, 4).map(
-    (p): PlayerSeasonStat => ({
-      name: p.name,
-      team: 'away',
-      position: p.position,
-      is_captain: p.is_captain,
-      appearances: p.lineups,
-      goals: p.goals,
-      assists: p.assists,
-      rating: p.rating,
-      shots_on_target: p.shots_on_target,
-      key_passes: p.key_passes,
-      passes_accuracy: p.passes_accuracy,
-    }),
-  );
+    });
+  const homeTop = home.top_performers.slice(0, 4).map(mapPerf('home'));
+  const awayTop = away.top_performers.slice(0, 4).map(mapPerf('away'));
   return [...homeTop, ...awayTop];
 }
 
@@ -242,7 +233,10 @@ function summarizeH2H(
   return { home_wins: homeWins, draws, away_wins: awayWins, total };
 }
 
-export function buildRichData(ctx: DeepPreMatchContext): MatchRichData {
+export function buildRichData(
+  ctx: DeepPreMatchContext,
+  afToDbPlayerId: Map<number, number> = new Map(),
+): MatchRichData {
   return {
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     radar: buildRadar(ctx.home, ctx.away),
@@ -250,7 +244,7 @@ export function buildRichData(ctx: DeepPreMatchContext): MatchRichData {
     form_away: lastN(ctx.away.form_long, 5),
     form_long_home: ctx.home.form_long.slice(-10),
     form_long_away: ctx.away.form_long.slice(-10),
-    top_players: buildTopPlayers(ctx.home, ctx.away),
+    top_players: buildTopPlayers(ctx.home, ctx.away, afToDbPlayerId),
     absent_players: buildAbsents(ctx.home, ctx.away),
     formation_home: ctx.home.primary_formation,
     formation_away: ctx.away.primary_formation,

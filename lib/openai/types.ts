@@ -79,6 +79,12 @@ export type RecentFormResult = 'W' | 'D' | 'L';
 
 /** Détail joueur clé avec stats saison. */
 export type PlayerSeasonStat = {
+  /** AF id (toujours présent) — sert au popup et à la résolution DB */
+  af_player_id: number;
+  /** DB id si le joueur existe dans notre table players (link vers /players/[id]) */
+  db_player_id: number | null;
+  /** URL photo joueur (depuis API-Football) */
+  photo: string | null;
   name: string;
   team: 'home' | 'away';
   position: string | null;

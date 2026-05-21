@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { FormationPitch } from '@/components/match/FormationPitch';
+import { PlayerPopup } from '@/components/match/PlayerPopup';
 import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import type {
   DeepPreMatchAnalysis,
@@ -322,37 +323,45 @@ function RichTopPlayers({
                 </p>
               )}
               {players.map((p) => (
-                <div
+                <PlayerPopup
                   key={p.name}
-                  className="border-border/60 flex items-center gap-3 border-t py-2 first:border-t-0 first:pt-0"
+                  player={p}
+                  team_name={
+                    p.team === 'home' ? home_team_name : away_team_name
+                  }
                 >
-                  <div className="bg-primary/15 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                    {p.position ?? '–'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                      {p.name}
-                      {p.is_captain && (
-                        <span className="text-primary ml-1.5 text-[10px] font-bold">
-                          (C)
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-muted-foreground truncate text-[11px]">
-                      {p.appearances} titu · {p.goals}b/{p.assists}a
-                      {p.key_passes != null
-                        ? ` · ${p.key_passes} passes clés`
-                        : ''}
-                    </p>
-                  </div>
-                  {p.rating != null && (
-                    <div
-                      className={`flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${ratingColor(p.rating)}`}
-                    >
-                      {p.rating.toFixed(1)}
+                  <button
+                    type="button"
+                    className="border-border/60 hover:bg-muted/40 group flex w-full items-center gap-3 border-t py-2 text-left transition-colors first:border-t-0 first:pt-0"
+                  >
+                    <div className="bg-primary/15 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                      {p.position ?? '–'}
                     </div>
-                  )}
-                </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="group-hover:text-primary truncate text-sm font-semibold transition-colors">
+                        {p.name}
+                        {p.is_captain && (
+                          <span className="text-primary ml-1.5 text-[10px] font-bold">
+                            (C)
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-muted-foreground truncate text-[11px]">
+                        {p.appearances} titu · {p.goals}b/{p.assists}a
+                        {p.key_passes != null
+                          ? ` · ${p.key_passes} passes clés`
+                          : ''}
+                      </p>
+                    </div>
+                    {p.rating != null && (
+                      <div
+                        className={`flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${ratingColor(p.rating)}`}
+                      >
+                        {p.rating.toFixed(1)}
+                      </div>
+                    )}
+                  </button>
+                </PlayerPopup>
               ))}
             </div>
           );

@@ -50,6 +50,8 @@ export async function buildDeepTeamContext(
     },
     primary_formation: primaryFormation,
     top_performers: top.map((p) => ({
+      af_player_id: p.player_id,
+      photo: p.photo,
       name: p.player_name,
       position: p.position,
       is_captain: p.is_captain,

@@ -156,6 +156,8 @@ export type DeepTeamContext = {
   primary_formation: string | null;
   // Joueurs : top performers avec stats enrichies
   top_performers: Array<{
+    af_player_id: number; // pour link DB
+    photo: string | null;
     name: string;
     position: string | null;
     is_captain: boolean;
