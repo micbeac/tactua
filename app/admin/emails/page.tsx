@@ -1,5 +1,6 @@
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
 import { getAdminUser } from '@/lib/data/admin';
+import { seedMissingTemplates } from '@/lib/data/seed-email-templates';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const metadata = { title: 'Admin · Emails' };
@@ -33,6 +34,11 @@ const KEY_LABELS: Record<string, string> = {
 export default async function AdminEmailsPage() {
   const admin = createAdminClient();
   const currentAdmin = await getAdminUser();
+
+  // Seed automatique des templates manquants (welcome, daily_digest,
+  // partner_promo). Idempotent : si déjà présents, no-op.
+  await seedMissingTemplates(admin);
+
   const { data: templates } = await admin
     .from('email_templates')
     .select(
