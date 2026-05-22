@@ -49,13 +49,7 @@ export async function Header() {
               href="/"
               className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
             >
-              Matchs
-            </Link>
-            <Link
-              href="/calendrier"
-              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
-            >
-              Calendrier
+              Matchs du jour
             </Link>
             <Link
               href="/coupe-du-monde-2026"

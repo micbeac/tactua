@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { DailyRecapSection } from '@/components/dashboard/DailyRecapSection';
-import { ForYouFeedSection } from '@/components/dashboard/ForYouFeedSection';
-import { PlayerRecommendationsSection } from '@/components/dashboard/PlayerRecommendationsSection';
+import { MatchesOfDaySection } from '@/components/dashboard/MatchesOfDaySection';
 import {
   WatchlistSection,
   type WatchlistMatch,
@@ -15,12 +13,11 @@ import { LandingFinalCta } from '@/components/landing/LandingFinalCta';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
-import { MatchCard, type MatchCardProps } from '@/components/match/MatchCard';
-import { getPersonalUpcomingMatches, getUserFavorites } from '@/lib/data/favorites';
-import { buildForYouFeed } from '@/lib/data/for-you-feed';
+import { type MatchCardProps } from '@/components/match/MatchCard';
+import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
 import { getDailyRecap } from '@/lib/data/recap';
-import { getRecommendedPlayers } from '@/lib/data/recommendations';
 import { getWeeklyRecap } from '@/lib/data/weekly-recap';
+import { getMatchesForDay, todayParis } from '@/lib/matchday';
 import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -129,8 +126,9 @@ export default async function HomePage() {
   // Dashboard utilisateur connecté
   // ============================================================================
   const nowIso = new Date().toISOString();
+  const today = todayParis();
 
-  // Fetch les prochains matchs de chaque compétition en parallèle + favoris
+  // Fetch les prochains matchs de chaque compétition en parallèle
   const competitionQueries = DASHBOARD_COMPETITIONS.map((c) =>
     supabase
       .from('matches')
@@ -146,29 +144,22 @@ export default async function HomePage() {
     ...competitionQueries,
     getPersonalUpcomingMatches(supabase, user.id, 8),
     getDailyRecap(supabase, user.id),
-    getRecommendedPlayers(supabase, user.id, 8),
-    getUserFavorites(supabase, user.id),
     getWeeklyRecap(supabase, user.id),
+    getMatchesForDay(supabase, today),
   ]);
 
-  const personal = results[results.length - 5] as Awaited<
+  const personal = results[results.length - 4] as Awaited<
     ReturnType<typeof getPersonalUpcomingMatches>
   >;
-  const recap = results[results.length - 4] as Awaited<
+  const recap = results[results.length - 3] as Awaited<
     ReturnType<typeof getDailyRecap>
   >;
-  const recommendations = results[results.length - 3] as Awaited<
-    ReturnType<typeof getRecommendedPlayers>
-  >;
-  const userFavs = results[results.length - 2] as Awaited<
-    ReturnType<typeof getUserFavorites>
-  >;
-  const weeklyRecap = results[results.length - 1] as Awaited<
+  const weeklyRecap = results[results.length - 2] as Awaited<
     ReturnType<typeof getWeeklyRecap>
   >;
-  const favoriteTeamsCount = userFavs.filter(
-    (f) => f.entity_type === 'team',
-  ).length;
+  const todayGroups = results[results.length - 1] as Awaited<
+    ReturnType<typeof getMatchesForDay>
+  >;
 
   const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => ({
     ...c,
@@ -178,21 +169,13 @@ export default async function HomePage() {
   // Prénom ou pseudonyme depuis email (avant le @)
   const userLabel = user.email?.split('@')[0] ?? null;
 
-  // Feed "Pour toi" — mix des sources existantes (pas de nouvelle query)
-  const feed = buildForYouFeed({
-    personal,
-    recap,
-    weeklyRecap,
-    recommendations,
-  });
-
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
-      <section className="mb-10">
+      <section className="mb-6">
         <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
           Coupe du Monde 2026
         </p>
-        <h1 className="mb-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mb-2 text-3xl font-semibold tracking-tight sm:text-4xl">
           Tout ce qu&apos;il faut comprendre avant le match.
         </h1>
         <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
@@ -200,25 +183,20 @@ export default async function HomePage() {
           l&apos;IA. Suis tes équipes et joueurs préférés et reçois les notifs
           essentielles.
         </p>
-        <div className="mt-4">
-          <Link
-            href="/calendrier"
-            className="bg-primary/15 text-primary hover:bg-primary/25 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
-          >
-            <span>📅 Voir tous les matchs du jour</span>
-            <span aria-hidden>→</span>
-          </Link>
-        </div>
       </section>
+
+      {/* Matchs du jour — vue d'ensemble, navigation par jour, scores live */}
+      <MatchesOfDaySection
+        initial_date={today}
+        initial_groups={todayGroups}
+        today={today}
+      />
 
       {/* Récap quotidien — tuiles + résultats favoris hier + news fraîches */}
       <DailyRecapSection recap={recap} user_label={userLabel} />
 
       {/* Récap hebdomadaire — bilan 7 derniers jours des favoris */}
       <WeeklyRecapSection recap={weeklyRecap} />
-
-      {/* Feed "Pour toi" — mix personnalisé matchs/résultats/news/suggestions */}
-      <ForYouFeedSection items={feed} />
 
       {/* Watchlist : favoris avec countdown live + bouton "Analyser" */}
       <WatchlistSection
@@ -246,12 +224,6 @@ export default async function HomePage() {
             },
           }),
         )}
-      />
-
-      {/* Recommandations joueurs basées sur les équipes favorites */}
-      <PlayerRecommendationsSection
-        players={recommendations}
-        favorite_teams_count={favoriteTeamsCount}
       />
 
       {/* Une section accordéon par compétition trackée — repliable, état persisté */}

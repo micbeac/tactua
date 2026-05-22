@@ -228,10 +228,10 @@ export default async function WorldCup2026Page() {
           🏆 Phase finale
         </Link>
         <Link
-          href="/calendrier"
+          href="/"
           className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
         >
-          📅 Calendrier complet
+          📅 Matchs du jour
         </Link>
       </nav>
 
@@ -403,7 +403,7 @@ export default async function WorldCup2026Page() {
         <p className="text-muted-foreground">
           Tu suis une équipe ?{' '}
           <Link
-            href="/calendrier"
+            href="/"
             className="text-primary inline-flex items-center gap-1 font-semibold hover:underline"
           >
             <CalendarDays className="size-3.5" aria-hidden />

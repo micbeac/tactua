@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'media.api-sports.io' },
     ],
   },
+  async redirects() {
+    return [
+      // /calendrier a été fusionné dans l'accueil (bloc "Matchs du jour")
+      { source: '/calendrier', destination: '/', permanent: true },
+    ];
+  },
 };
 
 // Sentry wrapper : ne s'active réellement que si NEXT_PUBLIC_SENTRY_DSN est
