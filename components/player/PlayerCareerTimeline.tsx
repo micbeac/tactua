@@ -23,11 +23,14 @@ export type PlayerCareerTimelineProps = {
   } | null;
 };
 
-const YEAR_FMT = new Intl.DateTimeFormat('fr-FR', { year: 'numeric' });
+const YEAR_FMT = new Intl.DateTimeFormat('fr-FR', { year: 'numeric',
+  timeZone: 'Europe/Paris',
+});
 const FULL_DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
+  timeZone: 'Europe/Paris',
 });
 
 function ClubBadge({

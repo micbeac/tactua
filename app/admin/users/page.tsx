@@ -7,6 +7,7 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
+  timeZone: 'Europe/Paris',
 });
 
 const statusLabels: Record<string, string> = {

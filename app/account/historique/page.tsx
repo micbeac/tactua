@@ -49,6 +49,7 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Europe/Paris',
 });
 
 function actionLabel(action: EventRow['action']): string {

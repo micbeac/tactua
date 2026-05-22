@@ -20,6 +20,7 @@ export type PlayerCareerSectionProps = {
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
   month: 'short',
+  timeZone: 'Europe/Paris',
 });
 
 function ClubChip({ name, logo }: { name: string; logo: string | null }) {

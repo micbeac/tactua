@@ -32,6 +32,7 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   month: 'long',
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Europe/Paris',
 });
 
 function shell(title: string, bodyHtml: string, ctaUrl: string): string {

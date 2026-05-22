@@ -22,6 +22,7 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
+  timeZone: 'Europe/Paris',
 });
 
 function outcomeForA(

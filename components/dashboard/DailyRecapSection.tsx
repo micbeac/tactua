@@ -22,11 +22,13 @@ const DAY_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: 'Europe/Paris',
 });
 
 const TIME_FMT = new Intl.DateTimeFormat('fr-FR', {
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Europe/Paris',
 });
 
 type TileId = 'today' | 'favorites' | 'yesterday' | 'news';

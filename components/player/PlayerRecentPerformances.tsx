@@ -21,6 +21,7 @@ export type PlayerRecentPerformancesProps = {
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',
+  timeZone: 'Europe/Paris',
 });
 
 export function PlayerRecentPerformances({

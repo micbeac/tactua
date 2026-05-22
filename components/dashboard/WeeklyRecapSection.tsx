@@ -20,6 +20,7 @@ export type WeeklyRecapSectionProps = {
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',
+  timeZone: 'Europe/Paris',
 });
 
 function resultBadge(r: 'W' | 'D' | 'L') {

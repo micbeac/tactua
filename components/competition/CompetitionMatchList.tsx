@@ -11,6 +11,7 @@ const DAY_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: 'Europe/Paris',
 });
 
 function dayKey(iso: string): string {

@@ -37,11 +37,13 @@ const SHORT_DATE = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
+  timeZone: 'Europe/Paris',
 });
 
 const TIME_FMT = new Intl.DateTimeFormat('fr-FR', {
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Europe/Paris',
 });
 
 /**

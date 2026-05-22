@@ -6,11 +6,13 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: 'Europe/Paris',
 });
 
 const TIME_FMT = new Intl.DateTimeFormat('fr-FR', {
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'Europe/Paris',
 });
 
 // Lit le template daily_digest depuis la DB (sujet + intro/outro éditables

@@ -39,7 +39,9 @@ function buildQuery(teamName: string): string {
   // pas les pages catégorie. Le mois et l'année actuels forcent Google à
   // prioriser les résultats récents.
   const now = new Date();
-  const monthFr = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(
+  const monthFr = new Intl.DateTimeFormat('fr-FR', { month: 'long',
+  timeZone: 'Europe/Paris',
+}).format(
     now,
   );
   const year = now.getFullYear();

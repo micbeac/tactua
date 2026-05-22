@@ -18,6 +18,7 @@ const FR_DAY = new Intl.DateTimeFormat('fr-FR', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: 'Europe/Paris',
 });
 
 export default async function QuizPage() {
