@@ -210,19 +210,79 @@ export async function getTeamSquad(
   supabase: Supa,
   teamId: number,
 ): Promise<SquadPlayer[]> {
-  const { data, error } = await supabase
+  // Source 1 : players.current_team_id = teamId (cas des clubs)
+  const clubReq = supabase
     .from('players')
     .select(
       'id, name, position, date_of_birth, nationality, photo_url, shirt_number',
     )
-    .eq('current_team_id', teamId)
-    .order('shirt_number', { ascending: true, nullsFirst: false })
-    .order('name');
-  if (error) {
-    console.error('[data/team] squad', error);
-    return [];
+    .eq('current_team_id', teamId);
+
+  // Source 2 : national_team_squads (cas des sélections — current_team_id
+  // des joueurs pointe sur leur club, pas sur la sélection)
+  const natReq = supabase
+    .from('national_team_squads')
+    .select(
+      `position, shirt_number,
+       player:players(id, name, date_of_birth, nationality, photo_url)`,
+    )
+    .eq('team_id', teamId);
+
+  const [clubRes, natRes] = await Promise.all([clubReq, natReq]);
+
+  if (clubRes.error) console.error('[data/team] squad (club)', clubRes.error);
+  if (natRes.error) console.error('[data/team] squad (national)', natRes.error);
+
+  const byId = new Map<number, SquadPlayer>();
+
+  for (const p of (clubRes.data ?? []) as SquadPlayer[]) {
+    byId.set(p.id, p);
   }
-  return (data ?? []) as SquadPlayer[];
+
+  type NatRow = {
+    position: string | null;
+    shirt_number: number | null;
+    player: {
+      id: number;
+      name: string;
+      date_of_birth: string | null;
+      nationality: string | null;
+      photo_url: string | null;
+    } | null;
+  };
+
+  for (const r of (natRes.data ?? []) as unknown as NatRow[]) {
+    if (!r.player) continue;
+    const existing = byId.get(r.player.id);
+    if (existing) {
+      // Préfère le n° de maillot fourni par la sélection si dispo
+      if (existing.shirt_number == null && r.shirt_number != null) {
+        existing.shirt_number = r.shirt_number;
+      }
+      continue;
+    }
+    byId.set(r.player.id, {
+      id: r.player.id,
+      name: r.player.name,
+      position: r.position,
+      date_of_birth: r.player.date_of_birth,
+      nationality: r.player.nationality,
+      photo_url: r.player.photo_url,
+      shirt_number: r.shirt_number,
+    });
+  }
+
+  const all = Array.from(byId.values());
+  all.sort((a, b) => {
+    if (a.shirt_number != null && b.shirt_number != null) {
+      if (a.shirt_number !== b.shirt_number) {
+        return a.shirt_number - b.shirt_number;
+      }
+    } else if (a.shirt_number != null) return -1;
+    else if (b.shirt_number != null) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  return all;
 }
 
 /**

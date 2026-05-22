@@ -1,6 +1,7 @@
 // Génération IA des prédictions de classement par groupe CDM 2026.
 // Prend les 4 équipes d'un groupe et demande à GPT-4o-mini un classement
 // final pronostiqué avec un court raisonnement par équipe.
+// Enrichi avec les effectifs des sélections (alimentés depuis AF /players/squads).
 
 import { DEFAULT_MODEL, getOpenAI } from './client.ts';
 
@@ -27,13 +28,16 @@ const SCHEMA = {
   },
 } as const;
 
+export type WCGroupPredictionTeam = {
+  team_id: number;
+  name: string;
+  country: string | null;
+  squad?: string; // String pré-formatée des joueurs clés (cf. formatSquadForPrompt)
+};
+
 export type WCGroupPredictionInput = {
   group_letter: string;
-  teams: Array<{
-    team_id: number;
-    name: string;
-    country: string | null;
-  }>;
+  teams: WCGroupPredictionTeam[];
 };
 
 export type WCGroupPredictionContent = {
@@ -51,24 +55,23 @@ Tu pronostiques le classement final d'un groupe de la Coupe du Monde 2026 (48 é
 
 Règles :
 - Français, ton factuel et nuancé.
-- Pour chaque équipe, en 1-2 phrases : pourquoi elle finit à cette place (ranking FIFA estimé, profil tactique, joueurs clés célèbres, dynamique générique de la sélection, niveau de la confédération).
+- Pour chaque équipe, en 2-3 phrases : pourquoi elle finit à cette place. Cite 1 à 2 joueurs clés réels parmi ceux fournis dans l'effectif (ne cite jamais un joueur qui n'apparaît pas dans la liste). Mentionne aussi le profil tactique, la dynamique générique, le niveau de la confédération.
 - "summary" : 2-3 phrases qui décrivent comment ce groupe pourrait se dérouler, qui sont les favoris/outsiders, où réside l'incertitude principale.
-- Pondère ton ranking avec le contexte historique (palmarès CDM, qualifications), pas juste les rankings FIFA bruts.
-- N'invente pas de noms de joueurs précis (tu n'es pas sûr de l'effectif actuel). Reste générique ("attaque expérimentée", "jeune garde émergente").
+- Pondère ton ranking avec le contexte historique (palmarès CDM, qualifications), la qualité du club d'appartenance des joueurs convoqués, l'expérience des cadres.
+- ⚠ N'invente AUCUN nom de joueur en dehors de ceux explicitement listés dans l'effectif fourni. Si l'effectif est vide ("effectif non récupéré"), reste générique pour cette équipe.
 - Reste mesuré, ce n'est pas du pari sportif. Tu peux dire "outsider crédible" ou "favori clair" mais reconnais l'incertitude pour les groupes équilibrés.
 
 Format : JSON strict avec ranking[1→4] + summary.`;
 
 function buildUserPrompt(input: WCGroupPredictionInput): string {
-  const teamLines = input.teams
-    .map(
-      (t, i) =>
-        `${i + 1}. ${t.name}${t.country ? ` (${t.country})` : ''} — team_id ${t.team_id}`,
-    )
-    .join('\n');
+  const blocks = input.teams.map((t, i) => {
+    const head = `${i + 1}. ${t.name}${t.country ? ` (${t.country})` : ''} — team_id ${t.team_id}`;
+    const squad = t.squad ? `   Effectif clé : ${t.squad}` : '';
+    return squad ? `${head}\n${squad}` : head;
+  });
   return `Groupe ${input.group_letter} de la Coupe du Monde 2026 :
 
-${teamLines}
+${blocks.join('\n\n')}
 
 Produis le classement final pronostiqué (1 → 4) avec reasoning par équipe et un summary du groupe.`;
 }
