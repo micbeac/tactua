@@ -103,8 +103,27 @@ export type InjuryResponse = {
 export type ActiveInjury = {
   player_name: string;
   reason: string | null;
+  /** 'suspension' (cumul cartons / rouge), 'injury' (blessure) ou 'other' */
+  kind: 'suspension' | 'injury' | 'other';
   last_seen: string; // YYYY-MM-DD
 };
+
+/** Déduit le type d'indisponibilité à partir du libellé `reason`. */
+function classifyInjuryReason(
+  reason: string | null,
+): 'suspension' | 'injury' | 'other' {
+  if (!reason) return 'other';
+  const r = reason.toLowerCase();
+  if (
+    r.includes('suspend') ||
+    r.includes('red card') ||
+    r.includes('carton') ||
+    r.includes('cards')
+  ) {
+    return 'suspension';
+  }
+  return 'injury';
+}
 
 /**
  * Renvoie les blessures/suspensions actives autour du `referenceDate`.
@@ -136,6 +155,7 @@ export async function fetchActiveInjuries(
       map.set(key, {
         player_name: inj.player.name,
         reason: inj.player.reason,
+        kind: classifyInjuryReason(inj.player.reason),
         last_seen: date,
       });
     }
@@ -265,6 +285,63 @@ export async function fetchMatchOdds(
         : null,
     btts_yes_pct: pct(average(bttsYes)),
     over_2_5_pct: pct(average(over25)),
+  };
+}
+
+// ============================================================================
+// Prediction native API-Football — /predictions?fixture=X
+// ============================================================================
+// Modèle statistique propre à AF. On en extrait le bloc `comparison` :
+// une comparaison domicile/extérieur (en %) sur plusieurs dimensions.
+// Signal de calibrage interne, indépendant du consensus des cotes.
+
+type PredictionResponse = {
+  response: Array<{
+    comparison?: {
+      form?: { home: string; away: string };
+      att?: { home: string; away: string };
+      def?: { home: string; away: string };
+      poisson_distribution?: { home: string; away: string };
+      h2h?: { home: string; away: string };
+      goals?: { home: string; away: string };
+      total?: { home: string; away: string };
+    };
+  }>;
+};
+
+export type AFPrediction = {
+  /** Chaque dimension : poids domicile vs extérieur (somme ≈ 100) */
+  form: { home: number; away: number };
+  attack: { home: number; away: number };
+  defense: { home: number; away: number };
+  poisson: { home: number; away: number };
+  /** Projection globale du modèle AF */
+  overall: { home: number; away: number };
+};
+
+function parsePct(s: string | null | undefined): number {
+  if (!s) return 0;
+  const n = Number(s.replace('%', '').trim());
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+
+export async function fetchMatchPrediction(
+  fixtureId: number,
+): Promise<AFPrediction | null> {
+  const d = await af<PredictionResponse>(
+    `/predictions?fixture=${fixtureId}`,
+  );
+  const c = d.response[0]?.comparison;
+  if (!c) return null;
+  return {
+    form: { home: parsePct(c.form?.home), away: parsePct(c.form?.away) },
+    attack: { home: parsePct(c.att?.home), away: parsePct(c.att?.away) },
+    defense: { home: parsePct(c.def?.home), away: parsePct(c.def?.away) },
+    poisson: {
+      home: parsePct(c.poisson_distribution?.home),
+      away: parsePct(c.poisson_distribution?.away),
+    },
+    overall: { home: parsePct(c.total?.home), away: parsePct(c.total?.away) },
   };
 }
 

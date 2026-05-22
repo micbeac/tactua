@@ -12,7 +12,11 @@
 
 import { NextResponse } from 'next/server';
 import { buildDeepTeamContext } from '@/lib/api-football/deep-context';
-import { fetchH2H, fetchMatchOdds } from '@/lib/api-football/deep-stats';
+import {
+  fetchH2H,
+  fetchMatchOdds,
+  fetchMatchPrediction,
+} from '@/lib/api-football/deep-stats';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
 import {
@@ -20,6 +24,7 @@ import {
   getTeamScheduleContext,
 } from '@/lib/data/match-context';
 import { getPostMatchPerformance } from '@/lib/data/match-performance';
+import { getCoachesMap } from '@/lib/data/wc-extras';
 import {
   generateDeepPreMatchAnalysis,
   generatePostMatchAnalysis,
@@ -239,7 +244,8 @@ export async function POST(
         console.log(
           `[analyze ${m.id}] deep mode AF league=${afLeagueId} season=${season} home=${afHomeId} away=${afAwayId}`,
         );
-        const [homeCtxR, awayCtxR, h2hAfR, oddsR] = await Promise.allSettled([
+        const [homeCtxR, awayCtxR, h2hAfR, oddsR, predR] =
+          await Promise.allSettled([
           buildDeepTeamContext({
             af_team_id: afHomeId!,
             af_league_id: afLeagueId!,
@@ -263,6 +269,10 @@ export async function POST(
           m.api_football_fixture_id != null
             ? fetchMatchOdds(m.api_football_fixture_id)
             : Promise.resolve(null),
+          // Prédiction statistique AF (calibrage interne, non bloquant)
+          m.api_football_fixture_id != null
+            ? fetchMatchPrediction(m.api_football_fixture_id)
+            : Promise.resolve(null),
         ]);
         if (homeCtxR.status === 'rejected') {
           throw new Error(
@@ -282,7 +292,7 @@ export async function POST(
         const homeCtx = homeCtxR.value;
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
-        // Les cotes sont optionnelles : un échec ne bloque pas l'analyse.
+        // Cotes + prédiction AF : optionnelles, un échec ne bloque pas.
         const marketConsensus =
           oddsR.status === 'fulfilled' ? oddsR.value : null;
         if (oddsR.status === 'rejected') {
@@ -291,6 +301,16 @@ export async function POST(
             oddsR.reason instanceof Error
               ? oddsR.reason.message
               : oddsR.reason,
+          );
+        }
+        const afPrediction =
+          predR.status === 'fulfilled' ? predR.value : null;
+        if (predR.status === 'rejected') {
+          console.warn(
+            `[analyze ${m.id}] prediction échec (non bloquant):`,
+            predR.reason instanceof Error
+              ? predR.reason.message
+              : predR.reason,
           );
         }
 
@@ -349,12 +369,12 @@ export async function POST(
           patchFromTeamSeasonStats(awayCtx, m.away_team_id!),
         ]);
 
-        // Contexte calendrier (fraîcheur/congestion) + classement (enjeu).
-        // 100% base de données, aucun appel API. Non bloquant.
+        // Contexte calendrier (fraîcheur/congestion) + classement (enjeu)
+        // + entraîneurs. 100% base de données, aucun appel API. Non bloquant.
         try {
           const compSeason = m.competition?.current_season ?? null;
           const compId = m.competition?.id ?? null;
-          const [homeSched, awaySched, homeStand, awayStand] =
+          const [homeSched, awaySched, homeStand, awayStand, coaches] =
             await Promise.all([
               getTeamScheduleContext(supabase, m.home_team_id!, m.kickoff_at),
               getTeamScheduleContext(supabase, m.away_team_id!, m.kickoff_at),
@@ -374,13 +394,16 @@ export async function POST(
                     m.away_team_id!,
                   )
                 : Promise.resolve(null),
+              getCoachesMap(supabase, [m.home_team_id!, m.away_team_id!]),
             ]);
           homeCtx.rest_days = homeSched.rest_days;
           homeCtx.matches_last_14d = homeSched.matches_last_14d;
           homeCtx.standing = homeStand;
+          homeCtx.coach = coaches.get(m.home_team_id!) ?? null;
           awayCtx.rest_days = awaySched.rest_days;
           awayCtx.matches_last_14d = awaySched.matches_last_14d;
           awayCtx.standing = awayStand;
+          awayCtx.coach = coaches.get(m.away_team_id!) ?? null;
         } catch (e) {
           console.warn(
             `[analyze ${m.id}] contexte calendrier/classement échec:`,
@@ -490,7 +513,11 @@ export async function POST(
             for (const name of removedNames) {
               ctx.active_injuries = [
                 ...ctx.active_injuries,
-                { player_name: name, reason: 'Simulation : absence supposée' },
+                {
+                  player_name: name,
+                  reason: 'Simulation : absence supposée',
+                  kind: 'other',
+                },
               ];
             }
             // Retire aussi des compositions confirmées si présent
@@ -546,6 +573,7 @@ export async function POST(
               ? { home: homeNarrs, away: awayNarrs }
               : undefined,
           market_consensus: marketConsensus ?? undefined,
+          af_prediction: afPrediction ?? undefined,
         };
 
         const { analysis, model } = await generateDeepPreMatchAnalysis(deepCtx);

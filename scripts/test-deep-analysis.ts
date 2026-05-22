@@ -76,6 +76,7 @@ async function buildTeamContext(
     active_injuries: injuries.map((i) => ({
       player_name: i.player_name,
       reason: i.reason,
+      kind: i.kind,
     })),
     starting_eleven: [],
   };

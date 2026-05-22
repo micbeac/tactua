@@ -174,8 +174,14 @@ export type DeepTeamContext = {
     saves: number | null;
     goals_conceded: number | null;
   }>;
-  // Indisponibles
-  active_injuries: Array<{ player_name: string; reason: string | null }>;
+  // Indisponibles (kind : 'suspension' | 'injury' | 'other')
+  active_injuries: Array<{
+    player_name: string;
+    reason: string | null;
+    kind: 'suspension' | 'injury' | 'other';
+  }>;
+  /** Entraîneur principal (nom + nationalité). Facultatif. */
+  coach?: { name: string; nationality: string | null } | null;
   // XI titulaire si dispo (sinon vide)
   starting_eleven: string[];
   /** Joueurs qui ont joué pour cette équipe cette saison mais sont
@@ -241,6 +247,17 @@ export type DeepPreMatchContext = {
     btts_yes_pct: number | null;
     over_2_5_pct: number | null;
   };
+  /**
+   * Comparaison domicile/extérieur du modèle statistique API-Football
+   * (chaque dimension = poids home vs away en %). Signal de calibrage.
+   */
+  af_prediction?: {
+    form: { home: number; away: number };
+    attack: { home: number; away: number };
+    defense: { home: number; away: number };
+    poisson: { home: number; away: number };
+    overall: { home: number; away: number };
+  };
 };
 
 const DEEP_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
@@ -281,6 +298,9 @@ Règles :
   * "Classement" : intègre l'enjeu réel (course au titre, places européennes, maintien, match sans enjeu). Un écart de points serré près d'une zone clé augmente l'intensité attendue.
   * "Fraîcheur" : un faible nombre de jours de repos ou une forte densité de calendrier (3+ matchs/14 j) annonce de la fatigue, des rotations possibles, une baisse de régime en 2e période. Compare les deux équipes.
   * "Tempo des buts" : exploite-le dans les scénarios (ex : une équipe qui marque tard + une qui encaisse tard → "but décisif dans le dernier quart d'heure" crédible).
+  * "Entraîneur" : tu peux le citer pour parler du style/de l'approche tactique de l'équipe.
+  * Indisponibles : distingue bien SUSPENDU (manque mécaniquement, certain) de blessé (incertain). Un cadre suspendu est une absence sûre à intégrer.
+- MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
   * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
@@ -320,8 +340,22 @@ function fmtTop(performers: DeepTeamContext['top_performers']): string {
 function fmtInjuries(list: DeepTeamContext['active_injuries']): string {
   if (list.length === 0) return 'aucune indispo connue';
   return list
-    .map((i) => `${i.player_name}${i.reason ? ` (${i.reason})` : ''}`)
+    .map((i) => {
+      const tag =
+        i.kind === 'suspension'
+          ? 'SUSPENDU'
+          : i.kind === 'injury'
+            ? 'blessé'
+            : 'indispo';
+      return `${i.player_name} (${tag}${i.reason ? ` — ${i.reason}` : ''})`;
+    })
     .join(' · ');
+}
+
+function fmtCoach(t: DeepTeamContext): string {
+  if (!t.coach) return '';
+  const nat = t.coach.nationality ? ` (${t.coach.nationality})` : '';
+  return `\n- Entraîneur : ${t.coach.name}${nat}`;
 }
 
 function fmtStanding(t: DeepTeamContext): string {
@@ -382,7 +416,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
 - Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
-- Formation principale : ${t.primary_formation ?? '—'}${fmtStanding(t)}${fmtFreshness(t)}${fmtGoalTiming(t)}
+- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtGoalTiming(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${
@@ -439,6 +473,20 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
     }
   }
 
+  // Bloc prédiction statistique AF (interne, calibrage)
+  let afPredBlock = '';
+  const ap = ctx.af_prediction;
+  if (ap) {
+    const h = ctx.home.name;
+    const a = ctx.away.name;
+    afPredBlock =
+      `\nModèle statistique tiers — comparaison ${h} / ${a} (donnée interne de calibrage) :\n` +
+      `- Projection globale : ${ap.overall.home}% / ${ap.overall.away}%\n` +
+      `- Forme : ${ap.form.home}% / ${ap.form.away}%\n` +
+      `- Attaque : ${ap.attack.home}% / ${ap.attack.away}%\n` +
+      `- Défense : ${ap.defense.home}% / ${ap.defense.away}%\n`;
+  }
+
   return `Contexte du match à venir :
 
 Compétition : ${ctx.competition}${ctx.stage_or_matchday ? ` (${ctx.stage_or_matchday})` : ''}
@@ -451,7 +499,7 @@ ${fmtTeam(ctx.away, 'Extérieur')}
 Confrontations directes récentes :
 ${h2hLines}
 ${narratives}
-${consensusBlock}
+${consensusBlock}${afPredBlock}
 Génère l'analyse pré-match enrichie en JSON selon le schéma fourni.`;
 }
 
