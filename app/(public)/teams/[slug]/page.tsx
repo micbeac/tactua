@@ -11,6 +11,10 @@ import {
   TeamNarrativesSection,
   type TeamNarrativeItem,
 } from '@/components/team/TeamNarrativesSection';
+import {
+  TeamWCNewsSection,
+  type TeamWCNewsItem,
+} from '@/components/team/TeamWCNewsSection';
 import { TeamSeasonStats } from '@/components/team/TeamSeasonStats';
 import { TeamSplitsSection } from '@/components/team/TeamSplitsSection';
 import { TeamSquadSection } from '@/components/team/TeamSquadSection';
@@ -96,6 +100,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
     analysisRes,
     teamSplits,
     videoClips,
+    wcNewsRes,
   ] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
     getTeamUpcomingMatches(supabase, teamId, 5),
@@ -126,6 +131,15 @@ export default async function TeamPage({ params }: TeamPageParams) {
       .maybeSingle(),
     getTeamSplits(supabase, teamId),
     getVideoClips(supabase, 'team', teamId),
+    // Actu Coupe du Monde de cette sélection (table dédiée wc_news).
+    // Renvoie vide si l'équipe n'est pas une sélection CDM (cas normal).
+    supabase
+      .from('wc_news')
+      .select('id, slug, title, ai_summary, published_at, scraped_at')
+      .eq('team_id', teamId)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .limit(5),
   ]);
 
   // Stats saison des joueurs de l'effectif (toutes compétitions confondues —
@@ -152,6 +166,8 @@ export default async function TeamPage({ params }: TeamPageParams) {
       internal_slug: n.slug,
       ai_summary: n.ai_summary,
     }));
+
+  const wcNews = (wcNewsRes.data ?? []) as TeamWCNewsItem[];
 
   // Extrait la formation depuis l'analyse récente (côté correspondant à teamId)
   type AnalysisWithMatch = {
@@ -287,6 +303,10 @@ export default async function TeamPage({ params }: TeamPageParams) {
       )}
 
       <TeamSplitsSection splits={teamSplits} team_name={team.name} />
+
+      {/* Actu CDM en premier pour les sélections nationales (rendu vide
+          côté composant si la liste est vide → invisible pour les clubs). */}
+      <TeamWCNewsSection team_name={team.name} items={wcNews} />
 
       <TeamNarrativesSection
         team_name={team.name}
