@@ -5,6 +5,12 @@ export type MatchInfoCardProps = {
   matchday: number | null;
   venue: string | null;
   referee: string | null;
+  /** Profil disciplinaire de l'arbitre (cartons/match), si disponible */
+  referee_profile?: {
+    matches: number;
+    yellow_per_match: number;
+    red_per_match: number;
+  } | null;
 };
 
 function formatStage(stage: string | null): string | null {
@@ -23,8 +29,9 @@ export function MatchInfoCard(props: MatchInfoCardProps) {
     matchday,
     venue,
     referee,
+    referee_profile,
   } = props;
-  const items: Array<{ label: string; value: string }> = [];
+  const items: Array<{ label: string; value: string; hint?: string }> = [];
 
   if (competition_name) {
     items.push({
@@ -40,7 +47,18 @@ export function MatchInfoCard(props: MatchInfoCardProps) {
   if (matchday != null)
     items.push({ label: 'Journée', value: String(matchday) });
   if (venue) items.push({ label: 'Stade', value: venue });
-  if (referee) items.push({ label: 'Arbitre', value: referee });
+  if (referee) {
+    let hint: string | undefined;
+    if (referee_profile) {
+      const rp = referee_profile;
+      const red =
+        rp.red_per_match >= 0.1
+          ? ` · ${rp.red_per_match.toFixed(2)} rouge/match`
+          : '';
+      hint = `${rp.yellow_per_match} cartons jaunes/match${red} (sur ${rp.matches} matchs)`;
+    }
+    items.push({ label: 'Arbitre', value: referee, hint });
+  }
 
   if (items.length === 0) return null;
 
@@ -54,6 +72,11 @@ export function MatchInfoCard(props: MatchInfoCardProps) {
               {it.label}
             </dt>
             <dd className="text-foreground mt-0.5 text-sm">{it.value}</dd>
+            {it.hint && (
+              <dd className="text-muted-foreground mt-0.5 text-xs">
+                {it.hint}
+              </dd>
+            )}
           </div>
         ))}
       </dl>

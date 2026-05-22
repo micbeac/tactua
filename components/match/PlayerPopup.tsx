@@ -47,6 +47,12 @@ export type PlayerPopupData = {
   intl_caps?: number | null;
   intl_goals?: number | null;
   intl_assists?: number | null;
+  /** Forme récente : note moyenne + tendance sur les derniers matchs */
+  recent_form?: {
+    avg: number;
+    sample: number;
+    trend: 'up' | 'down' | 'stable';
+  } | null;
 };
 
 type Props = {
@@ -247,6 +253,27 @@ export function PlayerPopup({ player, children, team_name }: Props) {
               </div>
             )}
 
+            {player.recent_form && (
+              <div className="border-border flex items-center justify-between rounded-lg border p-3 text-sm">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <TrendingUp className="size-3.5" aria-hidden />
+                  Forme récente ({player.recent_form.sample} matchs)
+                </span>
+                <span className="flex items-center gap-1.5 font-bold tabular-nums">
+                  <span className={ratingColor(player.recent_form.avg)}>
+                    {player.recent_form.avg.toFixed(2)}
+                  </span>
+                  <span aria-hidden>
+                    {player.recent_form.trend === 'up'
+                      ? '↗'
+                      : player.recent_form.trend === 'down'
+                        ? '↘'
+                        : '→'}
+                  </span>
+                </span>
+              </div>
+            )}
+
             {hasPerformanceDetails && (
               <div>
                 <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
@@ -296,11 +323,14 @@ export function PlayerPopup({ player, children, team_name }: Props) {
               </div>
             )}
 
-            {!hasStats && !hasPerformanceDetails && !hasIntlStats && (
-              <p className="text-muted-foreground py-2 text-center text-xs italic">
-                Stats saison non encore disponibles
-              </p>
-            )}
+            {!hasStats &&
+              !hasPerformanceDetails &&
+              !hasIntlStats &&
+              !player.recent_form && (
+                <p className="text-muted-foreground py-2 text-center text-xs italic">
+                  Stats saison non encore disponibles
+                </p>
+              )}
 
             {player.is_captain && (
               <div className="bg-primary/5 border-primary/30 flex items-center gap-2 rounded-lg border p-3 text-xs">

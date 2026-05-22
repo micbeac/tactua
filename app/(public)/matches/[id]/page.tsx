@@ -36,6 +36,10 @@ import {
   getTeamScheduleContext,
   getTeamSeasonXG,
 } from '@/lib/data/match-context';
+import {
+  getProbableLineup,
+  getRefereeProfile,
+} from '@/lib/data/match-insights';
 import { getMatchPlayerPopupMap } from '@/lib/data/match-player-popup';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -249,6 +253,22 @@ export default async function MatchPage({ params }: MatchPageParams) {
     ]);
   }
 
+  // Composition probable : si pas de compo officielle et match pas terminé,
+  // on déduit le XI probable depuis les derniers matchs (100% DB).
+  let homeProbable: Awaited<ReturnType<typeof getProbableLineup>> = null;
+  let awayProbable: Awaited<ReturnType<typeof getProbableLineup>> = null;
+  if (!anyConfirmed && match.status !== 'finished') {
+    if (homeId != null) {
+      homeProbable = await getProbableLineup(supabase, homeId, match.kickoff_at);
+    }
+    if (awayId != null) {
+      awayProbable = await getProbableLineup(supabase, awayId, match.kickoff_at);
+    }
+  }
+
+  // Profil disciplinaire de l'arbitre (cartons/match)
+  const refereeProfile = await getRefereeProfile(supabase, match.referee);
+
   // Map player_id → PlayerPopupData pour clic sur joueur (lineup + timeline)
   const playerPopupMap = await getMatchPlayerPopupMap(
     supabase,
@@ -426,6 +446,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
         matchday={match.matchday}
         venue={match.venue}
         referee={match.referee}
+        referee_profile={refereeProfile}
       />
 
       {/* Timeline events (live ou post-match) */}
@@ -489,6 +510,8 @@ export default async function MatchPage({ params }: MatchPageParams) {
         is_confirmed={anyConfirmed}
         home={buildTeamLineup(match.home_team, lineupRows)}
         away={buildTeamLineup(match.away_team, lineupRows)}
+        home_probable={homeProbable}
+        away_probable={awayProbable}
         popup_map={playerPopupMap}
       />
 

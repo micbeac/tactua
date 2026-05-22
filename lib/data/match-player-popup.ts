@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PlayerPopupData } from '@/components/match/PlayerPopup';
+import { getPlayersRecentForm } from '@/lib/data/match-insights';
 import type { Database } from '@/types/database';
 
 type Supa = SupabaseClient<Database>;
@@ -111,12 +112,16 @@ export async function getMatchPlayerPopupMap(
     statById.set(s.player_id, s);
   }
 
+  // 3.bis Forme récente (note moyenne + tendance) de tous les joueurs
+  const formById = await getPlayersRecentForm(supabase, ids);
+
   // 4. Build le map final
   for (const id of ids) {
     const p = playerById.get(id);
     if (!p) continue;
     const lineup = lineupInfoById.get(id);
     const stat = statById.get(id);
+    const form = formById.get(id);
     result.set(id, {
       name: p.name,
       photo: p.photo_url,
@@ -135,6 +140,9 @@ export async function getMatchPlayerPopupMap(
       shots_on_target: stat?.shots ?? null,
       key_passes: stat?.key_passes ?? null,
       passes_accuracy: null, // pas dispo dans cette table (champ passes = total)
+      recent_form: form
+        ? { avg: form.avg_rating, sample: form.sample, trend: form.trend }
+        : null,
     });
   }
 

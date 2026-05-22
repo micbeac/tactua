@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PlayerPopup, type PlayerPopupData } from '@/components/match/PlayerPopup';
+import type { ProbableLineup } from '@/lib/data/match-insights';
 import { playerHref } from '@/lib/url';
 
 type LineupPlayer = {
@@ -23,6 +24,9 @@ export type MatchLineupSectionProps = {
   away: TeamLineup | null;
   /** Map player_id → PlayerPopupData pour ouvrir un popup au clic sur un joueur. */
   popup_map?: Map<number, PlayerPopupData>;
+  /** XI probable (déduit des derniers matchs) — fallback si pas de compo. */
+  home_probable?: ProbableLineup | null;
+  away_probable?: ProbableLineup | null;
 };
 
 /** Couleur de la pastille de note (0-10). */
@@ -88,11 +92,16 @@ function TeamLineupColumn({
   team,
   label,
   popup_map,
+  probable,
 }: {
   team: TeamLineup;
   label: string;
   popup_map?: Map<number, PlayerPopupData>;
+  probable?: ProbableLineup | null;
 }) {
+  // Pas de compo officielle mais un XI probable dispo → on l'affiche
+  const showProbable = team.starters.length === 0 && probable != null;
+
   return (
     <div>
       <header className="mb-3 flex items-center justify-between">
@@ -104,24 +113,52 @@ function TeamLineupColumn({
         </h3>
       </header>
 
-      <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-        Titulaires
-      </p>
-      {team.starters.length === 0 ? (
-        <p className="text-muted-foreground py-2 text-xs italic">
-          Composition non disponible.
-        </p>
+      {showProbable ? (
+        <>
+          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+            XI probable
+            <span className="text-muted-foreground/60 ml-1.5 normal-case">
+              · d&apos;après les {probable!.sample} derniers matchs
+            </span>
+          </p>
+          <ul>
+            {probable!.players.map((p) => (
+              <PlayerRow
+                key={`p-${p.player_id}`}
+                p={{
+                  player_id: p.player_id,
+                  player_name: p.player_name,
+                  position: p.position,
+                  shirt_number: p.shirt_number,
+                }}
+                team_name={team.team_name}
+                popup_data={popup_map?.get(p.player_id)}
+              />
+            ))}
+          </ul>
+        </>
       ) : (
-        <ul>
-          {team.starters.map((p) => (
-            <PlayerRow
-              key={`s-${p.player_id}`}
-              p={p}
-              team_name={team.team_name}
-              popup_data={popup_map?.get(p.player_id)}
-            />
-          ))}
-        </ul>
+        <>
+          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+            Titulaires
+          </p>
+          {team.starters.length === 0 ? (
+            <p className="text-muted-foreground py-2 text-xs italic">
+              Composition non disponible.
+            </p>
+          ) : (
+            <ul>
+              {team.starters.map((p) => (
+                <PlayerRow
+                  key={`s-${p.player_id}`}
+                  p={p}
+                  team_name={team.team_name}
+                  popup_data={popup_map?.get(p.player_id)}
+                />
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       {team.bench.length > 0 && (
@@ -150,10 +187,20 @@ export function MatchLineupSection({
   home,
   away,
   popup_map,
+  home_probable,
+  away_probable,
 }: MatchLineupSectionProps) {
   const hasAny =
     (home && (home.starters.length > 0 || home.bench.length > 0)) ||
-    (away && (away.starters.length > 0 || away.bench.length > 0));
+    (away && (away.starters.length > 0 || away.bench.length > 0)) ||
+    (home_probable != null && home_probable.players.length > 0) ||
+    (away_probable != null && away_probable.players.length > 0);
+  // "Officielle" seulement si une vraie compo est confirmée ; sinon le XI
+  // probable est affiché et le badge dit "Probable".
+  const officialShown = is_confirmed && (
+    (home != null && home.starters.length > 0) ||
+    (away != null && away.starters.length > 0)
+  );
 
   return (
     <section className="bg-card border-border rounded-2xl border p-6">
@@ -162,12 +209,12 @@ export function MatchLineupSection({
         {hasAny && (
           <span
             className={`rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
-              is_confirmed
+              officialShown
                 ? 'bg-primary/10 text-primary'
                 : 'bg-yellow-500/15 text-yellow-500'
             }`}
           >
-            {is_confirmed ? 'Officielle' : 'Probable'}
+            {officialShown ? 'Officielle' : 'Probable'}
           </span>
         )}
       </header>
@@ -184,6 +231,7 @@ export function MatchLineupSection({
               team={home}
               label="Domicile"
               popup_map={popup_map}
+              probable={home_probable}
             />
           ) : (
             <div />
@@ -193,6 +241,7 @@ export function MatchLineupSection({
               team={away}
               label="Extérieur"
               popup_map={popup_map}
+              probable={away_probable}
             />
           ) : (
             <div />
