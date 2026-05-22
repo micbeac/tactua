@@ -960,6 +960,81 @@ export type Database = {
         }
         Relationships: []
       }
+      wc_news: {
+        Row: {
+          id: number
+          team_id: number | null
+          category: string
+          title: string
+          slug: string | null
+          source_url: string | null
+          source_name: string | null
+          snippet: string | null
+          scraped_at: string
+          published_at: string | null
+          status: string
+          ai_summary: string | null
+          ai_content: string | null
+          ai_perspective: string | null
+          ai_generated_at: string | null
+          ai_model: string | null
+          video_youtube_id: string | null
+          edited_at: string | null
+          created_at: string
+          url_hash: string | null
+        }
+        Insert: {
+          id?: number
+          team_id?: number | null
+          category?: string
+          title: string
+          slug?: string | null
+          source_url?: string | null
+          source_name?: string | null
+          snippet?: string | null
+          scraped_at?: string
+          published_at?: string | null
+          status?: string
+          ai_summary?: string | null
+          ai_content?: string | null
+          ai_perspective?: string | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
+          video_youtube_id?: string | null
+          edited_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          team_id?: number | null
+          category?: string
+          title?: string
+          slug?: string | null
+          source_url?: string | null
+          source_name?: string | null
+          snippet?: string | null
+          scraped_at?: string
+          published_at?: string | null
+          status?: string
+          ai_summary?: string | null
+          ai_content?: string | null
+          ai_perspective?: string | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
+          video_youtube_id?: string | null
+          edited_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wc_news_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       national_team_squads: {
         Row: {
           team_id: number

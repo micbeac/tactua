@@ -14,11 +14,11 @@ import {
   getAllWCMatches,
   getGroupPredictions,
   getGroupStandings,
-  getWCNews,
   groupMatchesByStage,
   WC_COMPETITION_ID,
   type WCMatch,
 } from '@/lib/data/world-cup';
+import { getLatestWCNews } from '@/lib/data/wc-news';
 import { getMatchesForDay, todayParis } from '@/lib/matchday';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
@@ -215,7 +215,7 @@ export default async function WorldCup2026Page() {
         'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
       ),
     getMatchesForDay(supabase, today, WC_COMPETITION_ID),
-    getWCNews(supabase, 6),
+    getLatestWCNews(supabase, 6),
   ]);
 
   const koPredsMap = new Map<number, KnockoutPrediction>();
@@ -611,7 +611,7 @@ export default async function WorldCup2026Page() {
               </p>
             </div>
             <Link
-              href="/news"
+              href="/coupe-du-monde-2026/actu"
               className="text-primary shrink-0 text-xs font-semibold hover:underline"
             >
               Toutes les actus →
@@ -621,11 +621,11 @@ export default async function WorldCup2026Page() {
             {wcNews.map((n) => (
               <li key={n.id}>
                 <Link
-                  href={`/news/${n.slug ?? `news-${n.id}`}`}
+                  href={`/coupe-du-monde-2026/actu/${n.slug ?? n.id}`}
                   className="bg-card hover:border-primary/40 border-border group flex h-full flex-col gap-3 rounded-2xl border p-4 transition-colors"
                 >
                   <header className="flex items-center gap-2">
-                    {n.team?.logo_url && (
+                    {n.team?.logo_url ? (
                       <div className="bg-muted relative size-7 shrink-0 overflow-hidden rounded-full">
                         <Image
                           src={n.team.logo_url}
@@ -635,13 +635,21 @@ export default async function WorldCup2026Page() {
                           className="object-contain p-1"
                         />
                       </div>
+                    ) : (
+                      <div className="bg-primary/15 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-xs">
+                        🌍
+                      </div>
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-primary truncate text-[10px] font-semibold tracking-widest uppercase">
-                        {n.team?.name ?? 'Football'}
+                        {n.category === 'tournoi'
+                          ? 'Tournoi'
+                          : (n.team?.name ?? 'Sélection')}
                       </p>
                       <p className="text-muted-foreground text-[10px]">
-                        {DATE_FMT.format(new Date(n.scraped_at))}
+                        {DATE_FMT.format(
+                          new Date(n.published_at ?? n.scraped_at),
+                        )}
                       </p>
                     </div>
                   </header>

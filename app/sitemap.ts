@@ -12,7 +12,8 @@ const MAX_NEWS = 5000;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
 
-  const [teamsRes, playersRes, matchesRes, newsRes] = await Promise.all([
+  const [teamsRes, playersRes, matchesRes, newsRes, wcNewsRes] =
+    await Promise.all([
     supabase
       .from('teams')
       .select('id, name, last_updated_at')
@@ -35,12 +36,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .not('slug', 'is', null)
       .order('scraped_at', { ascending: false })
       .limit(MAX_NEWS),
+    supabase
+      .from('wc_news')
+      .select('slug, published_at, edited_at, scraped_at')
+      .eq('status', 'published')
+      .not('slug', 'is', null)
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .limit(MAX_NEWS),
   ]);
 
   const teams = teamsRes.data ?? [];
   const players = playersRes.data ?? [];
   const matches = matchesRes.data ?? [];
   const news = newsRes.data ?? [];
+  const wcNews = wcNewsRes.data ?? [];
 
   const now = new Date();
 
@@ -76,6 +85,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}/coupe-du-monde-2026/calendrier`,
       lastModified: now,
       changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/coupe-du-monde-2026/actu`,
+      lastModified: now,
+      changeFrequency: 'daily',
       priority: 0.7,
     },
     {
@@ -148,11 +163,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
+  const wcNewsEntries: MetadataRoute.Sitemap = (
+    wcNews as Array<{
+      slug: string | null;
+      published_at: string | null;
+      edited_at: string | null;
+      scraped_at: string;
+    }>
+  )
+    .filter((n) => n.slug)
+    .map((n) => ({
+      url: `${BASE_URL}/coupe-du-monde-2026/actu/${n.slug}`,
+      lastModified: new Date(
+        n.edited_at ?? n.published_at ?? n.scraped_at,
+      ),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    }));
+
   return [
     ...staticEntries,
     ...matchEntries,
     ...teamEntries,
     ...playerEntries,
     ...newsEntries,
+    ...wcNewsEntries,
   ];
 }

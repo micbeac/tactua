@@ -144,38 +144,6 @@ export async function getWCNationalTeamIds(supabase: Supa): Promise<number[]> {
   return Array.from(ids);
 }
 
-export type WCNewsItem = {
-  id: number;
-  title: string;
-  slug: string | null;
-  ai_summary: string | null;
-  scraped_at: string;
-  team: { id: number; name: string; logo_url: string | null } | null;
-};
-
-/**
- * Dernières actus IA des sélections nationales engagées en Coupe du Monde.
- * Alimente le bloc « actu CDM » de la page /coupe-du-monde-2026.
- */
-export async function getWCNews(
-  supabase: Supa,
-  limit = 6,
-): Promise<WCNewsItem[]> {
-  const ids = await getWCNationalTeamIds(supabase);
-  if (ids.length === 0) return [];
-  const { data } = await supabase
-    .from('team_narratives')
-    .select(
-      `id, title, slug, ai_summary, scraped_at,
-       team:teams!team_narratives_team_id_fkey(id, name, logo_url)`,
-    )
-    .in('team_id', ids)
-    .not('ai_content', 'is', null)
-    .order('scraped_at', { ascending: false })
-    .limit(limit);
-  return (data ?? []) as unknown as WCNewsItem[];
-}
-
 /**
  * Mapping team_id → groupe, depuis wc_group_assignments.
  */
