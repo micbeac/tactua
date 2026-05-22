@@ -19,7 +19,23 @@ async function af<T>(path: string): Promise<T> {
       `API-Football ${res.status} on ${path}: ${body.slice(0, 200)}`,
     );
   }
-  return (await res.json()) as T;
+  const json = (await res.json()) as T & { errors?: unknown };
+  // API-Football renvoie HTTP 200 même en cas d'erreur quota / ratelimit :
+  // le détail est dans `errors` (objet non vide). On le traite comme une
+  // vraie erreur — sinon on génèrerait (et mettrait en cache) une analyse
+  // dégradée silencieusement.
+  const errs = json.errors;
+  if (
+    errs != null &&
+    !Array.isArray(errs) &&
+    typeof errs === 'object' &&
+    Object.keys(errs).length > 0
+  ) {
+    throw new Error(
+      `API-Football error on ${path}: ${JSON.stringify(errs).slice(0, 200)}`,
+    );
+  }
+  return json as T;
 }
 
 // ============================================================================
