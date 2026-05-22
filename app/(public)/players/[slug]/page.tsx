@@ -19,6 +19,8 @@ import {
   getPlayerSeasonStats,
 } from '@/lib/data/player';
 import { getPlayerEfficiency } from '@/lib/data/player-efficiency';
+import { getVideoClips } from '@/lib/data/video-clips';
+import { VideoClipsSection } from '@/components/video/VideoClipsSection';
 import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
@@ -67,11 +69,13 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
     playerId,
   );
 
-  const [seasonStatsRaw, performancesRaw, efficiency] = await Promise.all([
-    getPlayerSeasonStats(supabase, playerId),
-    getPlayerRecentPerformances(supabase, playerId, 5),
-    getPlayerEfficiency(supabase, playerId),
-  ]);
+  const [seasonStatsRaw, performancesRaw, efficiency, videoClips] =
+    await Promise.all([
+      getPlayerSeasonStats(supabase, playerId),
+      getPlayerRecentPerformances(supabase, playerId, 5),
+      getPlayerEfficiency(supabase, playerId),
+      getVideoClips(supabase, 'player', playerId),
+    ]);
 
   const seasonStats: PlayerSeasonStats[] = seasonStatsRaw.map((s) => ({
     season: s.season,
@@ -187,6 +191,8 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
       {efficiency && <PlayerEfficiencyCard efficiency={efficiency} />}
 
       <PlayerRecentPerformances items={performances} />
+
+      <VideoClipsSection clips={videoClips} />
     </main>
   );
 }

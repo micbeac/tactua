@@ -10,6 +10,7 @@ const NAV = [
   { href: '/admin/cdm', label: 'CDM 2026' },
   { href: '/admin/partners', label: 'Partenaires' },
   { href: '/admin/promo-codes', label: 'Codes promo' },
+  { href: '/admin/videos', label: 'Vidéos' },
   { href: '/admin/emails', label: 'Emails' },
   { href: '/admin/push', label: 'Push' },
 ];

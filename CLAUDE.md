@@ -39,7 +39,6 @@ Voir `plan-mvp-cdm.md` pour le découpage jour par jour et l'architecture compl�
 - Stats live détaillées pendant matchs
 - Push web notifications
 - Feed personnalisé type TikTok
-- Mini-clips et contenu vidéo
 - Comparaison équipes avec radars
 - Recherche globale avancée
 - Module prédictions IA détaillées

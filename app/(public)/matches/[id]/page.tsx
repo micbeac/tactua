@@ -41,6 +41,8 @@ import {
   getRefereeProfile,
 } from '@/lib/data/match-insights';
 import { getMatchPlayerPopupMap } from '@/lib/data/match-player-popup';
+import { getVideoClips } from '@/lib/data/video-clips';
+import { VideoClipsSection } from '@/components/video/VideoClipsSection';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
@@ -268,6 +270,9 @@ export default async function MatchPage({ params }: MatchPageParams) {
 
   // Profil disciplinaire de l'arbitre (cartons/match)
   const refereeProfile = await getRefereeProfile(supabase, match.referee);
+
+  // Mini-clips vidéo du match
+  const videoClips = await getVideoClips(supabase, 'match', matchId);
 
   // Map player_id → PlayerPopupData pour clic sur joueur (lineup + timeline)
   const playerPopupMap = await getMatchPlayerPopupMap(
@@ -591,6 +596,8 @@ export default async function MatchPage({ params }: MatchPageParams) {
             : null
         }
       />
+
+      <VideoClipsSection clips={videoClips} title="Vidéos du match" />
     </main>
   );
 }

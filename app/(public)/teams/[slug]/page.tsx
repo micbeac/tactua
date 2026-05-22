@@ -28,6 +28,8 @@ import {
   type ScheduleMatch,
 } from '@/lib/data/team';
 import { getTeamSplits } from '@/lib/data/team-splits';
+import { getVideoClips } from '@/lib/data/video-clips';
+import { VideoClipsSection } from '@/components/video/VideoClipsSection';
 import { isFavorite } from '@/lib/data/favorites';
 import { createClient } from '@/lib/supabase/server';
 import { parseEntityId } from '@/lib/url';
@@ -93,6 +95,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
     narrativesRes,
     analysisRes,
     teamSplits,
+    videoClips,
   ] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
     getTeamUpcomingMatches(supabase, teamId, 5),
@@ -122,6 +125,7 @@ export default async function TeamPage({ params }: TeamPageParams) {
       .limit(1)
       .maybeSingle(),
     getTeamSplits(supabase, teamId),
+    getVideoClips(supabase, 'team', teamId),
   ]);
 
   // Stats saison des joueurs de l'effectif (toutes compétitions confondues —
@@ -324,6 +328,8 @@ export default async function TeamPage({ params }: TeamPageParams) {
         stats_by_player={statsByPlayer}
         team_name={team.name}
       />
+
+      <VideoClipsSection clips={videoClips} />
     </main>
   );
 }

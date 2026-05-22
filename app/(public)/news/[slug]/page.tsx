@@ -8,6 +8,8 @@ import { NewsContextCard } from '@/components/news/NewsContextCard';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { autolinkHtml, type LinkableEntity } from '@/lib/autolink';
 import { getNewsContext } from '@/lib/data/news-context';
+import { getVideoClips } from '@/lib/data/video-clips';
+import { VideoClipsSection } from '@/components/video/VideoClipsSection';
 import { parseNewsSlug } from '@/lib/openai/news-content';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import { createClient } from '@/lib/supabase/server';
@@ -182,6 +184,9 @@ export default async function NewsPage({
 
   // Contexte équipe (logo, classement, forme, prochain match, joueurs)
   const ctx = team ? await getNewsContext(supabase, team.id) : null;
+
+  // Mini-clips vidéo attachés à l'article
+  const videoClips = await getVideoClips(supabase, 'news', news.id);
 
   // Related news (maillage interne)
   let related: {
@@ -464,6 +469,13 @@ export default async function NewsPage({
           </footer>
         )}
       </article>
+
+      {/* Mini-clips vidéo de l'article */}
+      {videoClips.length > 0 && (
+        <div className="mt-8">
+          <VideoClipsSection clips={videoClips} />
+        </div>
+      )}
 
       {/* Related news */}
       {related.length > 0 && team && (

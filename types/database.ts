@@ -1049,6 +1049,36 @@ export type Database = {
           },
         ]
       }
+      video_clips: {
+        Row: {
+          id: number
+          entity_type: string
+          entity_id: number
+          youtube_id: string
+          title: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          entity_type: string
+          entity_id: number
+          youtube_id: string
+          title: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          entity_type?: string
+          entity_id?: number
+          youtube_id?: string
+          title?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       match_events: {
         Row: {
           id: number
