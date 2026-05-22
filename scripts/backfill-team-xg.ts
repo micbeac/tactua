@@ -26,17 +26,25 @@ type MatchRow = {
 async function main() {
   const competitionId = process.argv[2] ? Number(process.argv[2]) : null;
 
-  let query = supabase
-    .from('matches')
-    .select('id, api_football_fixture_id, home_team_id, away_team_id')
-    .eq('status', 'finished')
-    .not('api_football_fixture_id', 'is', null)
-    .order('kickoff_at', { ascending: true });
-  if (competitionId != null) {
-    query = query.eq('competition_id', competitionId);
+  // Pagination : Supabase plafonne un select() à 1000 lignes.
+  const matches: MatchRow[] = [];
+  const PAGE = 1000;
+  for (let offset = 0; ; offset += PAGE) {
+    let query = supabase
+      .from('matches')
+      .select('id, api_football_fixture_id, home_team_id, away_team_id')
+      .eq('status', 'finished')
+      .not('api_football_fixture_id', 'is', null)
+      .order('kickoff_at', { ascending: true })
+      .range(offset, offset + PAGE - 1);
+    if (competitionId != null) {
+      query = query.eq('competition_id', competitionId);
+    }
+    const { data } = await query;
+    const page = (data ?? []) as MatchRow[];
+    matches.push(...page);
+    if (page.length < PAGE) break;
   }
-  const { data } = await query;
-  const matches = (data ?? []) as MatchRow[];
   console.log(`▶ ${matches.length} matchs à traiter\n`);
 
   // Map team_id DB → api_football_id, pour construire le teamIdMap AF→DB
