@@ -954,6 +954,86 @@ export type Database = {
         }
         Relationships: []
       }
+      national_team_squads: {
+        Row: {
+          team_id: number
+          player_id: number
+          position: string | null
+          shirt_number: number | null
+          source: string
+          last_updated_at: string
+        }
+        Insert: {
+          team_id: number
+          player_id: number
+          position?: string | null
+          shirt_number?: number | null
+          source?: string
+          last_updated_at?: string
+        }
+        Update: {
+          team_id?: number
+          player_id?: number
+          position?: string | null
+          shirt_number?: number | null
+          source?: string
+          last_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "national_team_squads_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "national_team_squads_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_coaches: {
+        Row: {
+          team_id: number
+          af_coach_id: number | null
+          name: string
+          nationality: string | null
+          photo_url: string | null
+          in_charge_since: string | null
+          last_updated_at: string
+        }
+        Insert: {
+          team_id: number
+          af_coach_id?: number | null
+          name: string
+          nationality?: string | null
+          photo_url?: string | null
+          in_charge_since?: string | null
+          last_updated_at?: string
+        }
+        Update: {
+          team_id?: number
+          af_coach_id?: number | null
+          name?: string
+          nationality?: string | null
+          photo_url?: string | null
+          in_charge_since?: string | null
+          last_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_coaches_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_events: {
         Row: {
           id: number

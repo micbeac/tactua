@@ -346,7 +346,7 @@ export async function fetchCurrentCoach(
 // Head-to-head — /fixtures/headtohead?h2h=A-B
 // ============================================================================
 
-type H2HResponse = {
+type H2HFullResponse = {
   response: Array<{
     fixture: {
       id: number;
@@ -386,7 +386,7 @@ export async function fetchHeadToHead(
   teamB: number,
   lastN = 5,
 ): Promise<H2HSummary> {
-  const d = await af<H2HResponse>(
+  const d = await af<H2HFullResponse>(
     `/fixtures/headtohead?h2h=${teamA}-${teamB}&status=FT-AET-PEN`,
   );
   let aWins = 0;
