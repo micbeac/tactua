@@ -41,6 +41,43 @@ function normalize(s: string): string {
     .trim();
 }
 
+/**
+ * Mappe un code statut API-Football (status.short) vers notre enum interne.
+ * Renvoie null si le code est inconnu (on ne touche pas au statut alors).
+ */
+function mapAfStatus(
+  short: string,
+): 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled' | null {
+  switch (short) {
+    case 'NS':
+    case 'TBD':
+      return 'scheduled';
+    case '1H':
+    case 'HT':
+    case '2H':
+    case 'ET':
+    case 'BT':
+    case 'P':
+    case 'LIVE':
+    case 'INT':
+      return 'live';
+    case 'FT':
+    case 'AET':
+    case 'PEN':
+    case 'AWD': // victoire sur tapis — il y a un résultat
+    case 'WO': // walkover
+      return 'finished';
+    case 'PST':
+    case 'SUSP':
+      return 'postponed';
+    case 'CANC':
+    case 'ABD':
+      return 'cancelled';
+    default:
+      return null;
+  }
+}
+
 function namesMatch(a: string, b: string): boolean {
   const na = normalize(a);
   const nb = normalize(b);
@@ -232,7 +269,7 @@ export async function enrichMatchFromApiFootball(
     );
   }
 
-  // 6.bis Events (timeline) + fixture detail (live minute / status)
+  // 6.bis Events (timeline) + fixture detail (status / score / live minute)
   // Fait avant les player stats car même endpoint /fixtures et bcp moins lourd.
   try {
     const detailResp = await client.getFixtureDetail(afFixtureId);
@@ -240,16 +277,30 @@ export async function enrichMatchFromApiFootball(
     if (fix) {
       result.live_status = fix.fixture.status.short;
       result.live_minute = fix.fixture.status.elapsed;
-      // Update matches.live_minute + live_updated_at
+      // Update matches : statut + score + minute live.
+      // Indispensable — sinon un match joué reste 'scheduled' sans score
+      // tant qu'aucun refresh Football-Data n'est passé.
+      const update: {
+        live_minute: number | null;
+        live_updated_at: string;
+        status?: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+        score_home?: number;
+        score_away?: number;
+      } = {
+        live_minute: fix.fixture.status.elapsed,
+        live_updated_at: new Date().toISOString(),
+      };
+      const mapped = mapAfStatus(fix.fixture.status.short);
+      if (mapped) update.status = mapped;
+      if (fix.goals.home != null) update.score_home = fix.goals.home;
+      if (fix.goals.away != null) update.score_away = fix.goals.away;
+
       const { error: mErr } = await supabase
         .from('matches')
-        .update({
-          live_minute: fix.fixture.status.elapsed,
-          live_updated_at: new Date().toISOString(),
-        })
+        .update(update)
         .eq('id', m.id);
       if (mErr) {
-        result.notes.push(`Live minute update: ${mErr.message}`);
+        result.notes.push(`Match status/score update: ${mErr.message}`);
       }
     }
   } catch (e) {
