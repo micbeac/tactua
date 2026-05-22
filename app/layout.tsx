@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import {
+  buildOrganizationJsonLd,
+  buildWebsiteJsonLd,
+  JsonLd,
+} from '@/components/seo/JsonLd';
 import { Footer } from '@/components/shared/Footer';
 import { Header } from '@/components/shared/Header';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
@@ -98,6 +103,9 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col">
+        {/* Schema.org site-wide : identité de marque + recherche Google */}
+        <JsonLd data={buildOrganizationJsonLd()} />
+        <JsonLd data={buildWebsiteJsonLd()} />
         <RefCapture />
         <PWAInstallPrompt />
         <Header />

@@ -2,7 +2,7 @@
 // Lu par Google pour les rich snippets et par les LLMs (ChatGPT, Perplexity)
 // pour les citations.
 
-import { SITE_URL } from '@/lib/site';
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
@@ -19,6 +19,58 @@ type TeamRef = {
   logo_url?: string | null;
   country?: string | null;
 };
+
+/** Organization — identité de marque, site-wide (à mettre dans le layout). */
+export function buildOrganizationJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+    description:
+      "Tactuo — plateforme d'analyse de football augmentée par l'IA : " +
+      'compositions, statistiques, analyses tactiques et prédictions. ' +
+      "Ce n'est pas le médicament Tactuo (acné).",
+  };
+}
+
+/** WebSite + SearchAction — active la recherche directe depuis Google. */
+export function buildWebsiteJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: SITE_URL,
+    inLanguage: 'fr-FR',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+/** FAQPage — à partir de la FAQ de la landing. */
+export function buildFaqPageJsonLd(
+  items: Array<{ question: string; answer: string }>,
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((it) => ({
+      '@type': 'Question',
+      name: it.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: it.answer,
+      },
+    })),
+  };
+}
 
 export function buildSportsEventJsonLd(args: {
   match_id: number;

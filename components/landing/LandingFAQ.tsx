@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-const FAQ = [
+export const LANDING_FAQ = [
   {
     q: 'Comment fonctionne l’IA ?',
     a: 'On combine plusieurs sources de données football (stats équipes, performances joueurs, blessures, compositions), puis on les passe à un modèle GPT-4o-mini avec des consignes strictes. Le modèle ne devine rien : il synthétise ce que les chiffres disent.',
@@ -49,7 +49,7 @@ export function LandingFAQ() {
         </motion.div>
 
         <div className="space-y-3">
-          {FAQ.map((item, i) => {
+          {LANDING_FAQ.map((item, i) => {
             const isOpen = open === i;
             return (
               <motion.div

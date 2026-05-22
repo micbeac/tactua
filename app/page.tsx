@@ -8,12 +8,13 @@ import {
 import { WeeklyRecapSection } from '@/components/dashboard/WeeklyRecapSection';
 import { LandingCoverage } from '@/components/landing/LandingCoverage';
 import { LandingDemo } from '@/components/landing/LandingDemo';
-import { LandingFAQ } from '@/components/landing/LandingFAQ';
+import { LandingFAQ, LANDING_FAQ } from '@/components/landing/LandingFAQ';
 import { LandingFinalCta } from '@/components/landing/LandingFinalCta';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { LandingLogoMarquee } from '@/components/landing/LandingLogoMarquee';
 import { type MatchCardProps } from '@/components/match/MatchCard';
+import { buildFaqPageJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { getPersonalUpcomingMatches } from '@/lib/data/favorites';
 import { getDailyRecap } from '@/lib/data/recap';
 import { getWeeklyRecap } from '@/lib/data/weekly-recap';
@@ -124,6 +125,11 @@ export default async function HomePage() {
           color: 'oklch(0.985 0 0)',
         }}
       >
+        <JsonLd
+          data={buildFaqPageJsonLd(
+            LANDING_FAQ.map((f) => ({ question: f.q, answer: f.a })),
+          )}
+        />
         <LandingHero />
         <LandingLogoMarquee />
         <LandingDemo />

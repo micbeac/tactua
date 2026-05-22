@@ -178,6 +178,7 @@ export async function generateMetadata({
   return {
     title: `${home} vs ${away}`,
     description: `${home} contre ${away} en ${competition}. Compositions, score, analyse tactique IA.`,
+    alternates: { canonical: `/matches/${id}` },
   };
 }
 
