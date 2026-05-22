@@ -61,6 +61,31 @@ export async function buildDeepTeamContext(
       ? safeStats.lineups[0].formation
       : null;
 
+  // Répartition temporelle des buts (% tôt 0-15' / tard 76'→)
+  const goalTiming = (
+    minute?: Record<string, { total: number | null }>,
+  ): { early: number | null; late: number | null } => {
+    if (!minute) return { early: null, late: null };
+    let grand = 0;
+    let early = 0;
+    let late = 0;
+    for (const [bucket, v] of Object.entries(minute)) {
+      const t = v?.total ?? 0;
+      grand += t;
+      if (bucket === '0-15') early += t;
+      if (bucket === '76-90' || bucket === '91-105' || bucket === '106-120') {
+        late += t;
+      }
+    }
+    if (grand === 0) return { early: null, late: null };
+    return {
+      early: Math.round((early / grand) * 100),
+      late: Math.round((late / grand) * 100),
+    };
+  };
+  const forTiming = goalTiming(safeStats.goals?.for?.minute);
+  const againstTiming = goalTiming(safeStats.goals?.against?.minute);
+
   return {
     name: safeStats.team?.name ?? team_name,
     country: team_country,
@@ -101,5 +126,11 @@ export async function buildDeepTeamContext(
       reason: i.reason,
     })),
     starting_eleven: input.starting_eleven,
+    goal_timing: {
+      scored_early_pct: forTiming.early,
+      scored_late_pct: forTiming.late,
+      conceded_early_pct: againstTiming.early,
+      conceded_late_pct: againstTiming.late,
+    },
   };
 }

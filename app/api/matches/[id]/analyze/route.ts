@@ -15,6 +15,10 @@ import { buildDeepTeamContext } from '@/lib/api-football/deep-context';
 import { fetchH2H, fetchMatchOdds } from '@/lib/api-football/deep-stats';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
+import {
+  getStandingContext,
+  getTeamScheduleContext,
+} from '@/lib/data/match-context';
 import { getPostMatchPerformance } from '@/lib/data/match-performance';
 import {
   generateDeepPreMatchAnalysis,
@@ -45,7 +49,7 @@ const MATCH_SELECT = `
   id, kickoff_at, status, stage, matchday, score_home, score_away,
   half_time_home, half_time_away, api_football_fixture_id,
   venue, home_team_id, away_team_id,
-  competition:competitions(id, name, api_football_league_id),
+  competition:competitions(id, name, api_football_league_id, current_season),
   home_team:teams!matches_home_team_id_fkey(id, name, country, api_football_id),
   away_team:teams!matches_away_team_id_fkey(id, name, country, api_football_id)
 `;
@@ -68,6 +72,7 @@ type MatchRow = {
     id: number;
     name: string;
     api_football_league_id: number | null;
+    current_season: string | null;
   } | null;
   home_team: {
     id: number;
@@ -343,6 +348,45 @@ export async function POST(
           patchFromTeamSeasonStats(homeCtx, m.home_team_id!),
           patchFromTeamSeasonStats(awayCtx, m.away_team_id!),
         ]);
+
+        // Contexte calendrier (fraîcheur/congestion) + classement (enjeu).
+        // 100% base de données, aucun appel API. Non bloquant.
+        try {
+          const compSeason = m.competition?.current_season ?? null;
+          const compId = m.competition?.id ?? null;
+          const [homeSched, awaySched, homeStand, awayStand] =
+            await Promise.all([
+              getTeamScheduleContext(supabase, m.home_team_id!, m.kickoff_at),
+              getTeamScheduleContext(supabase, m.away_team_id!, m.kickoff_at),
+              compId && compSeason
+                ? getStandingContext(
+                    supabase,
+                    compId,
+                    compSeason,
+                    m.home_team_id!,
+                  )
+                : Promise.resolve(null),
+              compId && compSeason
+                ? getStandingContext(
+                    supabase,
+                    compId,
+                    compSeason,
+                    m.away_team_id!,
+                  )
+                : Promise.resolve(null),
+            ]);
+          homeCtx.rest_days = homeSched.rest_days;
+          homeCtx.matches_last_14d = homeSched.matches_last_14d;
+          homeCtx.standing = homeStand;
+          awayCtx.rest_days = awaySched.rest_days;
+          awayCtx.matches_last_14d = awaySched.matches_last_14d;
+          awayCtx.standing = awayStand;
+        } catch (e) {
+          console.warn(
+            `[analyze ${m.id}] contexte calendrier/classement échec:`,
+            e instanceof Error ? e.message : e,
+          );
+        }
 
         // Fix anti-mercato : l'endpoint AF /players?team=X&season=Y retourne
         // TOUS les joueurs ayant joué cette saison, y compris ceux partis au

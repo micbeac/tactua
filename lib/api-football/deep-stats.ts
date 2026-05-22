@@ -41,10 +41,18 @@ export type TeamStatsResponse = {
       for: {
         total: { home: number; away: number; total: number };
         average: { home: string; away: string; total: string };
+        minute?: Record<
+          string,
+          { total: number | null; percentage: string | null }
+        >;
       };
       against: {
         total: { home: number; away: number; total: number };
         average: { home: string; away: string; total: string };
+        minute?: Record<
+          string,
+          { total: number | null; percentage: string | null }
+        >;
       };
     };
     biggest: {

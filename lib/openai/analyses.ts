@@ -181,6 +181,25 @@ export type DeepTeamContext = {
   /** Joueurs qui ont joué pour cette équipe cette saison mais sont
    *  partis au mercato. L'IA doit explicitement NE PAS les mentionner. */
   transferred_out?: string[];
+  /** Jours de repos depuis le dernier match (fraîcheur) */
+  rest_days?: number | null;
+  /** Matchs joués sur les 14 derniers jours (congestion calendaire) */
+  matches_last_14d?: number;
+  /** Position au classement + écarts avec les voisins directs */
+  standing?: {
+    position: number;
+    points: number;
+    total_teams: number;
+    points_behind_above: number | null;
+    points_ahead_below: number | null;
+  } | null;
+  /** Répartition temporelle des buts (% marqués/encaissés tôt vs tard) */
+  goal_timing?: {
+    scored_early_pct: number | null; // 0-15'
+    scored_late_pct: number | null; // 76' →
+    conceded_early_pct: number | null;
+    conceded_late_pct: number | null;
+  } | null;
 };
 
 export type RecentNarrative = {
@@ -258,6 +277,10 @@ Règles :
   * N'invente AUCUN nom de joueur, même si tu penses connaître l'effectif. Tes connaissances peuvent être dépassées par rapport au mercato.
   * En cas de doute sur un joueur, utilise un terme générique ("l'attaquant", "le milieu créatif", "la défense").
 
+- CONTEXTE DE MATCH — Exploite ces signaux quand ils sont fournis :
+  * "Classement" : intègre l'enjeu réel (course au titre, places européennes, maintien, match sans enjeu). Un écart de points serré près d'une zone clé augmente l'intensité attendue.
+  * "Fraîcheur" : un faible nombre de jours de repos ou une forte densité de calendrier (3+ matchs/14 j) annonce de la fatigue, des rotations possibles, une baisse de régime en 2e période. Compare les deux équipes.
+  * "Tempo des buts" : exploite-le dans les scénarios (ex : une équipe qui marque tard + une qui encaisse tard → "but décisif dans le dernier quart d'heure" crédible).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
   * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
@@ -301,6 +324,52 @@ function fmtInjuries(list: DeepTeamContext['active_injuries']): string {
     .join(' · ');
 }
 
+function fmtStanding(t: DeepTeamContext): string {
+  if (!t.standing) return '';
+  const s = t.standing;
+  const above =
+    s.points_behind_above != null
+      ? `, à ${s.points_behind_above} pt(s) du rang au-dessus`
+      : '';
+  const below =
+    s.points_ahead_below != null
+      ? `, ${s.points_ahead_below} pt(s) d'avance sur le rang en-dessous`
+      : '';
+  return `\n- Classement : ${s.position}ᵉ/${s.total_teams} (${s.points} pts)${above}${below}`;
+}
+
+function fmtFreshness(t: DeepTeamContext): string {
+  if (t.rest_days == null && t.matches_last_14d == null) return '';
+  const rest =
+    t.rest_days != null ? `${t.rest_days} j de repos` : 'repos inconnu';
+  const dens =
+    t.matches_last_14d != null
+      ? `, ${t.matches_last_14d} match(s) sur 14 j`
+      : '';
+  return `\n- Fraîcheur : ${rest}${dens}`;
+}
+
+function fmtGoalTiming(t: DeepTeamContext): string {
+  const g = t.goal_timing;
+  if (
+    !g ||
+    (g.scored_late_pct == null &&
+      g.conceded_late_pct == null &&
+      g.scored_early_pct == null &&
+      g.conceded_early_pct == null)
+  ) {
+    return '';
+  }
+  const parts: string[] = [];
+  if (g.scored_late_pct != null)
+    parts.push(`${g.scored_late_pct}% de ses buts marqués après la 75ᵉ`);
+  if (g.conceded_late_pct != null)
+    parts.push(`${g.conceded_late_pct}% encaissés après la 75ᵉ`);
+  if (g.scored_early_pct != null)
+    parts.push(`${g.scored_early_pct}% marqués avant la 15ᵉ`);
+  return parts.length > 0 ? `\n- Tempo des buts : ${parts.join(', ')}` : '';
+}
+
 function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   const fmtTeam = (t: DeepTeamContext, side: 'Domicile' | 'Extérieur') =>
     `
@@ -313,7 +382,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
 - Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
-- Formation principale : ${t.primary_formation ?? '—'}
+- Formation principale : ${t.primary_formation ?? '—'}${fmtStanding(t)}${fmtFreshness(t)}${fmtGoalTiming(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${
