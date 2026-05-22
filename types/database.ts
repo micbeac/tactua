@@ -882,6 +882,78 @@ export type Database = {
         }
         Relationships: []
       }
+      wc_group_assignments: {
+        Row: {
+          id: number
+          team_id: number
+          group_letter: string
+        }
+        Insert: {
+          id?: number
+          team_id: number
+          group_letter: string
+        }
+        Update: {
+          id?: number
+          team_id?: number
+          group_letter?: string
+        }
+        Relationships: []
+      }
+      wc_group_predictions: {
+        Row: {
+          group_letter: string
+          content_json: Json
+          ai_model: string | null
+          generated_at: string
+        }
+        Insert: {
+          group_letter: string
+          content_json: Json
+          ai_model?: string | null
+          generated_at?: string
+        }
+        Update: {
+          group_letter?: string
+          content_json?: Json
+          ai_model?: string | null
+          generated_at?: string
+        }
+        Relationships: []
+      }
+      wc_knockout_predictions: {
+        Row: {
+          match_id: number
+          predicted_winner_team_id: number | null
+          predicted_score_home: number | null
+          predicted_score_away: number | null
+          confidence: string | null
+          reasoning: string | null
+          ai_model: string | null
+          generated_at: string
+        }
+        Insert: {
+          match_id: number
+          predicted_winner_team_id?: number | null
+          predicted_score_home?: number | null
+          predicted_score_away?: number | null
+          confidence?: string | null
+          reasoning?: string | null
+          ai_model?: string | null
+          generated_at?: string
+        }
+        Update: {
+          match_id?: number
+          predicted_winner_team_id?: number | null
+          predicted_score_home?: number | null
+          predicted_score_away?: number | null
+          confidence?: string | null
+          reasoning?: string | null
+          ai_model?: string | null
+          generated_at?: string
+        }
+        Relationships: []
+      }
       match_events: {
         Row: {
           id: number

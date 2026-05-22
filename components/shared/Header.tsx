@@ -58,6 +58,12 @@ export async function Header() {
               Calendrier
             </Link>
             <Link
+              href="/coupe-du-monde-2026"
+              className="text-primary hover:bg-primary/10 hidden rounded-md px-3 py-1.5 font-semibold sm:inline-block"
+            >
+              CDM 2026
+            </Link>
+            <Link
               href="/news"
               className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
             >
