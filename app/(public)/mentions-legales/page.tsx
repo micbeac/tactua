@@ -36,8 +36,7 @@ export default function MentionsLegalesPage() {
             <li>Éditeur : Michael Beauclercq</li>
             <li>Statut : éditeur personne physique</li>
             <li>
-              Adresse : Clos de la Mare aux Loups 22, [code postal et ville à
-              compléter]
+              Adresse : Clos de la Mare aux Loups 22, 1330 Rixensart, Belgique
             </li>
             <li>
               Contact :{' '}
