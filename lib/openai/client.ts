@@ -5,10 +5,16 @@ import OpenAI from 'openai';
 export const DEFAULT_MODEL = 'gpt-4o-mini';
 
 // Modèle "premium" réservé à l'analyse pré-match approfondie (l'artefact
-// vu par l'utilisateur payant). ~15-17× le coût du mini par token mais
-// l'analyse est petite et mise en cache → quelques € / mois max.
-// Surchargeable via OPENAI_DEEP_MODEL si un flagship plus récent est dispo.
-export const DEEP_MODEL = process.env.OPENAI_DEEP_MODEL || 'gpt-4o';
+// vu par l'utilisateur payant). L'analyse est petite et mise en cache par
+// match → quelques € à quelques dizaines d'€ / mois max.
+// Surchargeable via OPENAI_DEEP_MODEL (ex repli gpt-4o si besoin).
+export const DEEP_MODEL = process.env.OPENAI_DEEP_MODEL || 'gpt-5.5';
+
+/** true si le modèle est un modèle de raisonnement (GPT-5+, série o) :
+ *  ils n'acceptent pas de `temperature` personnalisé. */
+export function isReasoningModel(model: string): boolean {
+  return /^(gpt-5|o\d)/i.test(model);
+}
 
 let _client: OpenAI | null = null;
 

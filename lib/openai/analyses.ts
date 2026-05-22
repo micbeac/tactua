@@ -2,7 +2,12 @@
 // Deep pre-match → modèle premium (DEEP_MODEL) ; reste → gpt-4o-mini.
 // Sortie strictement typée via response_format json_schema.
 
-import { DEEP_MODEL, DEFAULT_MODEL, getOpenAI } from './client.ts';
+import {
+  DEEP_MODEL,
+  DEFAULT_MODEL,
+  getOpenAI,
+  isReasoningModel,
+} from './client.ts';
 import {
   DEEP_PRE_MATCH_JSON_SCHEMA,
   POST_MATCH_JSON_SCHEMA,
@@ -533,7 +538,8 @@ export async function generateDeepPreMatchAnalysis(
         >,
       },
     },
-    temperature: 0.5,
+    // Les modèles de raisonnement (GPT-5+) refusent un temperature custom.
+    ...(isReasoningModel(model) ? {} : { temperature: 0.5 }),
   });
 
   const content = response.choices[0]?.message?.content;
