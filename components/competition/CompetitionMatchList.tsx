@@ -5,6 +5,11 @@ export type CompetitionMatchListProps = {
   title: string;
   empty_label: string;
   matches: CompetitionMatchRow[];
+  /**
+   * Ordre des jours. 'asc' (défaut) = du plus ancien au plus récent
+   * (prochains matchs). 'desc' = du plus récent au plus ancien (résultats).
+   */
+  day_order?: 'asc' | 'desc';
 };
 
 const DAY_FMT = new Intl.DateTimeFormat('fr-FR', {
@@ -46,6 +51,7 @@ export function CompetitionMatchList({
   title,
   empty_label,
   matches,
+  day_order = 'asc',
 }: CompetitionMatchListProps) {
   if (matches.length === 0) {
     return (
@@ -66,6 +72,7 @@ export function CompetitionMatchList({
     groups.get(k)!.push(m);
   }
   const orderedDays = Array.from(groups.keys()).sort();
+  if (day_order === 'desc') orderedDays.reverse();
 
   return (
     <section>

@@ -97,6 +97,7 @@ export default async function CompetitionPage({
         title="Résultats récents"
         empty_label="Aucun match joué récemment."
         matches={recent}
+        day_order="desc"
       />
     </main>
   );
