@@ -205,7 +205,11 @@ export default async function WorldCup2026Page() {
           groupes en direct, bracket des phases finales.
         </p>
         <div className="relative">
-          <WorldCupCountdown />
+          <WorldCupCountdown
+            kickoff_iso={
+              matches.find((m) => m.stage === 'GROUP_STAGE')?.kickoff_at
+            }
+          />
         </div>
       </section>
 

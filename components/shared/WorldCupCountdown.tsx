@@ -2,27 +2,30 @@
 
 import { useEffect, useState } from 'react';
 
-// Kickoff officiel CDM 2026 : 11 juin 2026, 19h00 UTC (~21h Paris).
-const KICKOFF_ISO = '2026-06-11T19:00:00Z';
+// Fallback si pas de kickoff dispo : 11 juin 2026, 19h00 UTC.
+// Mais le composant accepte un prop `kickoff_iso` (le 1er match CDM en DB).
+const DEFAULT_KICKOFF_ISO = '2026-06-11T19:00:00Z';
 
 type Remaining = {
   days: number;
   hours: number;
   minutes: number;
+  seconds: number;
   is_live: boolean;
 };
 
-function computeRemaining(): Remaining {
-  const target = new Date(KICKOFF_ISO).getTime();
+function computeRemaining(targetIso: string): Remaining {
+  const target = new Date(targetIso).getTime();
   const now = Date.now();
   const diff = target - now;
   if (diff <= 0) {
-    return { days: 0, hours: 0, minutes: 0, is_live: true };
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, is_live: true };
   }
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
   const minutes = Math.floor((diff / (1000 * 60)) % 60);
-  return { days, hours, minutes, is_live: false };
+  const seconds = Math.floor((diff / 1000) % 60);
+  return { days, hours, minutes, seconds, is_live: false };
 }
 
 function Cell({ value, label }: { value: number; label: string }) {
@@ -38,25 +41,29 @@ function Cell({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function WorldCupCountdown() {
-  // SSR-safe : on initialise une fois côté client puis on rafraîchit chaque minute.
+export function WorldCupCountdown({
+  kickoff_iso,
+}: {
+  /** ISO du premier match CDM. Défaut : 11 juin 2026 19h UTC. */
+  kickoff_iso?: string;
+} = {}) {
+  const target = kickoff_iso ?? DEFAULT_KICKOFF_ISO;
+  // SSR-safe : on initialise une fois côté client puis on rafraîchit chaque seconde.
   const [r, setR] = useState<Remaining | null>(null);
 
   useEffect(() => {
-    // Init immédiate au mount client (SSR rend le placeholder à 0).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setR(computeRemaining());
-    const id = setInterval(() => setR(computeRemaining()), 60_000);
+    setR(computeRemaining(target));
+    const id = setInterval(() => setR(computeRemaining(target)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [target]);
 
   if (!r) {
-    // placeholder pendant le SSR pour éviter le décalage
     return (
       <div className="flex gap-2 sm:gap-3" aria-hidden>
         <Cell value={0} label="jours" />
         <Cell value={0} label="heures" />
         <Cell value={0} label="min" />
+        <Cell value={0} label="sec" />
       </div>
     );
   }
@@ -76,6 +83,7 @@ export function WorldCupCountdown() {
         <Cell value={r.days} label="jours" />
         <Cell value={r.hours} label="heures" />
         <Cell value={r.minutes} label="min" />
+        <Cell value={r.seconds} label="sec" />
       </div>
       <p className="text-muted-foreground hidden text-xs sm:block">
         avant le coup d&apos;envoi
