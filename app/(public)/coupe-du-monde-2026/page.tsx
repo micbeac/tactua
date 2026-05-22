@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { MatchesOfDaySection } from '@/components/dashboard/MatchesOfDaySection';
 import type { MatchCardProps } from '@/components/match/MatchCard';
+import { FaqAccordion } from '@/components/shared/FaqAccordion';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
-import { JsonLd } from '@/components/seo/JsonLd';
+import { buildFaqPageJsonLd, JsonLd } from '@/components/seo/JsonLd';
+import { WC_FACTS, WC_FAQ } from '@/lib/content/world-cup';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import {
   getAllWCMatches,
@@ -233,6 +235,11 @@ export default async function WorldCup2026Page() {
           url: `${SITE_URL}/coupe-du-monde-2026`,
         }}
       />
+      <JsonLd
+        data={buildFaqPageJsonLd(
+          WC_FAQ.map((f) => ({ question: f.q, answer: f.a })),
+        )}
+      />
 
       {/* Hero */}
       <section className="bg-primary/10 border-primary/20 relative mb-10 overflow-hidden rounded-2xl border p-6 sm:p-10">
@@ -247,7 +254,7 @@ export default async function WorldCup2026Page() {
           Coupe du Monde 2026
         </h1>
         <p className="text-muted-foreground relative mb-6 max-w-2xl text-sm sm:text-base">
-          48 équipes, 12 groupes, 64 matchs. Pronostics IA, classements de
+          48 équipes, 12 groupes, 104 matchs. Pronostics IA, classements de
           groupes en direct, bracket des phases finales.
         </p>
         <div className="relative">
@@ -256,6 +263,91 @@ export default async function WorldCup2026Page() {
               matches.find((m) => m.stage === 'GROUP_STAGE')?.kickoff_at
             }
           />
+        </div>
+      </section>
+
+      {/* L'ESSENTIEL — contenu éditorial indexable */}
+      <section className="mb-12">
+        <h2 className="mb-4 text-2xl font-semibold tracking-tight">
+          La Coupe du Monde 2026 en bref
+        </h2>
+        <div className="text-muted-foreground space-y-3 text-sm leading-relaxed sm:text-base">
+          <p>
+            La Coupe du Monde 2026 est la {WC_FACTS.edition}. Elle se déroule
+            du <strong className="text-foreground">{WC_FACTS.startLabel}</strong>{' '}
+            au <strong className="text-foreground">{WC_FACTS.endLabel}</strong>,
+            et marque un tournant dans l&apos;histoire du tournoi : c&apos;est
+            la première édition organisée conjointement par{' '}
+            <strong className="text-foreground">trois pays</strong> — les
+            États-Unis, le Canada et le Mexique — et la première à réunir{' '}
+            <strong className="text-foreground">48 sélections</strong> au lieu
+            de 32.
+          </p>
+          <p>
+            Ce nouveau format porte le nombre de rencontres à{' '}
+            <strong className="text-foreground">104 matchs</strong>, répartis
+            sur {WC_FACTS.hostCitiesCount} villes hôtes. Les 48 équipes sont
+            réparties en 12 groupes de 4 : les deux premiers de chaque groupe et
+            les huit meilleurs troisièmes se qualifient pour une phase à
+            élimination directe inédite, qui débute par des 16ᵉ de finale. La
+            compétition s&apos;ouvre le 11 juin 2026 à l&apos;Estadio Azteca de
+            Mexico et se conclut par la finale du 19 juillet au MetLife Stadium
+            de New York / New Jersey.
+          </p>
+        </div>
+
+        {/* Chiffres clés */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { value: '48', label: 'équipes' },
+            { value: '104', label: 'matchs' },
+            { value: '16', label: 'villes hôtes' },
+            { value: '3', label: 'pays organisateurs' },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-card border-border rounded-xl border p-4 text-center"
+            >
+              <p className="text-primary text-3xl font-bold tabular-nums">
+                {stat.value}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Liens vers les guides */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {[
+            {
+              href: '/coupe-du-monde-2026/format',
+              title: 'Le format à 48 équipes',
+              desc: 'Groupes, qualifiés, élimination directe — comment ça marche.',
+            },
+            {
+              href: '/coupe-du-monde-2026/villes-hotes',
+              title: 'Les 16 villes hôtes',
+              desc: 'Stades et villes des États-Unis, du Canada et du Mexique.',
+            },
+            {
+              href: '/coupe-du-monde-2026/calendrier',
+              title: 'Le calendrier complet',
+              desc: 'Dates clés, du match d’ouverture à la finale.',
+            },
+          ].map((g) => (
+            <Link
+              key={g.href}
+              href={g.href}
+              className="bg-card border-border hover:border-primary/40 group rounded-xl border p-4 transition-colors"
+            >
+              <p className="group-hover:text-primary text-sm font-semibold">
+                {g.title}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">{g.desc}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -278,6 +370,12 @@ export default async function WorldCup2026Page() {
           className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
         >
           🏆 Phase finale
+        </Link>
+        <Link
+          href="#faq"
+          className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
+        >
+          ❓ Questions fréquentes
         </Link>
       </nav>
 
@@ -480,6 +578,19 @@ export default async function WorldCup2026Page() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* FAQ — contenu indexable + JSON-LD FAQPage pour les rich results */}
+      <section id="faq" className="mt-16 scroll-mt-24">
+        <header className="mb-6">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            Questions fréquentes
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            L&apos;essentiel à savoir sur la Coupe du Monde 2026.
+          </p>
+        </header>
+        <FaqAccordion items={WC_FAQ} />
       </section>
 
       {/* Footer */}
