@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { requireCronAuth } from '@/lib/cron/auth';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
+import { getPostMatchPerformance } from '@/lib/data/match-performance';
 import { upsertAnalysis } from '@/lib/data/analysis';
 import {
   generatePostMatchAnalysis,
@@ -253,6 +254,14 @@ export async function GET(request: Request) {
         .map((r) => r.players?.name)
         .filter((n): n is string => Boolean(n));
 
+      // Notes joueurs + buteurs → l'IA peut nommer l'homme du match
+      const perf = await getPostMatchPerformance(
+        supabase,
+        m.id,
+        m.home_team!.id,
+        m.away_team!.id,
+      );
+
       const { analysis, model } = await generatePostMatchAnalysis({
         competition: m.competition?.name ?? 'Compétition',
         stage_or_matchday:
@@ -265,6 +274,7 @@ export async function GET(request: Request) {
           score: m.score_home!,
           half_time_score: m.half_time_home,
           starting_eleven: homeXI,
+          top_performers: perf.home_performers,
         },
         away: {
           name: m.away_team!.name,
@@ -272,7 +282,9 @@ export async function GET(request: Request) {
           score: m.score_away!,
           half_time_score: m.half_time_away,
           starting_eleven: awayXI,
+          top_performers: perf.away_performers,
         },
+        goal_events: perf.goal_events,
       });
       await upsertAnalysis(supabase, m.id, 'post_match', analysis, model);
       stats.post_generated += 1;

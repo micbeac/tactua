@@ -394,6 +394,21 @@ export async function generateDeepPreMatchAnalysis(
 // POST-MATCH
 // ============================================================================
 
+export type PostMatchPerformer = {
+  name: string;
+  rating: number | null;
+  goals: number;
+  assists: number;
+};
+
+export type PostMatchGoal = {
+  minute: number;
+  scorer: string;
+  assist: string | null;
+  detail: string | null;
+  team_side: 'home' | 'away';
+};
+
 export type PostMatchContext = {
   competition: string;
   stage_or_matchday: string | null;
@@ -405,6 +420,8 @@ export type PostMatchContext = {
     score: number;
     half_time_score: number | null;
     starting_eleven: string[];
+    /** Joueurs notés, triés par note décroissante (top performers) */
+    top_performers?: PostMatchPerformer[];
   };
   away: {
     name: string;
@@ -412,7 +429,10 @@ export type PostMatchContext = {
     score: number;
     half_time_score: number | null;
     starting_eleven: string[];
+    top_performers?: PostMatchPerformer[];
   };
+  /** Buts du match dans l'ordre chronologique (avec buteur + passeur) */
+  goal_events?: PostMatchGoal[];
 };
 
 const POST_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
@@ -420,16 +440,50 @@ Tu rédiges une lecture post-match factuelle et engageante : faits marquants, ho
 
 Règles :
 - Français exclusivement. Ton factuel, mesuré, jamais sensationnaliste.
-- Base-toi UNIQUEMENT sur les données fournies (score, score mi-temps, compositions si dispo). Pas d'invention de buteurs, passeurs, ou stats spécifiques.
-- Si tu n'as pas les compositions, ne nomme pas de joueur spécifique pour l'homme du match : utilise un nom générique ("L'attaquant principal de X") ou indique que l'info manque.
-- "facts" : 3 à 5 faits chiffrés ou notables (score final, score mi-temps, retournement, dynamique).
-- "turning_point" : 1-2 phrases sur le moment qui a fait basculer le match (peut être déduit du score mi-temps vs final).
+- Base-toi UNIQUEMENT sur les données fournies (score, score mi-temps, compositions, notes des joueurs, buteurs). Pas d'invention de stats.
+- "Homme du match" : nomme EXPLICITEMENT le joueur — c'est en priorité celui avec la meilleure note parmi les "Top performers" fournis, en tenant compte de son impact (buts, passes décisives). Si aucune note n'est fournie, alors seulement reste générique ("l'attaquant principal de X").
+- Ne cite QUE des joueurs présents dans les "Top performers", les buteurs, ou le XI titulaire fournis. N'invente AUCUN nom.
+- Si des buteurs sont fournis, cite-les nommément dans les "facts" avec leur minute.
+- "facts" : 3 à 5 faits chiffrés ou notables (score final, buteurs + minutes, score mi-temps, retournement, dynamique).
+- "turning_point" : 1-2 phrases sur le moment qui a fait basculer le match.
 - "tactical_reading" : 2-3 phrases sur ce que le résultat révèle du jeu des deux équipes.`;
 
 function buildPostMatchPrompt(ctx: PostMatchContext): string {
   const fmtSquad = (squad: string[]) =>
     squad.length === 0 ? 'non publiée' : squad.join(', ');
   const fmtHT = (n: number | null) => (n != null ? String(n) : '?');
+
+  const fmtPerformers = (perfs?: PostMatchPerformer[]) => {
+    if (!perfs || perfs.length === 0) return 'notes non disponibles';
+    return perfs
+      .map((p) => {
+        const bits: string[] = [];
+        if (p.rating != null) bits.push(`note ${p.rating}`);
+        if (p.goals > 0) bits.push(`${p.goals} but${p.goals > 1 ? 's' : ''}`);
+        if (p.assists > 0)
+          bits.push(`${p.assists} passe${p.assists > 1 ? 's' : ''} déc.`);
+        return `${p.name}${bits.length ? ` (${bits.join(', ')})` : ''}`;
+      })
+      .join(', ');
+  };
+
+  const goalsLine = () => {
+    if (!ctx.goal_events || ctx.goal_events.length === 0) {
+      return 'Buteurs : non disponibles';
+    }
+    return (
+      'Buts :\n' +
+      ctx.goal_events
+        .map((g) => {
+          const team = g.team_side === 'home' ? ctx.home.name : ctx.away.name;
+          const og = g.detail === 'Own Goal' ? ' csc' : '';
+          const pen = g.detail === 'Penalty' ? ' (pen.)' : '';
+          const assist = g.assist ? `, passe de ${g.assist}` : '';
+          return `  ${g.minute}' — ${g.scorer}${og}${pen} (${team})${assist}`;
+        })
+        .join('\n')
+    );
+  };
 
   return `Contexte du match terminé :
 
@@ -439,13 +493,17 @@ Coup d'envoi : ${ctx.kickoff_at_iso}${ctx.venue ? ` — ${ctx.venue}` : ''}
 Score final : ${ctx.home.name} ${ctx.home.score} - ${ctx.away.score} ${ctx.away.name}
 Score mi-temps : ${fmtHT(ctx.home.half_time_score)} - ${fmtHT(ctx.away.half_time_score)}
 
+${goalsLine()}
+
 Équipe à domicile : ${ctx.home.name}${ctx.home.country ? ` (${ctx.home.country})` : ''}
 - XI titulaire : ${fmtSquad(ctx.home.starting_eleven)}
+- Top performers (note décroissante) : ${fmtPerformers(ctx.home.top_performers)}
 
 Équipe à l'extérieur : ${ctx.away.name}${ctx.away.country ? ` (${ctx.away.country})` : ''}
 - XI titulaire : ${fmtSquad(ctx.away.starting_eleven)}
+- Top performers (note décroissante) : ${fmtPerformers(ctx.away.top_performers)}
 
-Génère l'analyse post-match en JSON selon le schéma fourni.`;
+Génère l'analyse post-match en JSON selon le schéma fourni. Nomme l'homme du match parmi les top performers.`;
 }
 
 export async function generatePostMatchAnalysis(

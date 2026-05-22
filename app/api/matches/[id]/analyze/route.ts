@@ -15,6 +15,7 @@ import { buildDeepTeamContext } from '@/lib/api-football/deep-context';
 import { fetchH2H } from '@/lib/api-football/deep-stats';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
+import { getPostMatchPerformance } from '@/lib/data/match-performance';
 import {
   generateDeepPreMatchAnalysis,
   generatePostMatchAnalysis,
@@ -634,6 +635,14 @@ export async function POST(
       .map((r) => r.players?.name)
       .filter((n): n is string => Boolean(n));
 
+    // Notes des joueurs + buteurs → permet à l'IA de nommer l'homme du match
+    const perf = await getPostMatchPerformance(
+      supabase,
+      m.id,
+      m.home_team_id,
+      m.away_team_id,
+    );
+
     const { analysis, model } = await generatePostMatchAnalysis({
       competition: m.competition?.name ?? 'Compétition',
       stage_or_matchday:
@@ -646,6 +655,7 @@ export async function POST(
         score: m.score_home,
         half_time_score: m.half_time_home,
         starting_eleven: homeXI,
+        top_performers: perf.home_performers,
       },
       away: {
         name: m.away_team.name,
@@ -653,7 +663,9 @@ export async function POST(
         score: m.score_away,
         half_time_score: m.half_time_away,
         starting_eleven: awayXI,
+        top_performers: perf.away_performers,
       },
+      goal_events: perf.goal_events,
     });
 
     await upsertAnalysis(supabase, m.id, 'post_match', analysis, model);
