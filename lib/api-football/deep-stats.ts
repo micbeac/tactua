@@ -136,6 +136,131 @@ export async function fetchActiveInjuries(
 }
 
 // ============================================================================
+// Odds — /odds?fixture=X
+// ============================================================================
+// Les cotes ne sont JAMAIS affichées : on les agrège en probabilités
+// implicites de consensus (marge bookmaker retirée) pour enrichir, en
+// interne, le calibrage des analyses IA. Pas une feature de paris.
+
+type OddsResponse = {
+  response: Array<{
+    bookmakers: Array<{
+      id: number;
+      name: string;
+      bets: Array<{
+        id: number;
+        name: string;
+        values: Array<{ value: string; odd: string }>;
+      }>;
+    }>;
+  }>;
+};
+
+export type MarketConsensus = {
+  /** Nombre de sources de données agrégées */
+  source_count: number;
+  /** Probas victoire dom / nul / victoire ext (somme = 100) */
+  match_winner: {
+    home_pct: number;
+    draw_pct: number;
+    away_pct: number;
+  } | null;
+  /** Proba que les 2 équipes marquent */
+  btts_yes_pct: number | null;
+  /** Proba plus de 2,5 buts dans le match */
+  over_2_5_pct: number | null;
+};
+
+/**
+ * Cote décimale → probabilités normalisées (retire la marge bookmaker :
+ * la somme des 1/cote vaut > 1, on ramène à 1).
+ */
+function impliedProbs(odds: number[]): number[] {
+  const raw = odds.map((o) => (o > 0 ? 1 / o : 0));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return odds.map(() => 0);
+  return raw.map((r) => r / sum);
+}
+
+function average(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  return xs.reduce((a, b) => a + b, 0) / xs.length;
+}
+
+/**
+ * Récupère les cotes d'un match et les agrège en probabilités implicites
+ * de consensus, moyennées sur tous les bookmakers disponibles.
+ * Renvoie null si aucune cote (match trop lointain, hors fenêtre 1-14j).
+ */
+export async function fetchMatchOdds(
+  fixtureId: number,
+): Promise<MarketConsensus | null> {
+  const d = await af<OddsResponse>(`/odds?fixture=${fixtureId}`);
+  const bookmakers = d.response[0]?.bookmakers ?? [];
+  if (bookmakers.length === 0) return null;
+
+  const mwHome: number[] = [];
+  const mwDraw: number[] = [];
+  const mwAway: number[] = [];
+  const bttsYes: number[] = [];
+  const over25: number[] = [];
+
+  for (const bk of bookmakers) {
+    for (const bet of bk.bets) {
+      if (bet.id === 1) {
+        // Match Winner (1N2)
+        const h = bet.values.find((v) => v.value === 'Home');
+        const dr = bet.values.find((v) => v.value === 'Draw');
+        const a = bet.values.find((v) => v.value === 'Away');
+        if (h && dr && a) {
+          const [ph, pd, pa] = impliedProbs([
+            Number(h.odd),
+            Number(dr.odd),
+            Number(a.odd),
+          ]);
+          mwHome.push(ph);
+          mwDraw.push(pd);
+          mwAway.push(pa);
+        }
+      } else if (bet.id === 8) {
+        // Both Teams Score
+        const y = bet.values.find((v) => v.value === 'Yes');
+        const n = bet.values.find((v) => v.value === 'No');
+        if (y && n) {
+          const [py] = impliedProbs([Number(y.odd), Number(n.odd)]);
+          bttsYes.push(py);
+        }
+      } else if (bet.id === 5) {
+        // Goals Over/Under — ligne 2.5
+        const o = bet.values.find((v) => v.value === 'Over 2.5');
+        const u = bet.values.find((v) => v.value === 'Under 2.5');
+        if (o && u) {
+          const [po] = impliedProbs([Number(o.odd), Number(u.odd)]);
+          over25.push(po);
+        }
+      }
+    }
+  }
+
+  const pct = (x: number | null): number | null =>
+    x == null ? null : Math.round(x * 100);
+
+  const h = average(mwHome);
+  const dr = average(mwDraw);
+  const a = average(mwAway);
+
+  return {
+    source_count: bookmakers.length,
+    match_winner:
+      h != null && dr != null && a != null
+        ? { home_pct: pct(h)!, draw_pct: pct(dr)!, away_pct: pct(a)! }
+        : null,
+    btts_yes_pct: pct(average(bttsYes)),
+    over_2_5_pct: pct(average(over25)),
+  };
+}
+
+// ============================================================================
 // H2H — /fixtures/headtohead
 // ============================================================================
 

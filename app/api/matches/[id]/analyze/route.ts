@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { buildDeepTeamContext } from '@/lib/api-football/deep-context';
-import { fetchH2H } from '@/lib/api-football/deep-stats';
+import { fetchH2H, fetchMatchOdds } from '@/lib/api-football/deep-stats';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
 import { getPostMatchPerformance } from '@/lib/data/match-performance';
@@ -43,7 +43,7 @@ type Body = {
 
 const MATCH_SELECT = `
   id, kickoff_at, status, stage, matchday, score_home, score_away,
-  half_time_home, half_time_away,
+  half_time_home, half_time_away, api_football_fixture_id,
   venue, home_team_id, away_team_id,
   competition:competitions(id, name, api_football_league_id),
   home_team:teams!matches_home_team_id_fkey(id, name, country, api_football_id),
@@ -60,6 +60,7 @@ type MatchRow = {
   score_away: number | null;
   half_time_home: number | null;
   half_time_away: number | null;
+  api_football_fixture_id: number | null;
   venue: string | null;
   home_team_id: number | null;
   away_team_id: number | null;
@@ -233,7 +234,7 @@ export async function POST(
         console.log(
           `[analyze ${m.id}] deep mode AF league=${afLeagueId} season=${season} home=${afHomeId} away=${afAwayId}`,
         );
-        const [homeCtxR, awayCtxR, h2hAfR] = await Promise.allSettled([
+        const [homeCtxR, awayCtxR, h2hAfR, oddsR] = await Promise.allSettled([
           buildDeepTeamContext({
             af_team_id: afHomeId!,
             af_league_id: afLeagueId!,
@@ -253,6 +254,10 @@ export async function POST(
             match_date: matchDate,
           }),
           fetchH2H(afHomeId!, afAwayId!, 10),
+          // Cotes → consensus probabiliste (calibrage interne, non bloquant)
+          m.api_football_fixture_id != null
+            ? fetchMatchOdds(m.api_football_fixture_id)
+            : Promise.resolve(null),
         ]);
         if (homeCtxR.status === 'rejected') {
           throw new Error(
@@ -272,6 +277,17 @@ export async function POST(
         const homeCtx = homeCtxR.value;
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
+        // Les cotes sont optionnelles : un échec ne bloque pas l'analyse.
+        const marketConsensus =
+          oddsR.status === 'fulfilled' ? oddsR.value : null;
+        if (oddsR.status === 'rejected') {
+          console.warn(
+            `[analyze ${m.id}] odds échec (non bloquant):`,
+            oddsR.reason instanceof Error
+              ? oddsR.reason.message
+              : oddsR.reason,
+          );
+        }
 
         // Fallback team_season_stats : si AF retourne des stats vides
         // (played.total === 0), on patche depuis Football-Data
@@ -485,6 +501,7 @@ export async function POST(
             homeNarrs.length > 0 || awayNarrs.length > 0
               ? { home: homeNarrs, away: awayNarrs }
               : undefined,
+          market_consensus: marketConsensus ?? undefined,
         };
 
         const { analysis, model } = await generateDeepPreMatchAnalysis(deepCtx);

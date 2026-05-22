@@ -207,6 +207,21 @@ export type DeepPreMatchContext = {
     home: RecentNarrative[];
     away: RecentNarrative[];
   };
+  /**
+   * Consensus de probabilités issu de données de marché agrégées.
+   * Donnée INTERNE de calibrage — jamais affichée, jamais mentionnée
+   * comme cote/bookmaker/pari dans le texte de l'analyse.
+   */
+  market_consensus?: {
+    source_count: number;
+    match_winner: {
+      home_pct: number;
+      draw_pct: number;
+      away_pct: number;
+    } | null;
+    btts_yes_pct: number | null;
+    over_2_5_pct: number | null;
+  };
 };
 
 const DEEP_SYSTEM_PROMPT = `Tu es un analyste football francophone pour Tactuo, une webapp d'analyse augmentée par l'IA.
@@ -242,6 +257,11 @@ Règles :
   * Si une ligne "⚠ NE PAS MENTIONNER" est fournie pour une équipe, ces joueurs sont PARTIS AU MERCATO et ne jouent plus pour cette équipe. Tu ne dois JAMAIS les citer comme acteurs du match à venir.
   * N'invente AUCUN nom de joueur, même si tu penses connaître l'effectif. Tes connaissances peuvent être dépassées par rapport au mercato.
   * En cas de doute sur un joueur, utilise un terme générique ("l'attaquant", "le milieu créatif", "la défense").
+
+- CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
+  * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
+  * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
+  * ⚠ Donnée INTERNE de calibrage : ne mentionne JAMAIS de cote, de bookmaker, de pari ni de "marché" dans le texte de l'analyse. C'est invisible pour le lecteur.
 
 Reste mesuré, c'est de l'analyse pas du pari sportif.`;
 
@@ -329,6 +349,27 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
       fmtNarratives(ctx.recent_narratives.away, ctx.away.name)
     : '';
 
+  // Bloc consensus de marché (interne, calibrage uniquement)
+  let consensusBlock = '';
+  const mc = ctx.market_consensus;
+  if (mc) {
+    const lines: string[] = [];
+    if (mc.match_winner) {
+      lines.push(
+        `- Issue : victoire ${ctx.home.name} ${mc.match_winner.home_pct}% · nul ${mc.match_winner.draw_pct}% · victoire ${ctx.away.name} ${mc.match_winner.away_pct}%`,
+      );
+    }
+    if (mc.btts_yes_pct != null) {
+      lines.push(`- Les deux équipes marquent : ${mc.btts_yes_pct}%`);
+    }
+    if (mc.over_2_5_pct != null) {
+      lines.push(`- Plus de 2,5 buts : ${mc.over_2_5_pct}%`);
+    }
+    if (lines.length > 0) {
+      consensusBlock = `\nConsensus probabiliste (${mc.source_count} sources agrégées — donnée interne de calibrage) :\n${lines.join('\n')}\n`;
+    }
+  }
+
   return `Contexte du match à venir :
 
 Compétition : ${ctx.competition}${ctx.stage_or_matchday ? ` (${ctx.stage_or_matchday})` : ''}
@@ -341,7 +382,7 @@ ${fmtTeam(ctx.away, 'Extérieur')}
 Confrontations directes récentes :
 ${h2hLines}
 ${narratives}
-
+${consensusBlock}
 Génère l'analyse pré-match enrichie en JSON selon le schéma fourni.`;
 }
 
