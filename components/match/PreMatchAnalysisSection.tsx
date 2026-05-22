@@ -6,6 +6,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Eye,
   Goal,
   Shield,
   Sparkles,
@@ -580,6 +581,12 @@ export function PreMatchAnalysisSection({
   const keyAway = analysis.key_players.filter((p) => p.team === 'away');
   const deep = isDeep(analysis);
   const rich = deep && hasRichData(analysis) ? analysis.rich_data : null;
+  // Champs enrichis (deep only) — facteur X, duels clés, à surveiller
+  const deepAnalysis: DeepPreMatchAnalysis | null = deep ? analysis : null;
+  const keyBattles = deepAnalysis?.tactical_overview.key_battles ?? null;
+  const legacyKeyBattle = analysis.tactical_overview.key_battle ?? null;
+  const xFactor = deepAnalysis?.x_factor ?? null;
+  const thingsToWatch = deepAnalysis?.things_to_watch ?? null;
 
   return (
     <section className="bg-card border-border space-y-7 rounded-2xl border p-6">
@@ -872,11 +879,44 @@ export function PreMatchAnalysisSection({
             <p className="text-sm">{analysis.tactical_overview.away_approach}</p>
           </div>
         </div>
-        <p className="text-foreground mt-3 text-sm">
-          <span className="text-primary font-semibold">Duel clé : </span>
-          {analysis.tactical_overview.key_battle}
-        </p>
+        {keyBattles && keyBattles.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              Duels clés
+            </p>
+            {keyBattles.map((b, i) => (
+              <p key={i} className="text-sm">
+                <span className="text-primary font-semibold">
+                  {b.title}
+                  {' — '}
+                </span>
+                {b.detail}
+              </p>
+            ))}
+          </div>
+        ) : legacyKeyBattle ? (
+          <p className="text-foreground mt-3 text-sm">
+            <span className="text-primary font-semibold">Duel clé : </span>
+            {legacyKeyBattle}
+          </p>
+        ) : null}
       </div>
+
+      {/* Le facteur X (IA, deep only) */}
+      {xFactor && (
+        <div className="bg-primary/5 border-primary/20 rounded-lg border p-4">
+          <h3 className="text-primary mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
+            <Sparkles className="size-3.5" aria-hidden />
+            Le facteur X
+          </h3>
+          <p className="text-foreground text-sm font-semibold">
+            {xFactor.title}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {xFactor.detail}
+          </p>
+        </div>
+      )}
 
       {/* Lecture de la forme */}
       <div>
@@ -972,6 +1012,26 @@ export function PreMatchAnalysisSection({
           </div>
         </div>
       </div>
+
+      {/* À surveiller (IA, deep only) */}
+      {thingsToWatch && thingsToWatch.length > 0 && (
+        <div>
+          <h3 className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+            <Eye className="size-3.5" aria-hidden />
+            À surveiller pendant le match
+          </h3>
+          <ul className="space-y-1.5">
+            {thingsToWatch.map((t, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span className="text-primary shrink-0 font-bold">
+                  {i + 1}.
+                </span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {generated_at && (
         <p className="text-muted-foreground/70 text-right text-[10px]">

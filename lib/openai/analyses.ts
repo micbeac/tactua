@@ -273,6 +273,9 @@ Règles :
 - Français exclusivement. Ton factuel, fondé sur les chiffres fournis. Aucune invention.
 - Tu DOIS citer des chiffres précis dans tes paragraphes (ex : "Bologne marque 1,6 but/match à l'extérieur", "Inter a 12 clean sheets cette saison", "ratio victoires à domicile : X/Y").
 - "data_insight" : 2-3 phrases qui synthétisent ce que les chiffres révèlent du match à venir (mismatch tactique, déséquilibre dom/ext, joueur clé absent, série en cours…).
+- "tactical_overview.key_battles" : exactement 2 ou 3 confrontations clés qui décideront le match, réparties sur le terrain (ex : un pressing contre une relance, une attaque contre une charnière, un duel d'ailes). Chaque entrée : "title" = la confrontation en 4-8 mots ; "detail" = 2-3 phrases concrètes sur pourquoi elle est décisive, en citant des chiffres et des joueurs réels fournis.
+- "x_factor" : LE facteur qui peut faire basculer le match — souvent non-évident (un retour de blessure, une fragilité sur coups de pied arrêtés, une fatigue de calendrier, un cadre suspendu, un mismatch de fraîcheur). "title" = le facteur en quelques mots ; "detail" = 2-3 phrases expliquant son impact possible. Un seul facteur, le plus déterminant.
+- "things_to_watch" : exactement 3 points concrets à observer EN REGARDANT le match, orientés spectateur ("Surveiller si X presse haut dès l'entame", "Le côté gauche de Y, exploité 60% du temps"…). Chaque point = une phrase actionnable, pas une généralité.
 - "scenarios" : exactement 3 scénarios narratifs du match, ORDONNÉS du plus probable au moins probable. Chacun :
   * "title" : 4-8 mots qui résument le scénario (ex : "Domination Inter, but tardif des visiteurs", "Match fermé décidé sur coup de pied arrêté").
   * "narrative" : 3-4 phrases qui racontent comment le match se déroule dans CE scénario — phases de jeu, joueurs impliqués, moments clés, score final implicite. Cite des chiffres précis (ex : "Profitant des 1,8 buts/match marqués à domicile…").

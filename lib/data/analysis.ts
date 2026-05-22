@@ -29,7 +29,7 @@ export async function upsertAnalysis(
   supabase: Supa,
   matchId: number,
   type: AnalysisType,
-  content: PreMatchAnalysis | PostMatchAnalysis,
+  content: PreMatchAnalysis | DeepPreMatchAnalysis | PostMatchAnalysis,
   aiModel: string,
 ): Promise<void> {
   const { error } = await supabase.from('match_analyses').upsert(

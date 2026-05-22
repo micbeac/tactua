@@ -136,7 +136,10 @@ export type DeepPreMatchAnalysis = {
   tactical_overview: {
     home_approach: string;
     away_approach: string;
-    key_battle: string;
+    /** Legacy : ancien duel unique (analyses en cache d'avant key_battles) */
+    key_battle?: string;
+    /** 2-3 confrontations clés du match */
+    key_battles?: Array<{ title: string; detail: string }>;
   };
   form_assessment: {
     home_form: string;
@@ -148,6 +151,10 @@ export type DeepPreMatchAnalysis = {
     away: string;
   };
   data_insight: string;
+  /** Le facteur décisif — l'élément qui peut faire basculer le match */
+  x_factor?: { title: string; detail: string };
+  /** 3 points concrets à observer pendant le match (orienté spectateur) */
+  things_to_watch?: string[];
   scenarios: MatchScenario[];
   prediction: {
     summary: string;
@@ -189,6 +196,8 @@ export const DEEP_PRE_MATCH_JSON_SCHEMA = {
     'key_players',
     'weak_points',
     'data_insight',
+    'x_factor',
+    'things_to_watch',
     'scenarios',
     'prediction',
   ],
@@ -196,12 +205,36 @@ export const DEEP_PRE_MATCH_JSON_SCHEMA = {
     tactical_overview: {
       type: 'object',
       additionalProperties: false,
-      required: ['home_approach', 'away_approach', 'key_battle'],
+      required: ['home_approach', 'away_approach', 'key_battles'],
       properties: {
         home_approach: { type: 'string' },
         away_approach: { type: 'string' },
-        key_battle: { type: 'string' },
+        key_battles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['title', 'detail'],
+            properties: {
+              title: { type: 'string' },
+              detail: { type: 'string' },
+            },
+          },
+        },
       },
+    },
+    x_factor: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['title', 'detail'],
+      properties: {
+        title: { type: 'string' },
+        detail: { type: 'string' },
+      },
+    },
+    things_to_watch: {
+      type: 'array',
+      items: { type: 'string' },
     },
     form_assessment: {
       type: 'object',
