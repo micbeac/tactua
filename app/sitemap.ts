@@ -44,6 +44,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const now = new Date();
 
+  // Uniquement des pages publiques indexables — surtout PAS /login ni
+  // /signup (interdites dans robots.txt : un sitemap ne doit jamais lister
+  // de pages bloquées, c'est un signal contradictoire pour Google).
   const staticEntries: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/`,
@@ -52,16 +55,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${BASE_URL}/login`,
+      url: `${BASE_URL}/coupe-du-monde-2026`,
       lastModified: now,
-      changeFrequency: 'yearly',
-      priority: 0.3,
+      changeFrequency: 'daily',
+      priority: 0.9,
     },
     {
-      url: `${BASE_URL}/signup`,
+      url: `${BASE_URL}/news`,
       lastModified: now,
-      changeFrequency: 'yearly',
-      priority: 0.3,
+      changeFrequency: 'daily',
+      priority: 0.6,
     },
   ];
 
