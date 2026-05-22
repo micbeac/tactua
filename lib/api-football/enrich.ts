@@ -156,6 +156,30 @@ export async function enrichMatchFromApiFootball(
   try {
     const lineupsResp = await client.getLineups(afFixtureId);
     if (lineupsResp.response.length > 0) {
+      // Résout TOUS les joueurs de la feuille de match par api_football_id,
+      // sans filtre current_team_id. Indispensable : un joueur transféré (ou
+      // dont current_team_id ne pointe plus sur l'une des 2 équipes) existe
+      // déjà en DB sous un autre id — le réinsérer violerait l'index unique
+      // players_api_football_id_uidx et ferait échouer tout le batch.
+      const afPlayerIds = new Set<number>();
+      for (const team of lineupsResp.response) {
+        for (const it of [...team.startXI, ...team.substitutes]) {
+          if (it.player?.id != null) afPlayerIds.add(it.player.id);
+        }
+      }
+      if (afPlayerIds.size > 0) {
+        const { data: known } = await supabase
+          .from('players')
+          .select('id, api_football_id')
+          .in('api_football_id', [...afPlayerIds]);
+        for (const p of (known ?? []) as Array<{
+          id: number;
+          api_football_id: number;
+        }>) {
+          playerIdMap.set(p.api_football_id, p.id);
+        }
+      }
+
       const { lineups, players } = mapApiFootballLineups(
         lineupsResp,
         m.id,
