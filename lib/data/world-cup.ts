@@ -117,6 +117,66 @@ export async function getAllWCMatches(supabase: Supa): Promise<WCMatch[]> {
 }
 
 /**
+ * IDs des sélections nationales de la Coupe du Monde.
+ * Deux sources fusionnées pour être robuste avant/après l'intégration du
+ * tirage au sort : les équipes ayant une sélection importée
+ * (national_team_squads) et celles présentes dans les matchs CDM.
+ */
+export async function getWCNationalTeamIds(supabase: Supa): Promise<number[]> {
+  const ids = new Set<number>();
+  const [squadRes, matchRes] = await Promise.all([
+    supabase.from('national_team_squads').select('team_id').limit(5000),
+    supabase
+      .from('matches')
+      .select('home_team_id, away_team_id')
+      .eq('competition_id', WC_COMPETITION_ID),
+  ]);
+  for (const r of (squadRes.data ?? []) as { team_id: number | null }[]) {
+    if (r.team_id != null) ids.add(r.team_id);
+  }
+  for (const r of (matchRes.data ?? []) as {
+    home_team_id: number | null;
+    away_team_id: number | null;
+  }[]) {
+    if (r.home_team_id != null) ids.add(r.home_team_id);
+    if (r.away_team_id != null) ids.add(r.away_team_id);
+  }
+  return Array.from(ids);
+}
+
+export type WCNewsItem = {
+  id: number;
+  title: string;
+  slug: string | null;
+  ai_summary: string | null;
+  scraped_at: string;
+  team: { id: number; name: string; logo_url: string | null } | null;
+};
+
+/**
+ * Dernières actus IA des sélections nationales engagées en Coupe du Monde.
+ * Alimente le bloc « actu CDM » de la page /coupe-du-monde-2026.
+ */
+export async function getWCNews(
+  supabase: Supa,
+  limit = 6,
+): Promise<WCNewsItem[]> {
+  const ids = await getWCNationalTeamIds(supabase);
+  if (ids.length === 0) return [];
+  const { data } = await supabase
+    .from('team_narratives')
+    .select(
+      `id, title, slug, ai_summary, scraped_at,
+       team:teams!team_narratives_team_id_fkey(id, name, logo_url)`,
+    )
+    .in('team_id', ids)
+    .not('ai_content', 'is', null)
+    .order('scraped_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as WCNewsItem[];
+}
+
+/**
  * Mapping team_id → groupe, depuis wc_group_assignments.
  */
 export async function getGroupAssignments(

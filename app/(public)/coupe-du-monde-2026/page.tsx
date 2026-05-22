@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { CalendarDays, Globe, Sparkles, Trophy } from 'lucide-react';
+import { CalendarDays, Globe, Newspaper, Sparkles, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
@@ -14,6 +14,7 @@ import {
   getAllWCMatches,
   getGroupPredictions,
   getGroupStandings,
+  getWCNews,
   groupMatchesByStage,
   WC_COMPETITION_ID,
   type WCMatch,
@@ -197,18 +198,25 @@ function MatchMini({
 export default async function WorldCup2026Page() {
   const supabase = await createClient();
   const today = todayParis();
-  const [matches, standings, predictions, knockoutPredsRes, todayGroups] =
-    await Promise.all([
-      getAllWCMatches(supabase),
-      getGroupStandings(supabase),
-      getGroupPredictions(supabase),
-      supabase
-        .from('wc_knockout_predictions')
-        .select(
-          'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
-        ),
-      getMatchesForDay(supabase, today, WC_COMPETITION_ID),
-    ]);
+  const [
+    matches,
+    standings,
+    predictions,
+    knockoutPredsRes,
+    todayGroups,
+    wcNews,
+  ] = await Promise.all([
+    getAllWCMatches(supabase),
+    getGroupStandings(supabase),
+    getGroupPredictions(supabase),
+    supabase
+      .from('wc_knockout_predictions')
+      .select(
+        'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
+      ),
+    getMatchesForDay(supabase, today, WC_COMPETITION_ID),
+    getWCNews(supabase, 6),
+  ]);
 
   const koPredsMap = new Map<number, KnockoutPrediction>();
   for (const p of (knockoutPredsRes.data ?? []) as KnockoutPrediction[]) {
@@ -371,6 +379,14 @@ export default async function WorldCup2026Page() {
         >
           🏆 Phase finale
         </Link>
+        {wcNews.length > 0 && (
+          <Link
+            href="#actu"
+            className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
+          >
+            📰 Actu des sélections
+          </Link>
+        )}
         <Link
           href="#faq"
           className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
@@ -579,6 +595,70 @@ export default async function WorldCup2026Page() {
           </div>
         </div>
       </section>
+
+      {/* ACTU DES SÉLECTIONS — dernières narratives IA des équipes nationales */}
+      {wcNews.length > 0 && (
+        <section id="actu" className="mt-16 scroll-mt-24">
+          <header className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                <Newspaper className="text-primary size-5" aria-hidden />
+                Actu des sélections
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Les dernières actualités des équipes engagées à la Coupe du
+                Monde 2026.
+              </p>
+            </div>
+            <Link
+              href="/news"
+              className="text-primary shrink-0 text-xs font-semibold hover:underline"
+            >
+              Toutes les actus →
+            </Link>
+          </header>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {wcNews.map((n) => (
+              <li key={n.id}>
+                <Link
+                  href={`/news/${n.slug ?? `news-${n.id}`}`}
+                  className="bg-card hover:border-primary/40 border-border group flex h-full flex-col gap-3 rounded-2xl border p-4 transition-colors"
+                >
+                  <header className="flex items-center gap-2">
+                    {n.team?.logo_url && (
+                      <div className="bg-muted relative size-7 shrink-0 overflow-hidden rounded-full">
+                        <Image
+                          src={n.team.logo_url}
+                          alt=""
+                          fill
+                          sizes="28px"
+                          className="object-contain p-1"
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-primary truncate text-[10px] font-semibold tracking-widest uppercase">
+                        {n.team?.name ?? 'Football'}
+                      </p>
+                      <p className="text-muted-foreground text-[10px]">
+                        {DATE_FMT.format(new Date(n.scraped_at))}
+                      </p>
+                    </div>
+                  </header>
+                  <h3 className="group-hover:text-primary line-clamp-2 text-sm font-semibold leading-snug transition-colors">
+                    {n.title}
+                  </h3>
+                  {n.ai_summary && (
+                    <p className="text-muted-foreground mt-auto line-clamp-3 text-xs leading-relaxed">
+                      {n.ai_summary}
+                    </p>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* FAQ — contenu indexable + JSON-LD FAQPage pour les rich results */}
       <section id="faq" className="mt-16 scroll-mt-24">

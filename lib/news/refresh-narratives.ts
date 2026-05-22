@@ -27,7 +27,9 @@ const SOURCES = [
   'skysports.com',
 ];
 
-function buildQuery(teamName: string): string {
+type ScrapeMode = 'club' | 'national';
+
+function buildQuery(teamName: string, mode: ScrapeMode = 'club'): string {
   const now = new Date();
   const monthFr = new Intl.DateTimeFormat('fr-FR', {
     month: 'long',
@@ -35,6 +37,10 @@ function buildQuery(teamName: string): string {
   }).format(now);
   const year = now.getFullYear();
   const sources = SOURCES.map((s) => `site:${s}`).join(' OR ');
+  if (mode === 'national') {
+    // Sélections nationales : angle Coupe du Monde, pas de "transfert".
+    return `${teamName} sélection Coupe du Monde 2026 actualité ${monthFr} ${year} liste OR blessure OR composition (${sources})`;
+  }
   return `${teamName} actualité ${monthFr} ${year} transfert OR blessure OR composition (${sources})`;
 }
 
@@ -67,6 +73,10 @@ export type RefreshNarrativesOptions = {
   force?: boolean;
   /** Cible une seule équipe. */
   teamIdFilter?: number | null;
+  /** Cible un ensemble d'équipes (ex. les sélections CDM). */
+  teamIds?: number[] | null;
+  /** Variante de requête de scraping : club (défaut) ou sélection nationale. */
+  mode?: ScrapeMode;
   /** Reprend après ce team_id (pagination). */
   afterTeamId?: number;
   /** Callback de progression (pour les logs du script). */
@@ -89,6 +99,8 @@ export async function runRefreshNarratives(
   const limit = opts.limit ?? 15;
   const force = opts.force ?? false;
   const teamIdFilter = opts.teamIdFilter ?? null;
+  const teamIds = opts.teamIds ?? null;
+  const mode = opts.mode ?? 'club';
   const afterTeamId = opts.afterTeamId ?? 0;
   const log = opts.onProgress ?? (() => {});
 
@@ -114,6 +126,7 @@ export async function runRefreshNarratives(
     .gt('id', afterTeamId)
     .order('id', { ascending: true });
   if (teamIdFilter) query = query.eq('id', teamIdFilter);
+  else if (teamIds && teamIds.length > 0) query = query.in('id', teamIds);
   query = query.limit(limit * 3);
 
   const { data: allTeams } = await query;
@@ -241,7 +254,7 @@ export async function runRefreshNarratives(
   async function processTeam(team: TeamRow) {
     try {
       log(`▶ ${team.name}`);
-      const results = await ragWebSearch(buildQuery(team.name), 5);
+      const results = await ragWebSearch(buildQuery(team.name, mode), 5);
       if (results.length === 0) return;
 
       const rows = results
