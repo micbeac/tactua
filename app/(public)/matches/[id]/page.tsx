@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MatchAnalysisOnDemand } from '@/components/match/MatchAnalysisOnDemand';
 import { MatchFormSection } from '@/components/match/MatchFormSection';
+import {
+  MatchContextSection,
+  type MatchSideContext,
+} from '@/components/match/MatchContextSection';
 import { MatchH2HSection } from '@/components/match/MatchH2HSection';
 import { MatchHeader } from '@/components/match/MatchHeader';
 import { MatchInfoCard } from '@/components/match/MatchInfoCard';
@@ -27,6 +31,11 @@ import {
   getMatchTeamStats,
   getTeamForm,
 } from '@/lib/data/match';
+import {
+  getStandingContext,
+  getTeamScheduleContext,
+  getTeamSeasonXG,
+} from '@/lib/data/match-context';
 import { getMatchPlayerPopupMap } from '@/lib/data/match-player-popup';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -52,6 +61,7 @@ type CompetitionEmbed = {
   id: number;
   name: string;
   country: string | null;
+  current_season: string | null;
 };
 
 type MatchRow = {
@@ -75,7 +85,7 @@ type MatchRow = {
 const MATCH_SELECT = `
   id, kickoff_at, status, stage, matchday, score_home, score_away, live_minute,
   venue, referee, home_team_id, away_team_id,
-  competition:competitions(id, name, country),
+  competition:competitions(id, name, country, current_season),
   home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
   away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)
 `;
@@ -211,6 +221,33 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
+
+  // Contexte d'avant-match (fraîcheur / classement / xG) — pur DB.
+  // Affiché uniquement avant ou pendant le match.
+  const isPreMatchPhase =
+    match.status === 'scheduled' || match.status === 'live';
+  const compId = match.competition?.id ?? null;
+  const compSeason = match.competition?.current_season ?? null;
+  let homeContext: MatchSideContext | null = null;
+  let awayContext: MatchSideContext | null = null;
+
+  async function buildSideContext(teamId: number): Promise<MatchSideContext> {
+    const [schedule, standing, xg] = await Promise.all([
+      getTeamScheduleContext(supabase, teamId, match!.kickoff_at),
+      compId && compSeason
+        ? getStandingContext(supabase, compId, compSeason, teamId)
+        : Promise.resolve(null),
+      compId ? getTeamSeasonXG(supabase, teamId, compId) : Promise.resolve(null),
+    ]);
+    return { schedule, standing, xg };
+  }
+
+  if (isPreMatchPhase && homeId != null && awayId != null) {
+    [homeContext, awayContext] = await Promise.all([
+      buildSideContext(homeId),
+      buildSideContext(awayId),
+    ]);
+  }
 
   // Map player_id → PlayerPopupData pour clic sur joueur (lineup + timeline)
   const playerPopupMap = await getMatchPlayerPopupMap(
@@ -399,6 +436,16 @@ export default async function MatchPage({ params }: MatchPageParams) {
           away_team_name={match.away_team?.name ?? 'Extérieur'}
           match_status={match.status}
           popup_map={playerPopupMap}
+        />
+      )}
+
+      {/* Contexte d'avant-match : fraîcheur, classement, xG saison */}
+      {homeContext && awayContext && (
+        <MatchContextSection
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          home={homeContext}
+          away={awayContext}
         />
       )}
 
