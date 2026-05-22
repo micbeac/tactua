@@ -52,6 +52,12 @@ export async function Header() {
               Matchs
             </Link>
             <Link
+              href="/calendrier"
+              className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
+            >
+              Calendrier
+            </Link>
+            <Link
               href="/news"
               className="text-muted-foreground hover:text-foreground hidden rounded-md px-3 py-1.5 sm:inline-block"
             >

@@ -200,6 +200,15 @@ export default async function HomePage() {
           l&apos;IA. Suis tes équipes et joueurs préférés et reçois les notifs
           essentielles.
         </p>
+        <div className="mt-4">
+          <Link
+            href="/calendrier"
+            className="bg-primary/15 text-primary hover:bg-primary/25 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+          >
+            <span>📅 Voir tous les matchs du jour</span>
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       </section>
 
       {/* Récap quotidien — tuiles + résultats favoris hier + news fraîches */}
