@@ -960,6 +960,9 @@ export type Database = {
           player_id: number
           position: string | null
           shirt_number: number | null
+          intl_caps: number
+          intl_goals: number
+          intl_assists: number
           source: string
           last_updated_at: string
         }
@@ -968,6 +971,9 @@ export type Database = {
           player_id: number
           position?: string | null
           shirt_number?: number | null
+          intl_caps?: number
+          intl_goals?: number
+          intl_assists?: number
           source?: string
           last_updated_at?: string
         }
@@ -976,6 +982,9 @@ export type Database = {
           player_id?: number
           position?: string | null
           shirt_number?: number | null
+          intl_caps?: number
+          intl_goals?: number
+          intl_assists?: number
           source?: string
           last_updated_at?: string
         }

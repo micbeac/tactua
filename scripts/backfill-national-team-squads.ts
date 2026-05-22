@@ -30,6 +30,10 @@ import { createAdminClient } from '../lib/supabase/admin.ts';
 const WC_LEAGUE_ID = 1;
 const WC_SEASON = 2026;
 
+// Nombre d'années calendaires agrégées pour les stats en sélection.
+// 5 ans = bilan robuste, tolère les trous de données ponctuels d'AF.
+const INTL_STAT_YEARS = 5;
+
 const supabase = createAdminClient();
 
 type TeamRow = {
@@ -44,7 +48,15 @@ type MergedPlayer = {
   position: string | null;
   photo: string | null;
   number: number | null;
-  appearances: number; // pour trier les "vraiment internationaux" en premier
+  // Stats en sélection agrégées (5 dernières années calendaires, toutes
+  // compétitions internationales). intl_caps sert aussi à trier les cadres.
+  intl_caps: number;
+  intl_goals: number;
+  intl_assists: number;
+  // true si le joueur fait partie du pool ACTUEL (liste CDM, dernière
+  // convocation, ou apparu en sélection sur les 2 dernières années). Les
+  // joueurs vus uniquement en 2022-2024 ne sont pas dans le groupe actuel.
+  recent: boolean;
 };
 
 function currentCalendarYear(): number {
@@ -106,13 +118,18 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
       WC_SEASON,
     );
     for (const p of wcPlayers) {
+      // On NE compte PAS les stats CDM ici : elles sont déjà incluses dans
+      // l'agrégat saison 2026 (sources 3+4), donc ça ferait double comptage.
       merged.set(p.player_id, {
         player_id: p.player_id,
         name: p.player_name,
         position: p.position,
         photo: p.photo,
         number: null,
-        appearances: p.appearances,
+        intl_caps: 0,
+        intl_goals: 0,
+        intl_assists: 0,
+        recent: true,
       });
     }
     console.log(`  /players CDM 2026 : ${wcPlayers.length} joueurs`);
@@ -141,7 +158,10 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
           position: s.position,
           photo: s.photo,
           number: s.number,
-          appearances: 0,
+          intl_caps: 0,
+          intl_goals: 0,
+          intl_assists: 0,
+          recent: true,
         });
       }
     }
@@ -150,10 +170,16 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
     console.log(`  /squads échec : ${e instanceof Error ? e.message : e}`);
   }
 
-  // 3 + 4. Fallback /players agrégé sur année courante + précédente
-  // (utile tant que les listes CDM ne sont pas finalisées)
+  // 3. /players agrégé sur les N dernières années. Sert à la fois à
+  // compléter l'effectif ET à calculer les stats en sélection (caps + buts +
+  // passes), sommées sur toutes les saisons.
   const year = currentCalendarYear();
-  for (const season of [year, year - 1]) {
+  const seasons: number[] = [];
+  for (let i = 0; i < INTL_STAT_YEARS; i++) seasons.push(year - i);
+  for (const season of seasons) {
+    // Un joueur vu dans une des 2 saisons les plus récentes fait partie du
+    // pool actuel de la sélection.
+    const isRecentSeason = season >= year - 1;
     try {
       const performers = await fetchAggregatedTeamPerformers(
         afTeamId,
@@ -165,7 +191,11 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
         if (existing) {
           if (!existing.photo && p.photo) existing.photo = p.photo;
           if (!existing.position && p.position) existing.position = p.position;
-          existing.appearances = Math.max(existing.appearances, p.appearances);
+          // Somme des stats internationales sur toutes les saisons
+          existing.intl_caps += p.appearances;
+          existing.intl_goals += p.goals;
+          existing.intl_assists += p.assists;
+          if (isRecentSeason) existing.recent = true;
         } else {
           merged.set(p.player_id, {
             player_id: p.player_id,
@@ -173,12 +203,14 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
             position: p.position,
             photo: p.photo,
             number: null,
-            appearances: p.appearances,
+            intl_caps: p.appearances,
+            intl_goals: p.goals,
+            intl_assists: p.assists,
+            recent: isRecentSeason,
           });
         }
       }
       console.log(`  /players saison ${season} : ${performers.length} joueurs`);
-      if (season === year && performers.length >= 25) break;
     } catch (e) {
       console.log(
         `  /players ${season} échec : ${e instanceof Error ? e.message : e}`,
@@ -267,7 +299,11 @@ async function backfillTeam(team: TeamRow) {
     .eq('team_id', team.id);
   if (delErr) console.error(`  ✗ delete squad: ${delErr.message}`);
 
+  // Seuls les joueurs du pool ACTUEL entrent dans national_team_squads
+  // (les joueurs vus uniquement en 2022-2024 sont ignorés ici, mais leurs
+  // stats restent disponibles dans players).
   const rows = players
+    .filter((p) => p.recent)
     .map((p) => {
       const dbId = afToDb.get(p.player_id);
       if (!dbId) return null;
@@ -276,6 +312,9 @@ async function backfillTeam(team: TeamRow) {
         player_id: dbId,
         position: p.position ?? null,
         shirt_number: p.number ?? null,
+        intl_caps: p.intl_caps,
+        intl_goals: p.intl_goals,
+        intl_assists: p.intl_assists,
         source: 'api_football_squads',
         last_updated_at: new Date().toISOString(),
       };

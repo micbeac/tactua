@@ -11,6 +11,9 @@ export type SquadPlayer = {
   nationality: string | null;
   photo_url: string | null;
   shirt_number: number | null;
+  intl_caps?: number | null;
+  intl_goals?: number | null;
+  intl_assists?: number | null;
 };
 
 export type SquadPlayerStats = {
@@ -140,6 +143,9 @@ export function TeamSquadSection({
                             appearances: stats?.appearances ?? undefined,
                             goals: stats?.goals ?? undefined,
                             assists: stats?.assists ?? undefined,
+                            intl_caps: p.intl_caps,
+                            intl_goals: p.intl_goals,
+                            intl_assists: p.intl_assists,
                           }}
                           team_name={team_name}
                         >

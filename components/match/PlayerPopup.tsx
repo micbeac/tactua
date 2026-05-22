@@ -43,6 +43,10 @@ export type PlayerPopupData = {
   shots_on_target?: number | null;
   key_passes?: number | null;
   passes_accuracy?: number | null;
+  /** Stats en sélection nationale (agrégat 2 dernières années) */
+  intl_caps?: number | null;
+  intl_goals?: number | null;
+  intl_assists?: number | null;
 };
 
 type Props = {
@@ -107,6 +111,10 @@ export function PlayerPopup({ player, children, team_name }: Props) {
     player.shots_on_target != null ||
     player.key_passes != null ||
     player.passes_accuracy != null;
+  const hasIntlStats =
+    (player.intl_caps != null && player.intl_caps > 0) ||
+    (player.intl_goals != null && player.intl_goals > 0) ||
+    (player.intl_assists != null && player.intl_assists > 0);
   const age = computeAge(player.date_of_birth);
 
   return (
@@ -214,6 +222,31 @@ export function PlayerPopup({ player, children, team_name }: Props) {
               </div>
             )}
 
+            {hasIntlStats && (
+              <div>
+                <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
+                  <Trophy className="size-3" aria-hidden />
+                  En sélection · 5 dernières années
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatBlock
+                    label="Sélections"
+                    value={player.intl_caps ?? 0}
+                  />
+                  <StatBlock
+                    label="Buts"
+                    value={player.intl_goals ?? 0}
+                    highlight
+                  />
+                  <StatBlock
+                    label="Passes déc."
+                    value={player.intl_assists ?? 0}
+                    highlight
+                  />
+                </div>
+              </div>
+            )}
+
             {hasPerformanceDetails && (
               <div>
                 <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
@@ -263,7 +296,7 @@ export function PlayerPopup({ player, children, team_name }: Props) {
               </div>
             )}
 
-            {!hasStats && !hasPerformanceDetails && (
+            {!hasStats && !hasPerformanceDetails && !hasIntlStats && (
               <p className="text-muted-foreground py-2 text-center text-xs italic">
                 Stats saison non encore disponibles
               </p>

@@ -204,6 +204,10 @@ export type SquadPlayer = {
   nationality: string | null;
   photo_url: string | null;
   shirt_number: number | null;
+  /** Stats en sélection (agrégat 2 dernières années) — null pour un club */
+  intl_caps: number | null;
+  intl_goals: number | null;
+  intl_assists: number | null;
 };
 
 export async function getTeamSquad(
@@ -223,7 +227,7 @@ export async function getTeamSquad(
   const natReq = supabase
     .from('national_team_squads')
     .select(
-      `position, shirt_number,
+      `position, shirt_number, intl_caps, intl_goals, intl_assists,
        player:players(id, name, date_of_birth, nationality, photo_url)`,
     )
     .eq('team_id', teamId);
@@ -235,13 +239,24 @@ export async function getTeamSquad(
 
   const byId = new Map<number, SquadPlayer>();
 
-  for (const p of (clubRes.data ?? []) as SquadPlayer[]) {
-    byId.set(p.id, p);
+  for (const p of (clubRes.data ?? []) as Array<Omit<
+    SquadPlayer,
+    'intl_caps' | 'intl_goals' | 'intl_assists'
+  >>) {
+    byId.set(p.id, {
+      ...p,
+      intl_caps: null,
+      intl_goals: null,
+      intl_assists: null,
+    });
   }
 
   type NatRow = {
     position: string | null;
     shirt_number: number | null;
+    intl_caps: number;
+    intl_goals: number;
+    intl_assists: number;
     player: {
       id: number;
       name: string;
@@ -259,6 +274,10 @@ export async function getTeamSquad(
       if (existing.shirt_number == null && r.shirt_number != null) {
         existing.shirt_number = r.shirt_number;
       }
+      // Complète les stats sélection (cas équipe nationale)
+      existing.intl_caps = r.intl_caps;
+      existing.intl_goals = r.intl_goals;
+      existing.intl_assists = r.intl_assists;
       continue;
     }
     byId.set(r.player.id, {
@@ -269,6 +288,9 @@ export async function getTeamSquad(
       nationality: r.player.nationality,
       photo_url: r.player.photo_url,
       shirt_number: r.shirt_number,
+      intl_caps: r.intl_caps,
+      intl_goals: r.intl_goals,
+      intl_assists: r.intl_assists,
     });
   }
 
