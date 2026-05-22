@@ -280,6 +280,160 @@ export async function fetchPlayerTransfers(
 }
 
 // ============================================================================
+// Coach d'une équipe — /coachs?team=TEAM_ID (sélectionneurs CDM, etc.)
+// ============================================================================
+
+type CoachsResponse = {
+  response: Array<{
+    id: number;
+    name: string;
+    firstname: string | null;
+    lastname: string | null;
+    age: number | null;
+    nationality: string | null;
+    photo: string | null;
+    team: { id: number; name: string } | null;
+    career: Array<{
+      team: { id: number; name: string } | null;
+      start: string | null;
+      end: string | null;
+    }>;
+  }>;
+};
+
+export type CoachInfo = {
+  af_coach_id: number;
+  name: string;
+  nationality: string | null;
+  photo: string | null;
+  in_charge_since: string | null; // ISO date du dernier start sur cette équipe
+};
+
+export async function fetchCurrentCoach(
+  afTeamId: number,
+): Promise<CoachInfo | null> {
+  const d = await af<CoachsResponse>(`/coachs?team=${afTeamId}`);
+  // /coachs renvoie l'historique : on cherche celui en poste (end=null) qui
+  // appartient à l'équipe demandée
+  for (const c of d.response) {
+    if (c.team?.id !== afTeamId) continue;
+    const current = c.career.find(
+      (k) => k.team?.id === afTeamId && (k.end == null || k.end === ''),
+    );
+    if (current) {
+      return {
+        af_coach_id: c.id,
+        name: c.name,
+        nationality: c.nationality,
+        photo: c.photo,
+        in_charge_since: current.start,
+      };
+    }
+  }
+  // Fallback : 1er coach renvoyé même sans match exact career.end=null
+  const first = d.response[0];
+  if (!first) return null;
+  return {
+    af_coach_id: first.id,
+    name: first.name,
+    nationality: first.nationality,
+    photo: first.photo,
+    in_charge_since: null,
+  };
+}
+
+// ============================================================================
+// Head-to-head — /fixtures/headtohead?h2h=A-B
+// ============================================================================
+
+type H2HResponse = {
+  response: Array<{
+    fixture: {
+      id: number;
+      date: string;
+      status: { short: string };
+    };
+    league: { id: number; name: string; season: number };
+    teams: {
+      home: { id: number; name: string; winner: boolean | null };
+      away: { id: number; name: string; winner: boolean | null };
+    };
+    goals: { home: number | null; away: number | null };
+  }>;
+};
+
+export type H2HSummary = {
+  total: number;
+  a_wins: number;
+  b_wins: number;
+  draws: number;
+  last_5: Array<{
+    date: string; // YYYY-MM-DD
+    competition: string;
+    score: string; // "2-1"
+    winner: 'a' | 'b' | 'draw';
+    home_id: number;
+    away_id: number;
+  }>;
+};
+
+/**
+ * Bilan tête-à-tête entre 2 équipes AF.
+ * `teamA` est traitée comme "l'équipe de référence" (a_wins = victoires de A).
+ */
+export async function fetchHeadToHead(
+  teamA: number,
+  teamB: number,
+  lastN = 5,
+): Promise<H2HSummary> {
+  const d = await af<H2HResponse>(
+    `/fixtures/headtohead?h2h=${teamA}-${teamB}&status=FT-AET-PEN`,
+  );
+  let aWins = 0;
+  let bWins = 0;
+  let draws = 0;
+  for (const m of d.response) {
+    const homeWin = m.teams.home.winner === true;
+    const awayWin = m.teams.away.winner === true;
+    if (!homeWin && !awayWin) {
+      draws += 1;
+      continue;
+    }
+    const winnerId = homeWin ? m.teams.home.id : m.teams.away.id;
+    if (winnerId === teamA) aWins += 1;
+    else if (winnerId === teamB) bWins += 1;
+  }
+  // Derniers N matchs, du plus récent au plus ancien
+  const sorted = [...d.response].sort((x, y) =>
+    y.fixture.date.localeCompare(x.fixture.date),
+  );
+  const last5 = sorted.slice(0, lastN).map((m) => {
+    const homeWin = m.teams.home.winner === true;
+    const awayWin = m.teams.away.winner === true;
+    let winner: 'a' | 'b' | 'draw' = 'draw';
+    if (homeWin || awayWin) {
+      const winnerId = homeWin ? m.teams.home.id : m.teams.away.id;
+      winner = winnerId === teamA ? 'a' : 'b';
+    }
+    return {
+      date: m.fixture.date.slice(0, 10),
+      competition: m.league.name,
+      score: `${m.goals.home ?? '?'}-${m.goals.away ?? '?'}`,
+      winner,
+      home_id: m.teams.home.id,
+      away_id: m.teams.away.id,
+    };
+  });
+  return {
+    total: d.response.length,
+    a_wins: aWins,
+    b_wins: bWins,
+    draws,
+    last_5: last5,
+  };
+}
+
+// ============================================================================
 // Squad complet — /players/squads (photos + numéros)
 // ============================================================================
 

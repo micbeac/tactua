@@ -29,12 +29,14 @@ export type WCKnockoutPredictionTeam = {
   name: string;
   country: string | null;
   squad?: string;
+  coach?: string;
 };
 
 export type WCKnockoutPredictionInput = {
   stage: string; // 'LAST_16', 'QUARTER_FINALS', etc.
   home: WCKnockoutPredictionTeam;
   away: WCKnockoutPredictionTeam;
+  h2h?: string; // Ligne pré-formatée du bilan H2H (cf. formatH2HForPrompt)
 };
 
 export type WCKnockoutPredictionContent = {
@@ -53,28 +55,28 @@ Règles :
 - "winner_team_id" : l'un des 2 team_id fournis (PAS un autre nombre).
 - "score_home" / "score_away" : score plausible cohérent avec le vainqueur (ex 2-1 si home gagne). Match nul interdit (KO = match avec vainqueur, prolongations comprises).
 - "confidence" : "high" si écart de niveau clair, "medium" si match équilibré avec léger favori, "low" si pile ou face.
-- "reasoning" : 3-4 phrases : profil tactique des 2 équipes, cite 1-2 joueurs clés réels par équipe (parmi ceux listés dans l'effectif fourni), parcours historique en CDM, qui a l'avantage et pourquoi.
+- "reasoning" : 3-4 phrases : profil tactique des 2 équipes (mentionne le sélectionneur si fourni), cite 1-2 joueurs clés réels par équipe (parmi ceux listés dans l'effectif fourni), parcours historique en CDM, exploite l'historique direct fourni si pertinent, qui a l'avantage et pourquoi.
 - ⚠ N'invente AUCUN nom de joueur en dehors de ceux explicitement listés dans l'effectif fourni. Si l'effectif est vide ("effectif non récupéré"), reste générique.
 
 Format : JSON strict.`;
 
 function buildUserPrompt(input: WCKnockoutPredictionInput): string {
-  const homeLine = `Équipe A (home) : ${input.home.name}${input.home.country ? ` (${input.home.country})` : ''} — team_id ${input.home.team_id}`;
-  const homeSquad = input.home.squad
-    ? `   Effectif clé : ${input.home.squad}`
-    : '';
-  const awayLine = `Équipe B (away) : ${input.away.name}${input.away.country ? ` (${input.away.country})` : ''} — team_id ${input.away.team_id}`;
-  const awaySquad = input.away.squad
-    ? `   Effectif clé : ${input.away.squad}`
-    : '';
+  const renderTeam = (label: string, t: WCKnockoutPredictionTeam): string => {
+    const lines: string[] = [
+      `${label} : ${t.name}${t.country ? ` (${t.country})` : ''} — team_id ${t.team_id}`,
+    ];
+    if (t.coach) lines.push(`   Sélectionneur : ${t.coach}`);
+    if (t.squad) lines.push(`   Effectif clé : ${t.squad}`);
+    return lines.join('\n');
+  };
+
+  const h2hBlock = input.h2h ? `\n\nHistorique direct : ${input.h2h}` : '';
 
   return `Phase : ${input.stage.replace(/_/g, ' ')}
 
-${homeLine}
-${homeSquad}
+${renderTeam('Équipe A (home)', input.home)}
 
-${awayLine}
-${awaySquad}
+${renderTeam('Équipe B (away)', input.away)}${h2hBlock}
 
 Pronostique le vainqueur, le score, ta confiance et un court raisonnement.`;
 }

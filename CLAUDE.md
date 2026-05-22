@@ -133,6 +133,8 @@ supabase/
 - [ ] Toutes les env vars Vercel présentes : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `FOOTBALL_DATA_API_KEY`, `OPENAI_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET`
 - [ ] `refresh-structures` a tourné au moins une fois ces dernières 72h (sinon : trigger manuel)
 - [ ] `refresh-rankings` a tourné dans les 24h
+- [ ] **Re-runner `scripts/backfill-national-team-squads.ts` à J-15, J-7 et J-2** pour capter les listes officielles CDM (l'endpoint `/players?league=1&season=2026` devient prioritaire dès qu'AF charge les 26 hommes officiels par sélection). Lancer la dernière fois après le 5 juin idéalement.
+- [ ] Une fois les squads officielles importées, regénérer les 12 pronos de groupe + les pronos KO disponibles via `/admin/cdm`
 - [ ] Pré-générer les analyses pré-match des matchs CDM via `/api/cron/generate-analysis` une fois les équipes confirmées
 - [ ] Upgrade Vercel Pro pour activer `refresh-matchday` à \*/3 (sinon scores live à +10min) — voir mémoire `project_vercel_pro_upgrade.md`
 - [ ] Vérifier domaine Resend custom OU avertir que les emails ne partent qu'à l'email du compte Resend (free tier shared domain)

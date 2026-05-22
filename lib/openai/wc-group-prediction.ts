@@ -33,6 +33,7 @@ export type WCGroupPredictionTeam = {
   name: string;
   country: string | null;
   squad?: string; // String pré-formatée des joueurs clés (cf. formatSquadForPrompt)
+  coach?: string; // String pré-formatée du sélectionneur (cf. formatCoach)
 };
 
 export type WCGroupPredictionInput = {
@@ -55,7 +56,7 @@ Tu pronostiques le classement final d'un groupe de la Coupe du Monde 2026 (48 é
 
 Règles :
 - Français, ton factuel et nuancé.
-- Pour chaque équipe, en 2-3 phrases : pourquoi elle finit à cette place. Cite 1 à 2 joueurs clés réels parmi ceux fournis dans l'effectif (ne cite jamais un joueur qui n'apparaît pas dans la liste). Mentionne aussi le profil tactique, la dynamique générique, le niveau de la confédération.
+- Pour chaque équipe, en 2-3 phrases : pourquoi elle finit à cette place. Cite 1 à 2 joueurs clés réels parmi ceux fournis dans l'effectif (ne cite jamais un joueur qui n'apparaît pas dans la liste). Si le sélectionneur est fourni, tu peux le mentionner pour parler du style tactique. Mentionne aussi le profil de jeu, la dynamique générique, le niveau de la confédération.
 - "summary" : 2-3 phrases qui décrivent comment ce groupe pourrait se dérouler, qui sont les favoris/outsiders, où réside l'incertitude principale.
 - Pondère ton ranking avec le contexte historique (palmarès CDM, qualifications), la qualité du club d'appartenance des joueurs convoqués, l'expérience des cadres.
 - ⚠ N'invente AUCUN nom de joueur en dehors de ceux explicitement listés dans l'effectif fourni. Si l'effectif est vide ("effectif non récupéré"), reste générique pour cette équipe.
@@ -66,8 +67,10 @@ Format : JSON strict avec ranking[1→4] + summary.`;
 function buildUserPrompt(input: WCGroupPredictionInput): string {
   const blocks = input.teams.map((t, i) => {
     const head = `${i + 1}. ${t.name}${t.country ? ` (${t.country})` : ''} — team_id ${t.team_id}`;
-    const squad = t.squad ? `   Effectif clé : ${t.squad}` : '';
-    return squad ? `${head}\n${squad}` : head;
+    const lines: string[] = [head];
+    if (t.coach) lines.push(`   Sélectionneur : ${t.coach}`);
+    if (t.squad) lines.push(`   Effectif clé : ${t.squad}`);
+    return lines.join('\n');
   });
   return `Groupe ${input.group_letter} de la Coupe du Monde 2026 :
 
