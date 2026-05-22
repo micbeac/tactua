@@ -26,8 +26,9 @@ export const revalidate = 60;
 // Chaque entrée a son propre header coloré + lien vers /competitions/[code].
 //
 // mode :
-//  - 'matchday' → affiche TOUS les matchs de la prochaine journée (J. 38 =
-//    10 matchs, etc.). `limit` sert de repli quand le matchday est null.
+//  - 'matchday' → affiche la prochaine journée = tous les matchs dans une
+//    fenêtre de 4 jours à partir du prochain match (le champ `matchday`
+//    est parfois null/incohérent selon la source, on ne s'y fie pas).
 //  - 'limit'    → plafond fixe (CDM : une « journée » de poule = 24 matchs).
 const DASHBOARD_COMPETITIONS: Array<{
   id: number;
@@ -47,8 +48,10 @@ const DASHBOARD_COMPETITIONS: Array<{
   { id: 9001, code: 'bjl', label: 'Jupiler Pro League', flag: '🇧🇪', mode: 'matchday', limit: 6 },
 ];
 
-// Plafond de sécurité pour le mode 'matchday' : une journée ne dépasse
-// jamais ~12 matchs, on borne au cas où la data serait incohérente.
+// Fenêtre (en ms) considérée comme « une journée » : tous les matchs dont
+// le coup d'envoi tombe dans les 4 jours suivant le prochain match.
+const MATCHDAY_WINDOW_MS = 4 * 24 * 60 * 60 * 1000;
+// Plafond de sécurité : une journée ne dépasse jamais ~12 matchs.
 const MATCHDAY_HARD_CAP = 14;
 
 type TeamEmbed = {
@@ -179,14 +182,19 @@ export default async function HomePage() {
     if (c.mode === 'limit') {
       matches = all.slice(0, c.limit);
     } else {
-      // mode 'matchday' : tous les matchs de la prochaine journée.
-      const nextMatchday = all[0]?.matchday ?? null;
-      matches =
-        nextMatchday == null
-          ? all.slice(0, c.limit) // pas de matchday (ex finale) → repli
-          : all
-              .filter((m) => m.matchday === nextMatchday)
-              .slice(0, MATCHDAY_HARD_CAP);
+      // mode 'matchday' : tous les matchs dans les 4 jours suivant le
+      // prochain match (= la prochaine journée), sans dépendre du champ
+      // matchday souvent incohérent.
+      const first = all[0];
+      if (!first) {
+        matches = [];
+      } else {
+        const windowEnd =
+          new Date(first.kickoff_at).getTime() + MATCHDAY_WINDOW_MS;
+        matches = all
+          .filter((m) => new Date(m.kickoff_at).getTime() <= windowEnd)
+          .slice(0, MATCHDAY_HARD_CAP);
+      }
     }
     return { ...c, matches };
   });
