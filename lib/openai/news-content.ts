@@ -8,7 +8,7 @@
 // du contexte Tactuo (forme récente, position, prochain match) pour être
 // original et utile aux LLM extractors / Google AI Overviews.
 
-import { DEFAULT_MODEL, getOpenAI } from './client.ts';
+import { DEEP_MODEL, getOpenAI, isReasoningModel } from './client.ts';
 
 const SCHEMA = {
   type: 'object',
@@ -98,8 +98,11 @@ export async function generateNewsContent(
   ctx: NewsContext,
 ): Promise<{ content: NewsContent; model: string }> {
   const openai = getOpenAI();
+  // Rédaction et résumé des news : même modèle que l'analyse pré-match
+  // approfondie (DEEP_MODEL, gpt-4o par défaut) — meilleure qualité
+  // éditoriale que gpt-4o-mini.
   const completion = await openai.chat.completions.create({
-    model: DEFAULT_MODEL,
+    model: DEEP_MODEL,
     response_format: {
       type: 'json_schema',
       json_schema: {
@@ -112,7 +115,9 @@ export async function generateNewsContent(
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(ctx) },
     ],
-    temperature: 0.5,
+    // Les modèles de raisonnement (GPT-5+, série o) refusent un temperature
+    // personnalisé.
+    ...(isReasoningModel(DEEP_MODEL) ? {} : { temperature: 0.5 }),
   });
   const raw = completion.choices[0]?.message?.content;
   if (!raw) throw new Error('OpenAI returned empty content');
