@@ -1,13 +1,30 @@
 import { WCNewsArticleCard } from '@/components/admin/WCNewsArticleCard';
 import { WCNewsScrapeButton } from '@/components/admin/WCNewsScrapeButton';
+import { getWCNationalTeamIds } from '@/lib/data/world-cup';
 import { getWCNewsAdmin } from '@/lib/data/wc-news';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
+export type WCTeamOption = { id: number; name: string };
+
 export default async function AdminWCNewsPage() {
   const supabase = createAdminClient();
-  const articles = await getWCNewsAdmin(supabase);
+  const [articles, nationalIds] = await Promise.all([
+    getWCNewsAdmin(supabase),
+    getWCNationalTeamIds(supabase),
+  ]);
+
+  // Liste des sélections (id + nom) ordonnée alphabétiquement.
+  let teams: WCTeamOption[] = [];
+  if (nationalIds.length > 0) {
+    const { data } = await supabase
+      .from('teams')
+      .select('id, name')
+      .in('id', nationalIds)
+      .order('name', { ascending: true });
+    teams = (data ?? []) as WCTeamOption[];
+  }
 
   const drafts = articles.filter((a) => a.status === 'draft');
   const published = articles.filter((a) => a.status === 'published');
@@ -39,10 +56,14 @@ export default async function AdminWCNewsPage() {
         </p>
       ) : (
         <div className="space-y-8">
-          <Section title="Brouillons à relire" articles={drafts} />
-          <Section title="Articles publiés" articles={published} />
+          <Section title="Brouillons à relire" articles={drafts} teams={teams} />
+          <Section
+            title="Articles publiés"
+            articles={published}
+            teams={teams}
+          />
           {archived.length > 0 && (
-            <Section title="Archivés" articles={archived} />
+            <Section title="Archivés" articles={archived} teams={teams} />
           )}
         </div>
       )}
@@ -53,9 +74,11 @@ export default async function AdminWCNewsPage() {
 function Section({
   title,
   articles,
+  teams,
 }: {
   title: string;
   articles: Awaited<ReturnType<typeof getWCNewsAdmin>>;
+  teams: WCTeamOption[];
 }) {
   if (articles.length === 0) return null;
   return (
@@ -68,7 +91,7 @@ function Section({
       </h2>
       <ul className="space-y-3">
         {articles.map((a) => (
-          <WCNewsArticleCard key={a.id} article={a} />
+          <WCNewsArticleCard key={a.id} article={a} teams={teams} />
         ))}
       </ul>
     </section>

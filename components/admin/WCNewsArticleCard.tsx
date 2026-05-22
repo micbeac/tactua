@@ -22,7 +22,15 @@ const STATUS_CLASS: Record<string, string> = {
   archived: 'bg-muted text-muted-foreground',
 };
 
-export function WCNewsArticleCard({ article }: { article: WCNewsArticle }) {
+export type WCNewsTeamOption = { id: number; name: string };
+
+export function WCNewsArticleCard({
+  article,
+  teams,
+}: {
+  article: WCNewsArticle;
+  teams: WCNewsTeamOption[];
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,7 +40,14 @@ export function WCNewsArticleCard({ article }: { article: WCNewsArticle }) {
   } | null>(null);
 
   const [title, setTitle] = useState(article.title);
-  const [category, setCategory] = useState(article.category);
+  // Sélecteur unifié : 'tournoi' OU l'id (string) d'une sélection.
+  const [pick, setPick] = useState<string>(
+    article.category === 'tournoi'
+      ? 'tournoi'
+      : article.team_id != null
+        ? String(article.team_id)
+        : 'tournoi',
+  );
   const [summary, setSummary] = useState(article.ai_summary ?? '');
   const [content, setContent] = useState(article.ai_content ?? '');
   const [perspective, setPerspective] = useState(article.ai_perspective ?? '');
@@ -46,10 +61,12 @@ export function WCNewsArticleCard({ article }: { article: WCNewsArticle }) {
     setBusy(true);
     setMessage(null);
     try {
+      const isTournament = pick === 'tournoi';
       const res = await updateWCNewsArticle({
         id: article.id,
         title,
-        category,
+        category: isTournament ? 'tournoi' : 'selection',
+        team_id: isTournament ? null : Number(pick),
         ai_summary: summary,
         ai_content: content,
         ai_perspective: perspective,
@@ -186,14 +203,20 @@ export function WCNewsArticleCard({ article }: { article: WCNewsArticle }) {
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Catégorie">
+            <Field label="Rattachement">
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={pick}
+                onChange={(e) => setPick(e.target.value)}
                 className="bg-background border-border w-full rounded-md border px-3 py-1.5 text-sm"
               >
-                <option value="selection">Sélection</option>
-                <option value="tournoi">Tournoi</option>
+                <option value="tournoi">🌍 Tournoi (transversal)</option>
+                <optgroup label="Sélections CDM">
+                  {teams.map((t) => (
+                    <option key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </Field>
             <Field label="Vidéo YouTube (optionnel)">

@@ -42,6 +42,7 @@ export async function updateWCNewsArticle(input: {
   id: number;
   title: string;
   category: string;
+  team_id: number | null;
   ai_summary: string;
   ai_content: string;
   ai_perspective: string;
@@ -52,6 +53,13 @@ export async function updateWCNewsArticle(input: {
   if (!input.title.trim()) return { ok: false, message: 'Titre requis' };
   if (!['selection', 'tournoi'].includes(input.category)) {
     return { ok: false, message: 'Catégorie invalide' };
+  }
+  // Cohérence : tournoi ⇒ team_id null ; sélection ⇒ team_id requis.
+  if (input.category === 'tournoi' && input.team_id != null) {
+    input.team_id = null;
+  }
+  if (input.category === 'selection' && input.team_id == null) {
+    return { ok: false, message: 'Sélection requise' };
   }
 
   // Vidéo optionnelle : si une URL est fournie, elle doit être valide.
@@ -67,6 +75,7 @@ export async function updateWCNewsArticle(input: {
     .update({
       title: input.title.trim(),
       category: input.category,
+      team_id: input.team_id,
       ai_summary: input.ai_summary.trim() || null,
       ai_content: input.ai_content.trim() || null,
       ai_perspective: input.ai_perspective.trim() || null,
