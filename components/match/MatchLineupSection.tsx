@@ -25,6 +25,14 @@ export type MatchLineupSectionProps = {
   popup_map?: Map<number, PlayerPopupData>;
 };
 
+/** Couleur de la pastille de note (0-10). */
+function ratingClass(r: number): string {
+  if (r >= 7.5) return 'bg-primary/15 text-primary';
+  if (r >= 6.8) return 'bg-emerald-500/15 text-emerald-300';
+  if (r >= 6.0) return 'bg-amber-500/15 text-amber-300';
+  return 'bg-destructive/15 text-destructive';
+}
+
 function PlayerRow({
   p,
   team_name,
@@ -34,6 +42,8 @@ function PlayerRow({
   team_name: string;
   popup_data?: PlayerPopupData;
 }) {
+  const rating = popup_data?.rating;
+  const goals = popup_data?.goals ?? 0;
   const inner = (
     <div className="hover:bg-muted/40 -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors">
       <span className="text-muted-foreground w-6 shrink-0 text-right text-xs tabular-nums">
@@ -41,10 +51,22 @@ function PlayerRow({
       </span>
       <span className="flex-1 truncate text-sm">
         {p.player_name ?? `Joueur #${p.player_id}`}
+        {goals > 0 && (
+          <span className="ml-1.5 text-xs" aria-label={`${goals} but`}>
+            {'⚽'.repeat(Math.min(goals, 3))}
+          </span>
+        )}
       </span>
       {p.position && (
         <span className="text-muted-foreground hidden text-xs sm:inline">
           {p.position}
+        </span>
+      )}
+      {rating != null && (
+        <span
+          className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold tabular-nums ${ratingClass(rating)}`}
+        >
+          {rating.toFixed(1)}
         </span>
       )}
     </div>
