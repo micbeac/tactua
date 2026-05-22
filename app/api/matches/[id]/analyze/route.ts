@@ -779,10 +779,25 @@ export async function POST(
     });
   } catch (e) {
     console.error('[/api/matches/[id]/analyze]', e);
+    const raw = e instanceof Error ? e.message : String(e);
+    // Erreur de quota API-Football → message clair, pas le détail technique
+    const isQuota =
+      /request limit|requests.*limit|rate.?limit/i.test(raw);
+    if (isQuota) {
+      return NextResponse.json(
+        {
+          error: 'Service de données momentanément saturé',
+          message:
+            "Trop de requêtes vers la base de données football aujourd'hui. " +
+            'Réessaie dans quelques heures — aucune analyse incomplète ne sera enregistrée.',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       {
         error: 'Erreur de génération',
-        message: e instanceof Error ? e.message : String(e),
+        message: raw,
       },
       { status: 500 },
     );
