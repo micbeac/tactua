@@ -92,7 +92,6 @@ export default async function TeamPage({ params }: TeamPageParams) {
     favorite,
     narrativesRes,
     analysisRes,
-    playerStatsRes,
     teamSplits,
   ] = await Promise.all([
     getTeamSeasonStats(supabase, teamId),
@@ -122,17 +121,21 @@ export default async function TeamPage({ params }: TeamPageParams) {
       .order('generated_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    // Stats saison de tous les joueurs de l'équipe (toutes compétitions
-    // confondues — agrégées côté JS). Permet d'afficher buts/passes dans le
-    // popup joueur depuis la fiche équipe.
-    supabase
-      .from('player_season_stats')
-      .select(
-        'player_id, appearances, goals, assists, players!inner(current_team_id)',
-      )
-      .eq('players.current_team_id', teamId),
     getTeamSplits(supabase, teamId),
   ]);
+
+  // Stats saison des joueurs de l'effectif (toutes compétitions confondues —
+  // agrégées côté JS). Requête par player_id de l'effectif réel : couvre les
+  // clubs ET les sélections (dont les joueurs ont leur club en current_team_id).
+  // Pour une sélection, ce sont donc les stats CLUB de chaque international.
+  const squadIds = squad.map((p) => p.id);
+  const playerStatsRes =
+    squadIds.length > 0
+      ? await supabase
+          .from('player_season_stats')
+          .select('player_id, appearances, goals, assists')
+          .in('player_id', squadIds)
+      : { data: [] as Array<Record<string, never>> };
 
   const narratives = (
     (narrativesRes.data ?? []) as Array<
