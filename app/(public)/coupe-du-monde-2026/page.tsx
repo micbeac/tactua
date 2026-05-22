@@ -15,6 +15,14 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
 
+type KnockoutPrediction = {
+  match_id: number;
+  predicted_winner_team_id: number | null;
+  predicted_score_home: number | null;
+  predicted_score_away: number | null;
+  confidence: string | null;
+};
+
 export const metadata: Metadata = {
   title: 'Coupe du Monde 2026 · Groupes, Bracket, Pronos IA',
   description:
@@ -50,9 +58,19 @@ const STAGE_LABELS: Record<string, string> = {
   FINAL: 'Finale',
 };
 
-function MatchMini({ m }: { m: WCMatch }) {
+function MatchMini({
+  m,
+  prediction,
+}: {
+  m: WCMatch;
+  prediction?: KnockoutPrediction;
+}) {
   const isFinished = m.status === 'finished';
   const isLive = m.status === 'live';
+  const showPrediction =
+    prediction && !isFinished && !isLive && m.home && m.away;
+  const predictedHomeWin =
+    prediction?.predicted_winner_team_id === m.home?.id;
   return (
     <Link
       href={`/matches/${m.id}`}
@@ -71,9 +89,19 @@ function MatchMini({ m }: { m: WCMatch }) {
             FT
           </span>
         )}
+        {showPrediction && (
+          <span className="bg-primary/15 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
+            <Sparkles className="size-2.5" aria-hidden />
+            Prono
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div
+          className={`flex min-w-0 flex-1 items-center gap-2 ${
+            showPrediction && predictedHomeWin ? 'opacity-100' : ''
+          } ${showPrediction && !predictedHomeWin ? 'opacity-60' : ''}`}
+        >
           <div className="bg-muted relative size-6 shrink-0 overflow-hidden rounded-full">
             {m.home?.logo_url && (
               <Image
@@ -92,9 +120,15 @@ function MatchMini({ m }: { m: WCMatch }) {
         <span className="text-foreground shrink-0 text-sm font-bold tabular-nums">
           {isFinished || isLive
             ? `${m.score_home ?? 0} - ${m.score_away ?? 0}`
-            : 'vs'}
+            : showPrediction
+              ? `${prediction.predicted_score_home}-${prediction.predicted_score_away}`
+              : 'vs'}
         </span>
-        <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
+        <div
+          className={`flex min-w-0 flex-1 flex-row-reverse items-center gap-2 ${
+            showPrediction && !predictedHomeWin ? 'opacity-100' : ''
+          } ${showPrediction && predictedHomeWin ? 'opacity-60' : ''}`}
+        >
           <div className="bg-muted relative size-6 shrink-0 overflow-hidden rounded-full">
             {m.away?.logo_url && (
               <Image
@@ -117,11 +151,21 @@ function MatchMini({ m }: { m: WCMatch }) {
 
 export default async function WorldCup2026Page() {
   const supabase = await createClient();
-  const [matches, standings, predictions] = await Promise.all([
+  const [matches, standings, predictions, knockoutPredsRes] = await Promise.all([
     getAllWCMatches(supabase),
     getGroupStandings(supabase),
     getGroupPredictions(supabase),
+    supabase
+      .from('wc_knockout_predictions')
+      .select(
+        'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
+      ),
   ]);
+
+  const koPredsMap = new Map<number, KnockoutPrediction>();
+  for (const p of (knockoutPredsRes.data ?? []) as KnockoutPrediction[]) {
+    koPredsMap.set(p.match_id, p);
+  }
 
   const byStage = groupMatchesByStage(matches);
   const hasAssignments = standings.some((g) => g.teams.length > 0);
@@ -336,7 +380,11 @@ export default async function WorldCup2026Page() {
                 ) : (
                   <div className="space-y-2">
                     {list.map((m) => (
-                      <MatchMini key={m.id} m={m} />
+                      <MatchMini
+                        key={m.id}
+                        m={m}
+                        prediction={koPredsMap.get(m.id)}
+                      />
                     ))}
                   </div>
                 )}
