@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { CalendarDays, Globe, Sparkles, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
+import { MatchesOfDaySection } from '@/components/dashboard/MatchesOfDaySection';
+import type { MatchCardProps } from '@/components/match/MatchCard';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
@@ -10,8 +13,10 @@ import {
   getGroupPredictions,
   getGroupStandings,
   groupMatchesByStage,
+  WC_COMPETITION_ID,
   type WCMatch,
 } from '@/lib/data/world-cup';
+import { getMatchesForDay, todayParis } from '@/lib/matchday';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
 
@@ -57,6 +62,44 @@ const STAGE_LABELS: Record<string, string> = {
   THIRD_PLACE: 'Match pour la 3e place',
   FINAL: 'Finale',
 };
+
+// Accordéons "tous les matchs" par stage, dans l'ordre du tournoi.
+const STAGE_ACCORDIONS: Array<{
+  key: keyof ReturnType<typeof groupMatchesByStage>;
+  emoji: string;
+}> = [
+  { key: 'GROUP_STAGE', emoji: '⚽' },
+  { key: 'LAST_16', emoji: '🏆' },
+  { key: 'QUARTER_FINALS', emoji: '🏆' },
+  { key: 'SEMI_FINALS', emoji: '🏆' },
+  { key: 'THIRD_PLACE', emoji: '🥉' },
+  { key: 'FINAL', emoji: '🏅' },
+];
+
+/** Convertit un WCMatch en MatchCardProps pour les accordéons. */
+function wcToCard(m: WCMatch): MatchCardProps {
+  return {
+    id: m.id,
+    kickoff_at: m.kickoff_at,
+    status: m.status,
+    stage: m.stage,
+    matchday: null,
+    score_home: m.score_home,
+    score_away: m.score_away,
+    home: {
+      id: m.home?.id ?? null,
+      name: m.home?.name ?? 'À déterminer',
+      tla: m.home?.tla ?? null,
+      logo_url: m.home?.logo_url ?? null,
+    },
+    away: {
+      id: m.away?.id ?? null,
+      name: m.away?.name ?? 'À déterminer',
+      tla: m.away?.tla ?? null,
+      logo_url: m.away?.logo_url ?? null,
+    },
+  };
+}
 
 function MatchMini({
   m,
@@ -151,16 +194,19 @@ function MatchMini({
 
 export default async function WorldCup2026Page() {
   const supabase = await createClient();
-  const [matches, standings, predictions, knockoutPredsRes] = await Promise.all([
-    getAllWCMatches(supabase),
-    getGroupStandings(supabase),
-    getGroupPredictions(supabase),
-    supabase
-      .from('wc_knockout_predictions')
-      .select(
-        'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
-      ),
-  ]);
+  const today = todayParis();
+  const [matches, standings, predictions, knockoutPredsRes, todayGroups] =
+    await Promise.all([
+      getAllWCMatches(supabase),
+      getGroupStandings(supabase),
+      getGroupPredictions(supabase),
+      supabase
+        .from('wc_knockout_predictions')
+        .select(
+          'match_id, predicted_winner_team_id, predicted_score_home, predicted_score_away, confidence',
+        ),
+      getMatchesForDay(supabase, today, WC_COMPETITION_ID),
+    ]);
 
   const koPredsMap = new Map<number, KnockoutPrediction>();
   for (const p of (knockoutPredsRes.data ?? []) as KnockoutPrediction[]) {
@@ -216,6 +262,12 @@ export default async function WorldCup2026Page() {
       {/* Nav rapide */}
       <nav className="mb-10 flex flex-wrap gap-2">
         <Link
+          href="#matchs"
+          className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
+        >
+          📅 Tous les matchs
+        </Link>
+        <Link
           href="#groupes"
           className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
         >
@@ -227,13 +279,45 @@ export default async function WorldCup2026Page() {
         >
           🏆 Phase finale
         </Link>
-        <Link
-          href="/"
-          className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
-        >
-          📅 Matchs du jour
-        </Link>
       </nav>
+
+      {/* TOUS LES MATCHS — vue jour + accordéons par stage */}
+      <section id="matchs" className="mb-16 scroll-mt-24">
+        <header className="mb-6">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <CalendarDays className="text-primary size-5" aria-hidden />
+            Tous les matchs
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Les 104 rencontres du tournoi. Navigue jour par jour ou déplie une
+            phase.
+          </p>
+        </header>
+
+        {/* Matchs du jour — navigation jour, scores live, fermé par défaut */}
+        <MatchesOfDaySection
+          initial_date={today}
+          initial_groups={todayGroups}
+          today={today}
+          competition_id={WC_COMPETITION_ID}
+          default_open={false}
+          storage_code="cdm-matchs-du-jour"
+        />
+
+        {/* Un accordéon par phase, fermé par défaut */}
+        {STAGE_ACCORDIONS.filter((s) => byStage[s.key].length > 0).map((s) => (
+          <CompetitionAccordion
+            key={s.key}
+            code={`cdm-${s.key.toLowerCase()}`}
+            label={STAGE_LABELS[s.key] ?? s.key}
+            flag={s.emoji}
+            matches={byStage[s.key].map(wcToCard)}
+            default_open={false}
+            view_all_href={null}
+            empty_label="Rencontres à déterminer."
+          />
+        ))}
+      </section>
 
       {/* PHASE DE GROUPES */}
       <section id="groupes" className="mb-16 scroll-mt-24">

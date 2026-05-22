@@ -15,8 +15,12 @@ export async function GET(request: Request) {
   const date =
     dateParam && isValidDate(dateParam) ? dateParam : todayParis();
 
+  const compParam = searchParams.get('competition');
+  const competitionId =
+    compParam && /^\d+$/.test(compParam) ? Number(compParam) : undefined;
+
   const supabase = await createClient();
-  const groups = await getMatchesForDay(supabase, date);
+  const groups = await getMatchesForDay(supabase, date, competitionId);
 
   return NextResponse.json(
     { date, groups },

@@ -144,18 +144,24 @@ function toCardProps(m: MatchRow): MatchCardProps {
 /**
  * Renvoie tous les matchs d'une journée Paris, groupés par compétition
  * et triés (ordre compétition puis heure de coup d'envoi).
+ * `competitionId` optionnel : restreint à une seule compétition.
  */
 export async function getMatchesForDay(
   supabase: SupabaseClient,
   date: string,
+  competitionId?: number,
 ): Promise<DayMatchGroup[]> {
   const { start, end } = parisDayRange(date);
-  const { data } = await supabase
+  let query = supabase
     .from('matches')
     .select(SELECT)
     .gte('kickoff_at', start)
     .lt('kickoff_at', end)
     .order('kickoff_at', { ascending: true });
+  if (competitionId != null) {
+    query = query.eq('competition_id', competitionId);
+  }
+  const { data } = await query;
 
   const matches = (data ?? []) as unknown as MatchRow[];
 

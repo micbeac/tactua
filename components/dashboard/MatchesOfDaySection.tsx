@@ -13,10 +13,15 @@ type Props = {
   initial_groups: DayMatchGroup[];
   /** Aujourd'hui (YYYY-MM-DD Paris) — pour les libellés relatifs */
   today: string;
+  /** Restreint à une compétition (ex CDM). Undefined = toutes. */
+  competition_id?: number;
+  /** Accordéon ouvert au premier load. Défaut true. */
+  default_open?: boolean;
+  /** Clé localStorage distincte (évite collision si 2 instances). */
+  storage_code?: string;
 };
 
 const STORAGE_KEY = 'tactuo-dashboard-state';
-const ACCORDION_CODE = 'matchs-du-jour';
 const LIVE_REFRESH_MS = 45_000;
 
 const DATE_LABEL_FMT = new Intl.DateTimeFormat('fr-FR', {
@@ -26,19 +31,19 @@ const DATE_LABEL_FMT = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
 });
 
-function readStored(): 'open' | 'closed' | null {
+function readStored(code: string): 'open' | 'closed' | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as Record<string, 'open' | 'closed'>;
-    return data[ACCORDION_CODE] ?? null;
+    return data[code] ?? null;
   } catch {
     return null;
   }
 }
 
-function writeStored(state: 'open' | 'closed') {
+function writeStored(code: string, state: 'open' | 'closed') {
   if (typeof window === 'undefined') return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -46,7 +51,7 @@ function writeStored(state: 'open' | 'closed') {
       string,
       'open' | 'closed'
     >;
-    data[ACCORDION_CODE] = state;
+    data[code] = state;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // ignore
@@ -71,8 +76,11 @@ export function MatchesOfDaySection({
   initial_date,
   initial_groups,
   today,
+  competition_id,
+  default_open = true,
+  storage_code = 'matchs-du-jour',
 }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(default_open);
   const [hydrated, setHydrated] = useState(false);
   const [date, setDate] = useState(initial_date);
   const [groups, setGroups] = useState<DayMatchGroup[]>(initial_groups);
@@ -80,39 +88,46 @@ export function MatchesOfDaySection({
 
   // Hydratation localStorage (état accordéon)
   useEffect(() => {
-    const stored = readStored();
+    const stored = readStored(storage_code);
     if (stored != null) setOpen(stored === 'open');
     setHydrated(true);
-  }, []);
+  }, [storage_code]);
 
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (hydrated) writeStored(next ? 'open' : 'closed');
+    if (hydrated) writeStored(storage_code, next ? 'open' : 'closed');
   }
 
-  const fetchDay = useCallback(async (ymd: string, withSpinner: boolean) => {
-    if (withSpinner) setLoading(true);
-    try {
-      const res = await fetch(`/api/matches/by-day?date=${ymd}`, {
-        cache: 'no-store',
-      });
-      if (!res.ok) return;
-      const json = (await res.json()) as {
-        date: string;
-        groups: DayMatchGroup[];
-      };
-      // Ignore les réponses obsolètes (l'utilisateur a changé de jour entretemps)
-      setDate((current) => {
-        if (json.date === current) setGroups(json.groups);
-        return current;
-      });
-    } catch {
-      // silencieux
-    } finally {
-      if (withSpinner) setLoading(false);
-    }
-  }, []);
+  const fetchDay = useCallback(
+    async (ymd: string, withSpinner: boolean) => {
+      if (withSpinner) setLoading(true);
+      try {
+        const params = new URLSearchParams({ date: ymd });
+        if (competition_id != null) {
+          params.set('competition', String(competition_id));
+        }
+        const res = await fetch(`/api/matches/by-day?${params.toString()}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          date: string;
+          groups: DayMatchGroup[];
+        };
+        // Ignore les réponses obsolètes (jour changé entretemps)
+        setDate((current) => {
+          if (json.date === current) setGroups(json.groups);
+          return current;
+        });
+      } catch {
+        // silencieux
+      } finally {
+        if (withSpinner) setLoading(false);
+      }
+    },
+    [competition_id],
+  );
 
   // Changement de jour → fetch (sauf le jour initial déjà rendu côté serveur)
   const firstRender = useRef(true);

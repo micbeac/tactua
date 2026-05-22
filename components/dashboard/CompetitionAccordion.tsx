@@ -16,6 +16,13 @@ export type CompetitionAccordionProps = {
   upcoming_count?: number;
   /** Ouvert par défaut au premier load (avant lecture localStorage). Default true. */
   default_open?: boolean;
+  /**
+   * Lien "Voir tout". `undefined` → /competitions/[code] (défaut).
+   * `null` → masque le lien (ex : accordéons par stage CDM).
+   */
+  view_all_href?: string | null;
+  /** Texte affiché quand il n'y a aucun match. */
+  empty_label?: string;
 };
 
 const STORAGE_KEY = 'tactuo-dashboard-state';
@@ -60,7 +67,11 @@ export function CompetitionAccordion({
   matches,
   upcoming_count,
   default_open = true,
+  view_all_href,
+  empty_label,
 }: CompetitionAccordionProps) {
+  const viewAllHref =
+    view_all_href === undefined ? `/competitions/${code}` : view_all_href;
   const [open, setOpen] = useState(default_open);
   const [hydrated, setHydrated] = useState(false);
 
@@ -102,13 +113,15 @@ export function CompetitionAccordion({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href={`/competitions/${code}`}
-              onClick={(e) => e.stopPropagation()}
-              className="text-muted-foreground hover:text-foreground text-xs underline"
-            >
-              Voir tout
-            </Link>
+            {viewAllHref && (
+              <Link
+                href={viewAllHref}
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-foreground text-xs underline"
+              >
+                Voir tout
+              </Link>
+            )}
             <motion.div
               animate={{ rotate: open ? 0 : -90 }}
               transition={{ duration: 0.2 }}
@@ -133,7 +146,7 @@ export function CompetitionAccordion({
             <div className="pt-3">
               {matches.length === 0 ? (
                 <p className="bg-card text-muted-foreground border-border rounded-xl border p-6 text-center text-sm">
-                  Aucun match {label} à venir.
+                  {empty_label ?? `Aucun match ${label} à venir.`}
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
