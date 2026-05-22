@@ -11,6 +11,9 @@ export type PerformanceItem = {
   minutes_played: number | null;
   goals: number | null;
   assists: number | null;
+  shots: number | null;
+  passes: number | null;
+  key_passes: number | null;
   rating: number | null;
 };
 
@@ -45,6 +48,24 @@ export function PlayerRecentPerformances({
                 <th className="px-1 py-2 text-center font-medium">Min</th>
                 <th className="px-1 py-2 text-center font-medium">B</th>
                 <th className="px-1 py-2 text-center font-medium">A</th>
+                <th
+                  className="px-1 py-2 text-center font-medium"
+                  title="Tirs"
+                >
+                  T
+                </th>
+                <th
+                  className="px-1 py-2 text-center font-medium"
+                  title="Passes"
+                >
+                  P
+                </th>
+                <th
+                  className="px-1 py-2 text-center font-medium"
+                  title="Passes clés"
+                >
+                  PC
+                </th>
                 <th className="py-2 pl-1 text-right font-medium">Note</th>
               </tr>
             </thead>
@@ -85,6 +106,15 @@ export function PlayerRecentPerformances({
                   </td>
                   <td className="px-1 py-2 text-center tabular-nums">
                     {p.assists ?? '—'}
+                  </td>
+                  <td className="text-muted-foreground px-1 py-2 text-center tabular-nums">
+                    {p.shots ?? '—'}
+                  </td>
+                  <td className="text-muted-foreground px-1 py-2 text-center tabular-nums">
+                    {p.passes ?? '—'}
+                  </td>
+                  <td className="text-muted-foreground px-1 py-2 text-center tabular-nums">
+                    {p.key_passes ?? '—'}
                   </td>
                   <td className="py-2 pl-1 text-right font-semibold tabular-nums">
                     {p.rating != null ? p.rating.toFixed(1) : '—'}

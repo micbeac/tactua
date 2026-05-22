@@ -99,6 +99,9 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
         minutes_played: p.minutes_played,
         goals: p.goals,
         assists: p.assists,
+        shots: p.shots,
+        passes: p.passes,
+        key_passes: p.key_passes,
         rating: p.rating,
       };
     }
@@ -118,6 +121,9 @@ export default async function PlayerPage({ params }: PlayerPageParams) {
       minutes_played: p.minutes_played,
       goals: p.goals,
       assists: p.assists,
+      shots: p.shots,
+      passes: p.passes,
+      key_passes: p.key_passes,
       rating: p.rating,
     };
   });
