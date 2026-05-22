@@ -8,13 +8,10 @@
 // script local scripts/refresh-wc-news.ts.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ragWebSearch, type RagBrowserResult } from '@/lib/apify/client';
-import { getWCNationalTeamIds } from '@/lib/data/world-cup';
-import {
-  buildNewsSlug,
-  generateNewsContent,
-} from '@/lib/openai/news-content';
-import type { Database } from '@/types/database';
+import { ragWebSearch, type RagBrowserResult } from '../apify/client.ts';
+import { getWCNationalTeamIds } from '../data/world-cup.ts';
+import { buildNewsSlug, generateNewsContent } from '../openai/news-content.ts';
+import type { Database } from '../../types/database';
 
 type Supa = SupabaseClient<Database>;
 

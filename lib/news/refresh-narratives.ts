@@ -6,13 +6,13 @@
 // batch passe ; le script local, lui, n'a aucun timeout et traite tout.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ragWebSearch, type RagBrowserResult } from '@/lib/apify/client';
+import { ragWebSearch, type RagBrowserResult } from '../apify/client.ts';
 import {
   buildNewsSlug,
   generateNewsContent,
   type NewsContext,
-} from '@/lib/openai/news-content';
-import type { Database } from '@/types/database';
+} from '../openai/news-content.ts';
+import type { Database } from '../../types/database';
 
 type Supa = SupabaseClient<Database>;
 
