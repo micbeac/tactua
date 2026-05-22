@@ -5,10 +5,11 @@ import OpenAI from 'openai';
 export const DEFAULT_MODEL = 'gpt-4o-mini';
 
 // Modèle "premium" réservé à l'analyse pré-match approfondie (l'artefact
-// vu par l'utilisateur payant). L'analyse est petite et mise en cache par
-// match → quelques € à quelques dizaines d'€ / mois max.
-// Surchargeable via OPENAI_DEEP_MODEL (ex repli gpt-4o si besoin).
-export const DEEP_MODEL = process.env.OPENAI_DEEP_MODEL || 'gpt-5.5';
+// vu par l'utilisateur payant). gpt-4o : rapide (~25-40 s ici) → fiable
+// sous le plafond Vercel Hobby de 60 s. gpt-5.5 (raisonnement) dépasse
+// régulièrement 60 s et fait timeout → à n'activer qu'en Vercel Pro
+// (maxDuration relevé), via OPENAI_DEEP_MODEL=gpt-5.5.
+export const DEEP_MODEL = process.env.OPENAI_DEEP_MODEL || 'gpt-4o';
 
 /** true si le modèle est un modèle de raisonnement (GPT-5+, série o) :
  *  ils n'acceptent pas de `temperature` personnalisé. */
