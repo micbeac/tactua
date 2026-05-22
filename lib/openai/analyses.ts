@@ -1,7 +1,8 @@
-// Génération d'analyses pré-match via OpenAI gpt-4o-mini.
+// Génération d'analyses pré/post-match via OpenAI.
+// Deep pre-match → modèle premium (DEEP_MODEL) ; reste → gpt-4o-mini.
 // Sortie strictement typée via response_format json_schema.
 
-import { DEFAULT_MODEL, getOpenAI } from './client.ts';
+import { DEEP_MODEL, DEFAULT_MODEL, getOpenAI } from './client.ts';
 import {
   DEEP_PRE_MATCH_JSON_SCHEMA,
   POST_MATCH_JSON_SCHEMA,
@@ -511,7 +512,8 @@ export async function generateDeepPreMatchAnalysis(
   model: string;
   usage: { input: number; output: number };
 }> {
-  const model = options.model ?? DEFAULT_MODEL;
+  // Analyse pré-match approfondie = l'artefact premium → modèle fort.
+  const model = options.model ?? DEEP_MODEL;
   const openai = getOpenAI();
 
   const response = await openai.chat.completions.create({
