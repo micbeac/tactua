@@ -21,9 +21,14 @@
 
 import {
   fetchAggregatedTeamPerformers,
+  fetchPlayersInLeague,
   fetchSquad,
 } from '../lib/api-football/deep-stats.ts';
 import { createAdminClient } from '../lib/supabase/admin.ts';
+
+// CDM 2026 dans API-Football
+const WC_LEAGUE_ID = 1;
+const WC_SEASON = 2026;
 
 const supabase = createAdminClient();
 
@@ -92,25 +97,61 @@ async function loadTargets(
 async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
   const merged = new Map<number, MergedPlayer>();
 
-  // 1. /players/squads — dernière convocation (peu de joueurs mais a les numéros)
+  // 1. /players?league=1&season=2026 — liste officielle CDM (la meilleure
+  // source dès que les sélectionneurs publient leur 26)
+  try {
+    const wcPlayers = await fetchPlayersInLeague(
+      afTeamId,
+      WC_LEAGUE_ID,
+      WC_SEASON,
+    );
+    for (const p of wcPlayers) {
+      merged.set(p.player_id, {
+        player_id: p.player_id,
+        name: p.player_name,
+        position: p.position,
+        photo: p.photo,
+        number: null,
+        appearances: p.appearances,
+      });
+    }
+    console.log(`  /players CDM 2026 : ${wcPlayers.length} joueurs`);
+  } catch (e) {
+    console.log(
+      `  /players CDM 2026 échec : ${e instanceof Error ? e.message : e}`,
+    );
+  }
+
+  // 2. /players/squads — dernière convocation (apporte les numéros maillots
+  // quand /league=1 ne les a pas encore)
   try {
     const squad = await fetchSquad(afTeamId);
     for (const s of squad) {
-      merged.set(s.player_id, {
-        player_id: s.player_id,
-        name: s.name,
-        position: s.position,
-        photo: s.photo,
-        number: s.number,
-        appearances: 0,
-      });
+      const existing = merged.get(s.player_id);
+      if (existing) {
+        if (existing.number == null && s.number != null) {
+          existing.number = s.number;
+        }
+        if (!existing.photo && s.photo) existing.photo = s.photo;
+        if (!existing.position && s.position) existing.position = s.position;
+      } else {
+        merged.set(s.player_id, {
+          player_id: s.player_id,
+          name: s.name,
+          position: s.position,
+          photo: s.photo,
+          number: s.number,
+          appearances: 0,
+        });
+      }
     }
     console.log(`  /squads : ${squad.length} joueurs`);
   } catch (e) {
     console.log(`  /squads échec : ${e instanceof Error ? e.message : e}`);
   }
 
-  // 2 + 3. /players agrégé sur année courante + précédente
+  // 3 + 4. Fallback /players agrégé sur année courante + précédente
+  // (utile tant que les listes CDM ne sont pas finalisées)
   const year = currentCalendarYear();
   for (const season of [year, year - 1]) {
     try {
@@ -137,14 +178,12 @@ async function gatherPlayers(afTeamId: number): Promise<MergedPlayer[]> {
         }
       }
       console.log(`  /players saison ${season} : ${performers.length} joueurs`);
-      // Si on a déjà 25+ joueurs sur l'année courante, on saute l'année -1
       if (season === year && performers.length >= 25) break;
     } catch (e) {
       console.log(
         `  /players ${season} échec : ${e instanceof Error ? e.message : e}`,
       );
     }
-    // Petit délai entre les pages
     await new Promise((r) => setTimeout(r, 200));
   }
 

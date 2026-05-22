@@ -464,6 +464,72 @@ export async function fetchTopPerformers(
 }
 
 /**
+ * Variante CDM : récupère tous les joueurs d'une sélection dans la
+ * compétition Coupe du Monde (league=1 par défaut) pour une saison.
+ * Cible la liste officielle CDM dès qu'elle est publiée par AF.
+ *
+ * Retourne TOUS les joueurs déclarés dans cette compétition pour cette
+ * équipe (pas juste ceux ayant déjà joué — un joueur peut être listé
+ * sans appearences avant le premier match).
+ */
+export async function fetchPlayersInLeague(
+  teamId: number,
+  leagueId: number,
+  season: number,
+): Promise<SquadPerformer[]> {
+  const out: SquadPerformer[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages && page <= 5) {
+    const d = await af<PlayerSeasonResponse>(
+      `/players?team=${teamId}&league=${leagueId}&season=${season}&page=${page}`,
+    );
+    totalPages = d.paging.total;
+
+    for (const p of d.response) {
+      const s = p.statistics.find((st) => st.league.id === leagueId);
+      const position = s?.games.position ?? null;
+      const appearances = s?.games.appearences ?? 0;
+      const lineups = s?.games.lineups ?? 0;
+      const minutes = s?.games.minutes ?? 0;
+      const goals = s?.goals.total ?? 0;
+      const assists = s?.goals.assists ?? 0;
+      const yellow = s?.cards.yellow ?? 0;
+      const red = s?.cards.red ?? 0;
+      const ratingRaw = s?.games.rating;
+      const rating = ratingRaw ? Number(ratingRaw) : null;
+
+      out.push({
+        player_id: p.player.id,
+        player_name: p.player.name,
+        photo: p.player.photo,
+        position,
+        is_captain: Boolean(s?.games.captain),
+        appearances,
+        lineups,
+        minutes,
+        goals,
+        assists,
+        rating: Number.isFinite(rating ?? NaN) ? rating : null,
+        shots_on_target: null,
+        key_passes: null,
+        passes_accuracy: null,
+        dribbles_success_ratio: null,
+        duels_won_ratio: null,
+        yellow_cards: yellow,
+        red_cards: red,
+        saves: null,
+        goals_conceded: null,
+      });
+    }
+    page += 1;
+  }
+
+  return out;
+}
+
+/**
  * Variante pour sélections nationales : agrège les stats sur TOUTES les
  * compétitions internationales (Friendlies, Nations League, qualifs, WC...)
  * pour une équipe nationale sur une saison. Renvoie un row par joueur.
