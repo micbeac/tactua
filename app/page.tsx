@@ -24,22 +24,32 @@ export const revalidate = 60;
 
 // Compétitions affichées sur le dashboard, dans cet ordre.
 // Chaque entrée a son propre header coloré + lien vers /competitions/[code].
+//
+// mode :
+//  - 'matchday' → affiche TOUS les matchs de la prochaine journée (J. 38 =
+//    10 matchs, etc.). `limit` sert de repli quand le matchday est null.
+//  - 'limit'    → plafond fixe (CDM : une « journée » de poule = 24 matchs).
 const DASHBOARD_COMPETITIONS: Array<{
   id: number;
   code: string;
   label: string;
   flag: string;
+  mode: 'matchday' | 'limit';
   limit: number;
 }> = [
-  { id: 2000, code: 'wc', label: 'Coupe du Monde 2026', flag: '🌍', limit: 6 },
-  { id: 2001, code: 'cl', label: 'Champions League', flag: '🇪🇺', limit: 4 },
-  { id: 2021, code: 'pl', label: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', limit: 4 },
-  { id: 2014, code: 'pd', label: 'La Liga', flag: '🇪🇸', limit: 4 },
-  { id: 2019, code: 'sa', label: 'Serie A', flag: '🇮🇹', limit: 4 },
-  { id: 2002, code: 'bl1', label: 'Bundesliga', flag: '🇩🇪', limit: 4 },
-  { id: 2015, code: 'fl1', label: 'Ligue 1', flag: '🇫🇷', limit: 4 },
-  { id: 9001, code: 'bjl', label: 'Jupiler Pro League', flag: '🇧🇪', limit: 4 },
+  { id: 2000, code: 'wc', label: 'Coupe du Monde 2026', flag: '🌍', mode: 'limit', limit: 8 },
+  { id: 2001, code: 'cl', label: 'Champions League', flag: '🇪🇺', mode: 'matchday', limit: 6 },
+  { id: 2021, code: 'pl', label: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', mode: 'matchday', limit: 6 },
+  { id: 2014, code: 'pd', label: 'La Liga', flag: '🇪🇸', mode: 'matchday', limit: 6 },
+  { id: 2019, code: 'sa', label: 'Serie A', flag: '🇮🇹', mode: 'matchday', limit: 6 },
+  { id: 2002, code: 'bl1', label: 'Bundesliga', flag: '🇩🇪', mode: 'matchday', limit: 6 },
+  { id: 2015, code: 'fl1', label: 'Ligue 1', flag: '🇫🇷', mode: 'matchday', limit: 6 },
+  { id: 9001, code: 'bjl', label: 'Jupiler Pro League', flag: '🇧🇪', mode: 'matchday', limit: 6 },
 ];
+
+// Plafond de sécurité pour le mode 'matchday' : une journée ne dépasse
+// jamais ~12 matchs, on borne au cas où la data serait incohérente.
+const MATCHDAY_HARD_CAP = 14;
 
 type TeamEmbed = {
   id: number;
@@ -128,7 +138,9 @@ export default async function HomePage() {
   const nowIso = new Date().toISOString();
   const today = todayParis();
 
-  // Fetch les prochains matchs de chaque compétition en parallèle
+  // Fetch les prochains matchs de chaque compétition en parallèle.
+  // On récupère large (30) puis on découpe côté JS : soit la prochaine
+  // journée complète (mode 'matchday'), soit un plafond fixe (mode 'limit').
   const competitionQueries = DASHBOARD_COMPETITIONS.map((c) =>
     supabase
       .from('matches')
@@ -137,7 +149,7 @@ export default async function HomePage() {
       .eq('status', 'scheduled')
       .gte('kickoff_at', nowIso)
       .order('kickoff_at', { ascending: true })
-      .limit(c.limit),
+      .limit(30),
   );
 
   const results = await Promise.all([
@@ -161,10 +173,23 @@ export default async function HomePage() {
     ReturnType<typeof getMatchesForDay>
   >;
 
-  const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => ({
-    ...c,
-    matches: ((results[i] as { data: unknown }).data ?? []) as MatchRow[],
-  }));
+  const competitionMatches = DASHBOARD_COMPETITIONS.map((c, i) => {
+    const all = ((results[i] as { data: unknown }).data ?? []) as MatchRow[];
+    let matches: MatchRow[];
+    if (c.mode === 'limit') {
+      matches = all.slice(0, c.limit);
+    } else {
+      // mode 'matchday' : tous les matchs de la prochaine journée.
+      const nextMatchday = all[0]?.matchday ?? null;
+      matches =
+        nextMatchday == null
+          ? all.slice(0, c.limit) // pas de matchday (ex finale) → repli
+          : all
+              .filter((m) => m.matchday === nextMatchday)
+              .slice(0, MATCHDAY_HARD_CAP);
+    }
+    return { ...c, matches };
+  });
 
   // Prénom ou pseudonyme depuis email (avant le @)
   const userLabel = user.email?.split('@')[0] ?? null;
