@@ -103,3 +103,82 @@ export async function getStandingContext(
     points_ahead_below: below ? myPts - (below.points ?? 0) : null,
   };
 }
+
+export type TeamSeasonXG = {
+  /** Nombre de matchs avec xG disponible */
+  sample: number;
+  /** xG marqué par match (moyenne) */
+  xg_for_avg: number;
+  /** xG concédé par match (moyenne) */
+  xg_against_avg: number;
+};
+
+/**
+ * xG saison d'une équipe dans une compétition : moyenne du xG marqué et
+ * concédé sur ses matchs finis (jusqu'à 40 récents). Source :
+ * match_team_stats.expected_goals. Renvoie null si aucun xG disponible.
+ */
+export async function getTeamSeasonXG(
+  supabase: Supa,
+  teamId: number,
+  competitionId: number,
+): Promise<TeamSeasonXG | null> {
+  const { data: matchRows } = await supabase
+    .from('matches')
+    .select('id, home_team_id, away_team_id')
+    .eq('competition_id', competitionId)
+    .eq('status', 'finished')
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order('kickoff_at', { ascending: false })
+    .limit(40);
+
+  const matches = (matchRows ?? []) as Array<{
+    id: number;
+    home_team_id: number | null;
+    away_team_id: number | null;
+  }>;
+  if (matches.length === 0) return null;
+
+  const { data: statRows } = await supabase
+    .from('match_team_stats')
+    .select('match_id, team_id, expected_goals')
+    .in(
+      'match_id',
+      matches.map((m) => m.id),
+    );
+
+  const byMatch = new Map<
+    number,
+    Array<{ team_id: number; xg: number | null }>
+  >();
+  for (const s of (statRows ?? []) as Array<{
+    match_id: number;
+    team_id: number;
+    expected_goals: number | null;
+  }>) {
+    const list = byMatch.get(s.match_id) ?? [];
+    list.push({ team_id: s.team_id, xg: s.expected_goals });
+    byMatch.set(s.match_id, list);
+  }
+
+  let forSum = 0;
+  let againstSum = 0;
+  let n = 0;
+  for (const m of matches) {
+    const rows = byMatch.get(m.id);
+    if (!rows) continue;
+    const mine = rows.find((r) => r.team_id === teamId);
+    const opp = rows.find((r) => r.team_id !== teamId);
+    if (mine?.xg == null || opp?.xg == null) continue;
+    forSum += mine.xg;
+    againstSum += opp.xg;
+    n += 1;
+  }
+  if (n === 0) return null;
+
+  return {
+    sample: n,
+    xg_for_avg: Math.round((forSum / n) * 100) / 100,
+    xg_against_avg: Math.round((againstSum / n) * 100) / 100,
+  };
+}

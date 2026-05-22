@@ -9,6 +9,8 @@ type Stats = {
   yellow_cards: number | null;
   red_cards: number | null;
   offsides: number | null;
+  expected_goals: number | null;
+  goals_prevented: number | null;
 };
 
 export type MatchStatsSectionProps = {
@@ -178,6 +180,16 @@ export function MatchStatsSection({
             </span>
           </div>
           <ul>
+            {(home_stats?.expected_goals != null ||
+              away_stats?.expected_goals != null) && (
+              <StatRow
+                row={{
+                  label: 'xG (buts attendus)',
+                  home: home_stats?.expected_goals ?? null,
+                  away: away_stats?.expected_goals ?? null,
+                }}
+              />
+            )}
             <StatRow
               row={{
                 label: 'Possession',

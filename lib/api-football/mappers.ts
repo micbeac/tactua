@@ -138,6 +138,8 @@ export function mapApiFootballTeamStats(
       yellow_cards: parseNumber(pickStat(t.statistics, 'Yellow Cards')),
       red_cards: parseNumber(pickStat(t.statistics, 'Red Cards')),
       offsides: parseNumber(pickStat(t.statistics, 'Offsides')),
+      expected_goals: parseNumber(pickStat(t.statistics, 'expected_goals')),
+      goals_prevented: parseNumber(pickStat(t.statistics, 'goals_prevented')),
     });
   }
   return rows;

@@ -22,6 +22,7 @@ import { getHeadToHead, getTeamForm } from '@/lib/data/match';
 import {
   getStandingContext,
   getTeamScheduleContext,
+  getTeamSeasonXG,
 } from '@/lib/data/match-context';
 import { getPostMatchPerformance } from '@/lib/data/match-performance';
 import { getCoachesMap } from '@/lib/data/wc-extras';
@@ -374,36 +375,41 @@ export async function POST(
         try {
           const compSeason = m.competition?.current_season ?? null;
           const compId = m.competition?.id ?? null;
-          const [homeSched, awaySched, homeStand, awayStand, coaches] =
-            await Promise.all([
-              getTeamScheduleContext(supabase, m.home_team_id!, m.kickoff_at),
-              getTeamScheduleContext(supabase, m.away_team_id!, m.kickoff_at),
-              compId && compSeason
-                ? getStandingContext(
-                    supabase,
-                    compId,
-                    compSeason,
-                    m.home_team_id!,
-                  )
-                : Promise.resolve(null),
-              compId && compSeason
-                ? getStandingContext(
-                    supabase,
-                    compId,
-                    compSeason,
-                    m.away_team_id!,
-                  )
-                : Promise.resolve(null),
-              getCoachesMap(supabase, [m.home_team_id!, m.away_team_id!]),
-            ]);
+          const [
+            homeSched,
+            awaySched,
+            homeStand,
+            awayStand,
+            coaches,
+            homeXg,
+            awayXg,
+          ] = await Promise.all([
+            getTeamScheduleContext(supabase, m.home_team_id!, m.kickoff_at),
+            getTeamScheduleContext(supabase, m.away_team_id!, m.kickoff_at),
+            compId && compSeason
+              ? getStandingContext(supabase, compId, compSeason, m.home_team_id!)
+              : Promise.resolve(null),
+            compId && compSeason
+              ? getStandingContext(supabase, compId, compSeason, m.away_team_id!)
+              : Promise.resolve(null),
+            getCoachesMap(supabase, [m.home_team_id!, m.away_team_id!]),
+            compId
+              ? getTeamSeasonXG(supabase, m.home_team_id!, compId)
+              : Promise.resolve(null),
+            compId
+              ? getTeamSeasonXG(supabase, m.away_team_id!, compId)
+              : Promise.resolve(null),
+          ]);
           homeCtx.rest_days = homeSched.rest_days;
           homeCtx.matches_last_14d = homeSched.matches_last_14d;
           homeCtx.standing = homeStand;
           homeCtx.coach = coaches.get(m.home_team_id!) ?? null;
+          homeCtx.season_xg = homeXg;
           awayCtx.rest_days = awaySched.rest_days;
           awayCtx.matches_last_14d = awaySched.matches_last_14d;
           awayCtx.standing = awayStand;
           awayCtx.coach = coaches.get(m.away_team_id!) ?? null;
+          awayCtx.season_xg = awayXg;
         } catch (e) {
           console.warn(
             `[analyze ${m.id}] contexte calendrier/classement échec:`,

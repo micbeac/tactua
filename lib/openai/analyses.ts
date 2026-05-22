@@ -212,6 +212,12 @@ export type DeepTeamContext = {
     conceded_early_pct: number | null;
     conceded_late_pct: number | null;
   } | null;
+  /** xG saison : buts attendus marqués/concédés par match (moyenne) */
+  season_xg?: {
+    sample: number;
+    xg_for_avg: number;
+    xg_against_avg: number;
+  } | null;
 };
 
 export type RecentNarrative = {
@@ -307,6 +313,7 @@ Règles :
   * "Classement" : intègre l'enjeu réel (course au titre, places européennes, maintien, match sans enjeu). Un écart de points serré près d'une zone clé augmente l'intensité attendue.
   * "Fraîcheur" : un faible nombre de jours de repos ou une forte densité de calendrier (3+ matchs/14 j) annonce de la fatigue, des rotations possibles, une baisse de régime en 2e période. Compare les deux équipes.
   * "Tempo des buts" : exploite-le dans les scénarios (ex : une équipe qui marque tard + une qui encaisse tard → "but décisif dans le dernier quart d'heure" crédible).
+  * "xG saison" : compare le xG aux buts réellement marqués/encaissés (champs "Buts marqués/encaissés / match"). Un xG marqué supérieur aux buts réels = équipe qui sous-performe sa finition (va probablement se corriger à la hausse) ; un xG concédé inférieur aux buts encaissés = défense chanceuse. C'est un signal FORT de la vraie valeur d'une équipe — utilise-le pour nuancer la lecture des résultats bruts et calibrer "prediction".
   * "Entraîneur" : tu peux le citer pour parler du style/de l'approche tactique de l'équipe.
   * Indisponibles : distingue bien SUSPENDU (manque mécaniquement, certain) de blessé (incertain). Un cadre suspendu est une absence sûre à intégrer.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
@@ -392,6 +399,12 @@ function fmtFreshness(t: DeepTeamContext): string {
   return `\n- Fraîcheur : ${rest}${dens}`;
 }
 
+function fmtXG(t: DeepTeamContext): string {
+  const x = t.season_xg;
+  if (!x || x.sample === 0) return '';
+  return `\n- xG saison (sur ${x.sample} matchs) : ${x.xg_for_avg} xG marqué/match, ${x.xg_against_avg} xG concédé/match`;
+}
+
 function fmtGoalTiming(t: DeepTeamContext): string {
   const g = t.goal_timing;
   if (
@@ -425,7 +438,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
 - Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
-- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtGoalTiming(t)}
+- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${

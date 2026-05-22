@@ -200,7 +200,9 @@ export type Database = {
       match_team_stats: {
         Row: {
           corners: number | null
+          expected_goals: number | null
           fouls: number | null
+          goals_prevented: number | null
           match_id: number
           offsides: number | null
           possession: number | null
@@ -212,7 +214,9 @@ export type Database = {
         }
         Insert: {
           corners?: number | null
+          expected_goals?: number | null
           fouls?: number | null
+          goals_prevented?: number | null
           match_id: number
           offsides?: number | null
           possession?: number | null
@@ -224,7 +228,9 @@ export type Database = {
         }
         Update: {
           corners?: number | null
+          expected_goals?: number | null
           fouls?: number | null
+          goals_prevented?: number | null
           match_id?: number
           offsides?: number | null
           possession?: number | null

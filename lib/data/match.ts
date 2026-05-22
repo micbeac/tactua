@@ -121,6 +121,8 @@ export type MatchTeamStatsRow = {
   yellow_cards: number | null;
   red_cards: number | null;
   offsides: number | null;
+  expected_goals: number | null;
+  goals_prevented: number | null;
 };
 
 export async function getMatchTeamStats(
@@ -130,7 +132,7 @@ export async function getMatchTeamStats(
   const { data, error } = await supabase
     .from('match_team_stats')
     .select(
-      'team_id, possession, shots, shots_on_target, corners, fouls, yellow_cards, red_cards, offsides',
+      'team_id, possession, shots, shots_on_target, corners, fouls, yellow_cards, red_cards, offsides, expected_goals, goals_prevented',
     )
     .eq('match_id', matchId);
   if (error) {
