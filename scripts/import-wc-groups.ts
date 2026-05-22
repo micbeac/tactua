@@ -33,10 +33,15 @@ async function main() {
   const rows: { team_id: number; group_letter: string }[] = [];
 
   for (const standing of groupStandings) {
-    // "GROUP_A" → "A"
-    const letter = standing.group!.replace(/^GROUP_/i, '').toUpperCase();
+    // Accepte "GROUP_A", "Group A", "Group_A", "A" → "A"
+    const letter = standing
+      .group!.replace(/^group[\s_]*/i, '')
+      .trim()
+      .toUpperCase();
     if (!/^[A-L]$/.test(letter)) {
-      console.warn(`  ⚠ groupe ignoré (lettre invalide) : ${standing.group}`);
+      console.warn(
+        `  ⚠ groupe ignoré (lettre invalide) : "${standing.group}" → "${letter}"`,
+      );
       continue;
     }
     for (const t of standing.table) {
@@ -79,7 +84,10 @@ async function main() {
   // Récap par groupe
   console.log('\n📋 Récap :');
   for (const standing of groupStandings) {
-    const letter = standing.group!.replace(/^GROUP_/i, '').toUpperCase();
+    const letter = standing
+      .group!.replace(/^group[\s_]*/i, '')
+      .trim()
+      .toUpperCase();
     const names = standing.table.map((t) => t.team.name).join(', ');
     console.log(`  Groupe ${letter} : ${names}`);
   }
