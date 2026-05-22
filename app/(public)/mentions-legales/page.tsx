@@ -33,11 +33,11 @@ export default function MentionsLegalesPage() {
             par :
           </p>
           <ul className="text-foreground/90 mt-2 list-none space-y-1">
-            <li>Nom / raison sociale : [À COMPLÉTER]</li>
-            <li>Statut juridique : [À COMPLÉTER]</li>
-            <li>Adresse : [À COMPLÉTER]</li>
+            <li>Éditeur : Michael Beauclercq</li>
+            <li>Statut : éditeur personne physique</li>
             <li>
-              Numéro d&apos;entreprise / SIRET / BCE : [À COMPLÉTER]
+              Adresse : Clos de la Mare aux Loups 22, [code postal et ville à
+              compléter]
             </li>
             <li>
               Contact :{' '}
@@ -48,7 +48,7 @@ export default function MentionsLegalesPage() {
                 contact@tactuo.com
               </a>
             </li>
-            <li>Directeur de la publication : [À COMPLÉTER]</li>
+            <li>Directeur de la publication : Michael Beauclercq</li>
           </ul>
         </section>
 
