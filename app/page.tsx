@@ -8,7 +8,8 @@ import {
 import { WeeklyRecapSection } from '@/components/dashboard/WeeklyRecapSection';
 import { LandingCoverage } from '@/components/landing/LandingCoverage';
 import { LandingDemo } from '@/components/landing/LandingDemo';
-import { LandingFAQ, LANDING_FAQ } from '@/components/landing/LandingFAQ';
+import { LandingFAQ } from '@/components/landing/LandingFAQ';
+import { LANDING_FAQ } from '@/components/landing/landing-faq-data';
 import { LandingFinalCta } from '@/components/landing/LandingFinalCta';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';

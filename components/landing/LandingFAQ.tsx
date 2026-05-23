@@ -3,29 +3,7 @@
 import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-
-export const LANDING_FAQ = [
-  {
-    q: 'Comment fonctionne l’IA ?',
-    a: 'On combine plusieurs sources de données football (stats équipes, performances joueurs, blessures, compositions), puis on les passe à un modèle GPT-4o-mini avec des consignes strictes. Le modèle ne devine rien : il synthétise ce que les chiffres disent.',
-  },
-  {
-    q: 'C’est gratuit ?',
-    a: 'Oui, totalement jusqu’au lancement public de Tactuo (juin 2026). Ensuite, un plan free avec quelques analyses par jour et un plan payant pour les analyses illimitées et détaillées.',
-  },
-  {
-    q: 'Est-ce que c’est une app de paris sportifs ?',
-    a: 'Non. Tactuo positionne l’analyse comme un outil de compréhension : "voici tout ce qu’il faut savoir avant le match". On donne des probabilités et des scénarios, jamais de conseil de pari.',
-  },
-  {
-    q: 'Quelles compétitions sont couvertes ?',
-    a: 'Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League et toute la Coupe du Monde 2026 (48 sélections). D’autres compétitions arriveront après le lancement.',
-  },
-  {
-    q: 'Mes données sont-elles fiables ?',
-    a: 'Football-Data.org pour la structure (calendrier, classements), API-Football Pro pour les stats détaillées et compositions officielles. Mises à jour quotidiennes.',
-  },
-];
+import { LANDING_FAQ } from './landing-faq-data';
 
 export function LandingFAQ() {
   const [open, setOpen] = useState<number | null>(0);
