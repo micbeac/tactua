@@ -33,6 +33,7 @@ import {
 } from '@/lib/data/match';
 import {
   getStandingContext,
+  getTeamGoalTiming,
   getTeamScheduleContext,
   getTeamSeasonXG,
 } from '@/lib/data/match-context';
@@ -239,14 +240,17 @@ export default async function MatchPage({ params }: MatchPageParams) {
   let awayContext: MatchSideContext | null = null;
 
   async function buildSideContext(teamId: number): Promise<MatchSideContext> {
-    const [schedule, standing, xg] = await Promise.all([
+    const [schedule, standing, xg, goal_timing] = await Promise.all([
       getTeamScheduleContext(supabase, teamId, match!.kickoff_at),
       compId && compSeason
         ? getStandingContext(supabase, compId, compSeason, teamId)
         : Promise.resolve(null),
       compId ? getTeamSeasonXG(supabase, teamId, compId) : Promise.resolve(null),
+      compId
+        ? getTeamGoalTiming(supabase, teamId, compId)
+        : Promise.resolve(null),
     ]);
-    return { schedule, standing, xg };
+    return { schedule, standing, xg, goal_timing };
   }
 
   if (isPreMatchPhase && homeId != null && awayId != null) {

@@ -104,6 +104,103 @@ export async function getStandingContext(
   };
 }
 
+export type TeamGoalTiming = {
+  /** Nombre de matchs avec événements goals connus (échantillon) */
+  sample: number;
+  goals_for: number;
+  goals_against: number;
+  /** % de buts marqués entre 0' et 15' (null si pas d'échantillon) */
+  scored_early_pct: number | null;
+  /** % de buts marqués à partir de 76' (incluant prolongations) */
+  scored_late_pct: number | null;
+  conceded_early_pct: number | null;
+  conceded_late_pct: number | null;
+};
+
+/**
+ * Tempo des buts d'une équipe dans une compétition : % de buts marqués
+ * / encaissés tôt (0-15') et tard (76+'). Source : match_events (déjà
+ * peuplée par le cron matchday). Zéro appel API externe.
+ */
+export async function getTeamGoalTiming(
+  supabase: Supa,
+  teamId: number,
+  competitionId: number,
+): Promise<TeamGoalTiming | null> {
+  // 1) Matchs finis de l'équipe dans la compétition (jusqu'à 40 récents).
+  const { data: matchRows } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('competition_id', competitionId)
+    .eq('status', 'finished')
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order('kickoff_at', { ascending: false })
+    .limit(40);
+
+  const matches = (matchRows ?? []) as Array<{ id: number }>;
+  if (matches.length === 0) return null;
+
+  const matchIds = matches.map((m) => m.id);
+
+  // 2) Events de type 'Goal' pour ces matchs.
+  const { data: eventRows } = await supabase
+    .from('match_events')
+    .select('match_id, team_id, minute, type, detail')
+    .in('match_id', matchIds)
+    .eq('type', 'Goal')
+    .not('minute', 'is', null);
+
+  const events = (eventRows ?? []) as Array<{
+    match_id: number;
+    team_id: number | null;
+    minute: number | null;
+    type: string;
+    detail: string | null;
+  }>;
+  if (events.length === 0) return null;
+
+  let forCount = 0;
+  let againstCount = 0;
+  let forEarly = 0;
+  let forLate = 0;
+  let againstEarly = 0;
+  let againstLate = 0;
+
+  for (const ev of events) {
+    if (ev.team_id == null || ev.minute == null) continue;
+    // Un csc (own goal) est marqué par l'équipe qui l'inscrit contre son
+    // camp : team_id = équipe qui en bénéficie (notre convention enrich).
+    const isFor = ev.team_id === teamId;
+    if (isFor) forCount += 1;
+    else againstCount += 1;
+
+    const m = ev.minute;
+    if (m >= 0 && m <= 15) {
+      if (isFor) forEarly += 1;
+      else againstEarly += 1;
+    } else if (m >= 76) {
+      if (isFor) forLate += 1;
+      else againstLate += 1;
+    }
+  }
+
+  // Échantillon = nombre de matchs distincts qui ont contribué.
+  const distinctMatches = new Set(events.map((e) => e.match_id)).size;
+
+  const pct = (num: number, den: number) =>
+    den > 0 ? Math.round((num / den) * 100) : null;
+
+  return {
+    sample: distinctMatches,
+    goals_for: forCount,
+    goals_against: againstCount,
+    scored_early_pct: pct(forEarly, forCount),
+    scored_late_pct: pct(forLate, forCount),
+    conceded_early_pct: pct(againstEarly, againstCount),
+    conceded_late_pct: pct(againstLate, againstCount),
+  };
+}
+
 export type TeamSeasonXG = {
   /** Nombre de matchs avec xG disponible */
   sample: number;
