@@ -128,18 +128,28 @@ export function MatchCard(props: MatchCardProps) {
   return (
     <Link
       href={`/matches/${id}`}
-      className="group bg-card hover:border-primary/40 focus-visible:border-primary border-border block rounded-xl border p-4 transition-colors focus-visible:outline-none"
+      className="group bg-card hover:border-primary/40 focus-visible:border-primary border-border block w-full max-w-full overflow-hidden rounded-xl border p-4 transition-colors focus-visible:outline-none"
     >
-      <div className="text-muted-foreground mb-3 flex items-center justify-between text-xs">
-        <span>{dateLabel}</span>
-        <div className="flex items-center gap-2">
-          {stageLabel && <span>{stageLabel}</span>}
-          {matchday != null && stageLabel == null && <span>J. {matchday}</span>}
+      {/* Header : date à gauche, stage/matchday/statut à droite. min-w-0
+          partout pour que les longs libellés (« Regular Season », badge live)
+          puissent rétrécir au lieu de pousser la carte au-delà de l'écran. */}
+      <div className="text-muted-foreground mb-3 flex min-w-0 items-center justify-between gap-2 text-xs">
+        <span className="min-w-0 truncate">{dateLabel}</span>
+        <div className="flex min-w-0 shrink items-center gap-2">
+          {stageLabel && (
+            <span className="min-w-0 truncate">{stageLabel}</span>
+          )}
+          {matchday != null && stageLabel == null && (
+            <span className="shrink-0">J. {matchday}</span>
+          )}
           <StatusBadge status={status} />
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Ligne équipes : flex avec min-w-0 pour que les noms longs
+          (« AFC Bournemouth », « Newcastle United ») s'ellipsent au lieu
+          de déborder. */}
+      <div className="flex min-w-0 items-center gap-3">
         <TeamSide team={home} align="left" />
         <div className="text-foreground shrink-0 text-sm font-semibold tabular-nums">
           {showScore ? (
