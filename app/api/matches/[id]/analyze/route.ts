@@ -780,20 +780,65 @@ export async function POST(
   } catch (e) {
     console.error('[/api/matches/[id]/analyze]', e);
     const raw = e instanceof Error ? e.message : String(e);
-    // Erreur de quota API-Football → message clair, pas le détail technique
-    const isQuota =
-      /request limit|requests.*limit|rate.?limit/i.test(raw);
-    if (isQuota) {
+
+    // Discrimination fine des erreurs API-Football (clé d'erreur extraite
+    // dans af() sous la forme [rateLimit] / [requests] / [Time] / [token]).
+    const code = raw.match(/\[(rateLimit|requests|Time|token|plan)\]/)?.[1];
+
+    // Limite par-minute → réessai très court
+    if (code === 'rateLimit' || code === 'Time') {
       return NextResponse.json(
         {
-          error: 'Service de données momentanément saturé',
+          error: 'Service de données saturé temporairement',
           message:
-            "Trop de requêtes vers la base de données football aujourd'hui. " +
-            'Réessaie dans quelques heures — aucune analyse incomplète ne sera enregistrée.',
+            'Trop de requêtes en peu de temps vers la base de données football. ' +
+            'Réessaie dans 1 à 2 minutes — aucune analyse incomplète ne sera enregistrée.',
         },
         { status: 503 },
       );
     }
+
+    // Quota journalier épuisé → reset à minuit UTC
+    if (code === 'requests') {
+      return NextResponse.json(
+        {
+          error: 'Quota journalier atteint',
+          message:
+            "Le quota journalier de la base de données football est atteint. " +
+            'Réessaie demain (reset à 1 h du matin) — aucune analyse incomplète ne sera enregistrée.',
+        },
+        { status: 503 },
+      );
+    }
+
+    // Problème de clé API ou de plan → action côté admin
+    if (code === 'token' || code === 'plan') {
+      return NextResponse.json(
+        {
+          error: 'Configuration API à vérifier',
+          message:
+            "La connexion à la base de données football a un souci de configuration. " +
+            "Si le problème persiste, contacte l'équipe — aucune analyse incomplète ne sera enregistrée.",
+        },
+        { status: 503 },
+      );
+    }
+
+    // Fallback : ancienne heuristique pour les messages d'erreur legacy
+    const isLegacyQuota =
+      /request limit|requests.*limit|rate.?limit/i.test(raw);
+    if (isLegacyQuota) {
+      return NextResponse.json(
+        {
+          error: 'Service de données momentanément saturé',
+          message:
+            'Trop de requêtes vers la base de données football. ' +
+            'Réessaie dans quelques minutes — aucune analyse incomplète ne sera enregistrée.',
+        },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       {
         error: 'Erreur de génération',

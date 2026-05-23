@@ -9,33 +9,74 @@ function apiKey(): string {
   return k;
 }
 
-async function af<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'x-apisports-key': apiKey(), Accept: 'application/json' },
+// ============================================================================
+// Limiteur de concurrence pour les appels API-Football
+// ============================================================================
+// Le plan Pro a un quota journalier ET une limite par-minute (~450 req/min).
+// Sans throttle, une analyse pré-match qui orchestre 30-40 requêtes en
+// Promise.all peut saturer la limite par-minute. Sémaphore simple à 5
+// en parallèle : ça reste rapide (~6-8 s pour une dizaine de batches) et
+// très loin du plafond par-minute.
+const MAX_CONCURRENT = 5;
+let inFlight = 0;
+const waitQueue: Array<() => void> = [];
+
+function acquireSlot(): Promise<void> {
+  if (inFlight < MAX_CONCURRENT) {
+    inFlight += 1;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    waitQueue.push(() => {
+      inFlight += 1;
+      resolve();
+    });
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `API-Football ${res.status} on ${path}: ${body.slice(0, 200)}`,
-    );
+}
+
+function releaseSlot() {
+  inFlight = Math.max(0, inFlight - 1);
+  const next = waitQueue.shift();
+  if (next) next();
+}
+
+async function af<T>(path: string): Promise<T> {
+  await acquireSlot();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: { 'x-apisports-key': apiKey(), Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `API-Football ${res.status} on ${path}: ${body.slice(0, 200)}`,
+      );
+    }
+    const json = (await res.json()) as T & { errors?: unknown };
+    // API-Football renvoie HTTP 200 même en cas d'erreur quota / ratelimit :
+    // le détail est dans `errors` (objet non vide). On le traite comme une
+    // vraie erreur — sinon on génèrerait (et mettrait en cache) une analyse
+    // dégradée silencieusement.
+    //
+    // On inclut la 1re clé d'erreur (rateLimit / requests / Time / token /
+    // plan) dans le message — ça permet à la route de distinguer la limite
+    // par-minute (réessai 1-2 min) du quota journalier (réessai demain).
+    const errs = json.errors;
+    if (
+      errs != null &&
+      !Array.isArray(errs) &&
+      typeof errs === 'object' &&
+      Object.keys(errs).length > 0
+    ) {
+      const firstKey = Object.keys(errs as Record<string, unknown>)[0];
+      throw new Error(
+        `API-Football error [${firstKey}] on ${path}: ${JSON.stringify(errs).slice(0, 200)}`,
+      );
+    }
+    return json as T;
+  } finally {
+    releaseSlot();
   }
-  const json = (await res.json()) as T & { errors?: unknown };
-  // API-Football renvoie HTTP 200 même en cas d'erreur quota / ratelimit :
-  // le détail est dans `errors` (objet non vide). On le traite comme une
-  // vraie erreur — sinon on génèrerait (et mettrait en cache) une analyse
-  // dégradée silencieusement.
-  const errs = json.errors;
-  if (
-    errs != null &&
-    !Array.isArray(errs) &&
-    typeof errs === 'object' &&
-    Object.keys(errs).length > 0
-  ) {
-    throw new Error(
-      `API-Football error on ${path}: ${JSON.stringify(errs).slice(0, 200)}`,
-    );
-  }
-  return json as T;
 }
 
 // ============================================================================
