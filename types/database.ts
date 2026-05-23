@@ -277,6 +277,7 @@ export type Database = {
           venue: string | null
           live_minute: number | null
           live_updated_at: string | null
+          angles_generated_at: string | null
         }
         Insert: {
           api_football_fixture_id?: number | null
@@ -297,6 +298,7 @@ export type Database = {
           venue?: string | null
           live_minute?: number | null
           live_updated_at?: string | null
+          angles_generated_at?: string | null
         }
         Update: {
           api_football_fixture_id?: number | null
@@ -317,6 +319,7 @@ export type Database = {
           venue?: string | null
           live_minute?: number | null
           live_updated_at?: string | null
+          angles_generated_at?: string | null
         }
         Relationships: [
           {
@@ -1031,6 +1034,122 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_angles: {
+        Row: {
+          id: number
+          created_at: string
+          match_id: number
+          generation_phase: string
+          format: string | null
+          hook: string | null
+          title: string | null
+          data_points: unknown | null
+          narrative: string | null
+          joueur_principal: string | null
+          club_principal: string | null
+          championnat: string | null
+          score_viralite: number | null
+          cta_tactuo: string | null
+          urgence: string | null
+          script_timecode: string | null
+          prompt_elevenlabs: string | null
+          prompts_visuels_ia: unknown | null
+          sources_visuels_a_chercher: unknown | null
+          instructions_capcut: string | null
+          caption_tiktok: string | null
+          hashtags: string | null
+          status: string
+          validated_at: string | null
+          produced_at: string | null
+          published_at: string | null
+          rejected_reason: string | null
+          url_tiktok: string | null
+          url_instagram: string | null
+          url_youtube: string | null
+          vues_24h: number | null
+          vues_7j: number | null
+          ai_model: string | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          match_id: number
+          generation_phase?: string
+          format?: string | null
+          hook?: string | null
+          title?: string | null
+          data_points?: unknown | null
+          narrative?: string | null
+          joueur_principal?: string | null
+          club_principal?: string | null
+          championnat?: string | null
+          score_viralite?: number | null
+          cta_tactuo?: string | null
+          urgence?: string | null
+          script_timecode?: string | null
+          prompt_elevenlabs?: string | null
+          prompts_visuels_ia?: unknown | null
+          sources_visuels_a_chercher?: unknown | null
+          instructions_capcut?: string | null
+          caption_tiktok?: string | null
+          hashtags?: string | null
+          status?: string
+          validated_at?: string | null
+          produced_at?: string | null
+          published_at?: string | null
+          rejected_reason?: string | null
+          url_tiktok?: string | null
+          url_instagram?: string | null
+          url_youtube?: string | null
+          vues_24h?: number | null
+          vues_7j?: number | null
+          ai_model?: string | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          match_id?: number
+          generation_phase?: string
+          format?: string | null
+          hook?: string | null
+          title?: string | null
+          data_points?: unknown | null
+          narrative?: string | null
+          joueur_principal?: string | null
+          club_principal?: string | null
+          championnat?: string | null
+          score_viralite?: number | null
+          cta_tactuo?: string | null
+          urgence?: string | null
+          script_timecode?: string | null
+          prompt_elevenlabs?: string | null
+          prompts_visuels_ia?: unknown | null
+          sources_visuels_a_chercher?: unknown | null
+          instructions_capcut?: string | null
+          caption_tiktok?: string | null
+          hashtags?: string | null
+          status?: string
+          validated_at?: string | null
+          produced_at?: string | null
+          published_at?: string | null
+          rejected_reason?: string | null
+          url_tiktok?: string | null
+          url_instagram?: string | null
+          url_youtube?: string | null
+          vues_24h?: number | null
+          vues_7j?: number | null
+          ai_model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_angles_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
             referencedColumns: ["id"]
           },
         ]

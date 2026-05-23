@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Tactuo" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "Tactuo" [ref=e6]
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - searchbox "Rechercher une équipe ou un joueur" [ref=e12]
+        - navigation [ref=e13]:
+          - link "Matchs du jour" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - link "CDM 2026" [ref=e15] [cursor=pointer]:
+            - /url: /coupe-du-monde-2026
+          - link "Actu" [ref=e16] [cursor=pointer]:
+            - /url: /news
+          - link "Comparer" [ref=e17] [cursor=pointer]:
+            - /url: /compare
+          - link "Précision IA" [ref=e18] [cursor=pointer]:
+            - /url: /precision
+          - link "Quiz" [ref=e19] [cursor=pointer]:
+            - /url: /quiz
+          - generic [ref=e20]:
+            - link "Connexion" [ref=e21] [cursor=pointer]:
+              - /url: /login
+            - link "S'inscrire" [ref=e22] [cursor=pointer]:
+              - /url: /signup
+  - main [ref=e24]:
+    - paragraph [ref=e25]: Erreur inattendue
+    - heading "Quelque chose s'est cassé." [level=1] [ref=e26]
+    - paragraph [ref=e27]: On a noté l'erreur de notre côté. Tu peux essayer de recharger la page — si ça persiste, on regardera ça vite.
+    - paragraph [ref=e28]: "ref : 1171528027"
+    - generic [ref=e29]:
+      - button "Réessayer" [ref=e30]
+      - link "Retour à l'accueil" [ref=e31] [cursor=pointer]:
+        - /url: /
+  - contentinfo [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - img "Tactuo" [ref=e36]
+          - generic [ref=e37]: · L'analyse foot augmentée par l'IA.
+        - paragraph [ref=e38]: © 2026 Tactuo. Tous droits réservés.
+      - navigation [ref=e39]:
+        - link "À propos" [ref=e40] [cursor=pointer]:
+          - /url: /a-propos
+        - link "Méthodologie" [ref=e41] [cursor=pointer]:
+          - /url: /methodologie
+        - link "Mentions légales" [ref=e42] [cursor=pointer]:
+          - /url: /mentions-legales
+        - link "Confidentialité" [ref=e43] [cursor=pointer]:
+          - /url: /confidentialite
+  - alert [ref=e44]

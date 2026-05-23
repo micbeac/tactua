@@ -1,0 +1,596 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Tactuo" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "Tactuo" [ref=e6]
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - searchbox "Rechercher une équipe ou un joueur" [ref=e12]
+        - navigation [ref=e13]:
+          - link "Matchs du jour" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - link "CDM 2026" [ref=e15] [cursor=pointer]:
+            - /url: /coupe-du-monde-2026
+          - link "Actu" [ref=e16] [cursor=pointer]:
+            - /url: /news
+          - link "Comparer" [ref=e17] [cursor=pointer]:
+            - /url: /compare
+          - link "Précision IA" [ref=e18] [cursor=pointer]:
+            - /url: /precision
+          - link "Quiz" [ref=e19] [cursor=pointer]:
+            - /url: /quiz
+          - generic [ref=e20]:
+            - link "Connexion" [ref=e21] [cursor=pointer]:
+              - /url: /login
+            - link "S'inscrire" [ref=e22] [cursor=pointer]:
+              - /url: /signup
+  - generic [ref=e24]:
+    - generic [ref=e25]:
+      - generic:
+        - img
+        - img
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - img [ref=e29]
+            - text: Analyses augmentées par l’IA · Coupe du Monde 2026
+          - heading "Comprends chaque match avant le coup d’envoi." [level=1] [ref=e32]:
+            - generic [ref=e33]: Comprends
+            - generic [ref=e34]: chaque match
+            - generic [ref=e35]: avant le coup d’envoi.
+          - paragraph [ref=e36]: Notre IA croise stats détaillées, forme récente, compositions et confrontations directes pour te livrer une lecture tactique précise — sans jargon, sans chiffres dans tous les sens.
+          - generic [ref=e37]:
+            - link "Créer mon compte gratuit" [ref=e40] [cursor=pointer]:
+              - /url: /signup
+              - button "Créer mon compte gratuit" [ref=e41]:
+                - text: Créer mon compte gratuit
+                - img
+            - link "Voir un exemple d’analyse" [ref=e42] [cursor=pointer]:
+              - /url: "#demo"
+              - button "Voir un exemple d’analyse" [ref=e43]:
+                - img
+                - text: Voir un exemple d’analyse
+          - paragraph [ref=e44]: Premier 5 européen · Champions League · 48 sélections WC 2026 · 100 % gratuit jusqu’au lancement
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: "0"
+            - paragraph [ref=e50]: équipes trackées
+          - generic [ref=e51]:
+            - paragraph [ref=e52]:
+              - generic [ref=e53]: 0+
+            - paragraph [ref=e54]: joueurs avec stats
+          - generic [ref=e55]:
+            - paragraph [ref=e56]:
+              - generic [ref=e57]: ~0s
+            - paragraph [ref=e58]: pour une analyse
+          - generic [ref=e59]:
+            - paragraph [ref=e60]: "0"
+            - paragraph [ref=e61]: compétitions live
+    - generic [ref=e62]:
+      - paragraph [ref=e64]: Les clubs et compétitions que tu suis, déjà en base
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - img "Real Madrid" [ref=e68]
+          - generic [ref=e69]: Real Madrid
+        - generic [ref=e70]:
+          - img "FC Barcelona" [ref=e71]
+          - generic [ref=e72]: FC Barcelona
+        - generic [ref=e73]:
+          - img "Manchester City" [ref=e74]
+          - generic [ref=e75]: Manchester City
+        - generic [ref=e76]:
+          - img "Liverpool" [ref=e77]
+          - generic [ref=e78]: Liverpool
+        - generic [ref=e79]:
+          - img "Manchester United" [ref=e80]
+          - generic [ref=e81]: Manchester United
+        - generic [ref=e82]:
+          - img "Bayern München" [ref=e83]
+          - generic [ref=e84]: Bayern München
+        - generic [ref=e85]:
+          - img "Paris SG" [ref=e86]
+          - generic [ref=e87]: Paris SG
+        - generic [ref=e88]:
+          - img "Inter Milano" [ref=e89]
+          - generic [ref=e90]: Inter Milano
+        - generic [ref=e91]:
+          - img "Juventus" [ref=e92]
+          - generic [ref=e93]: Juventus
+        - generic [ref=e94]:
+          - img "AC Milan" [ref=e95]
+          - generic [ref=e96]: AC Milan
+        - generic [ref=e97]:
+          - img "Atlético Madrid" [ref=e98]
+          - generic [ref=e99]: Atlético Madrid
+        - generic [ref=e100]:
+          - img "Chelsea" [ref=e101]
+          - generic [ref=e102]: Chelsea
+        - generic [ref=e103]:
+          - img "Arsenal" [ref=e104]
+          - generic [ref=e105]: Arsenal
+        - generic [ref=e106]:
+          - img "Borussia Dortmund" [ref=e107]
+          - generic [ref=e108]: Borussia Dortmund
+        - generic [ref=e109]:
+          - img "Napoli" [ref=e110]
+          - generic [ref=e111]: Napoli
+        - generic [ref=e112]:
+          - img "Tottenham" [ref=e113]
+          - generic [ref=e114]: Tottenham
+        - generic [ref=e115]:
+          - img "AS Roma" [ref=e116]
+          - generic [ref=e117]: AS Roma
+        - generic [ref=e118]:
+          - img "Real Madrid" [ref=e119]
+          - generic [ref=e120]: Real Madrid
+        - generic [ref=e121]:
+          - img "FC Barcelona" [ref=e122]
+          - generic [ref=e123]: FC Barcelona
+        - generic [ref=e124]:
+          - img "Manchester City" [ref=e125]
+          - generic [ref=e126]: Manchester City
+        - generic [ref=e127]:
+          - img "Liverpool" [ref=e128]
+          - generic [ref=e129]: Liverpool
+        - generic [ref=e130]:
+          - img "Manchester United" [ref=e131]
+          - generic [ref=e132]: Manchester United
+        - generic [ref=e133]:
+          - img "Bayern München" [ref=e134]
+          - generic [ref=e135]: Bayern München
+        - generic [ref=e136]:
+          - img "Paris SG" [ref=e137]
+          - generic [ref=e138]: Paris SG
+        - generic [ref=e139]:
+          - img "Inter Milano" [ref=e140]
+          - generic [ref=e141]: Inter Milano
+        - generic [ref=e142]:
+          - img "Juventus" [ref=e143]
+          - generic [ref=e144]: Juventus
+        - generic [ref=e145]:
+          - img "AC Milan" [ref=e146]
+          - generic [ref=e147]: AC Milan
+        - generic [ref=e148]:
+          - img "Atlético Madrid" [ref=e149]
+          - generic [ref=e150]: Atlético Madrid
+        - generic [ref=e151]:
+          - img "Chelsea" [ref=e152]
+          - generic [ref=e153]: Chelsea
+        - generic [ref=e154]:
+          - img "Arsenal" [ref=e155]
+          - generic [ref=e156]: Arsenal
+        - generic [ref=e157]:
+          - img "Borussia Dortmund" [ref=e158]
+          - generic [ref=e159]: Borussia Dortmund
+        - generic [ref=e160]:
+          - img "Napoli" [ref=e161]
+          - generic [ref=e162]: Napoli
+        - generic [ref=e163]:
+          - img "Tottenham" [ref=e164]
+          - generic [ref=e165]: Tottenham
+        - generic [ref=e166]:
+          - img "AS Roma" [ref=e167]
+          - generic [ref=e168]: AS Roma
+    - generic [ref=e170]:
+      - generic [ref=e171]:
+        - paragraph [ref=e172]: Une vraie analyse, pas une fiche de stats
+        - heading "Ce qu'on te livre en 15 secondes" [level=2] [ref=e173]
+        - paragraph [ref=e174]: Verdict, scénarios, probabilités, comparaison statistique, formations, top joueurs, indisponibles, lecture tactique. Pas un chiffre brut sans contexte.
+      - generic [ref=e176]:
+        - generic [ref=e177]:
+          - generic [ref=e178]:
+            - img [ref=e179]
+            - heading "Analyse pré-match" [level=3] [ref=e183]
+          - generic [ref=e184]:
+            - generic [ref=e185]: Mode deep
+            - generic [ref=e186]: Démo
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - paragraph [ref=e189]: Serie A · Journée 38 · Stadio Renato Dall'Ara
+            - paragraph [ref=e190]: Bologna FC vs Inter Milano
+          - paragraph [ref=e191]: 23 mai 2026 · 16:00
+        - generic [ref=e192]:
+          - paragraph [ref=e193]: Prédiction
+          - paragraph [ref=e194]: L'Inter aborde ce déplacement à Bologne en favori clair. Leur supériorité statistique se traduit autant à l'avant qu'en défense, et la dynamique récente confirme la hiérarchie. Bologne reste capable d'inquiéter à domicile mais doit composer avec des absences qui pèsent.
+          - paragraph [ref=e195]: "Score plausible : 0 - 2"
+        - generic [ref=e196]:
+          - heading "Scénarios possibles" [level=4] [ref=e197]
+          - generic [ref=e198]:
+            - generic [ref=e199]:
+              - generic [ref=e200]:
+                - paragraph [ref=e201]: "Scénario #1 — Domination Inter, but tardif des visiteurs"
+                - generic [ref=e202]: Probabilité élevée
+              - paragraph [ref=e203]: Inter contrôle la possession dès l'entame et étouffe les sorties de balle adverses. Bologne tient le 0-0 jusqu'à la mi-temps mais cède sur un débordement de Dimarco. Lautaro double la mise dans le money time.
+            - generic [ref=e204]:
+              - generic [ref=e205]:
+                - paragraph [ref=e206]: "Scénario #2 — Match fermé décidé sur coup de pied arrêté"
+                - generic [ref=e207]: Probabilité moyenne
+              - paragraph [ref=e208]: Bologne défend bas et limite l'Inter à la tentative lointaine. Le match s'enlise puis bascule sur un corner pour les visiteurs. 0-1, Inter gère.
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - paragraph [ref=e211]: "Scénario #3 — Bologne réagit, partage des points"
+                - generic [ref=e212]: Probabilité faible
+              - paragraph [ref=e213]: Orsolini s'allume tôt et trouve la lucarne, mettant Bologne devant. L'Inter égalise rapidement et la fin de match s'équilibre. Nul logique.
+        - generic [ref=e214]:
+          - heading "Probabilités d'issue" [level=4] [ref=e215]:
+            - img [ref=e216]
+            - text: Probabilités d'issue
+          - generic [ref=e222]:
+            - generic [ref=e224]:
+              - generic [ref=e225]: Bologna FC 1909 (dom.)
+              - generic [ref=e226]: 15%
+            - generic [ref=e230]:
+              - generic [ref=e231]: Match nul
+              - generic [ref=e232]: 20%
+            - generic [ref=e236]:
+              - generic [ref=e237]: FC Internazionale Milano (ext.)
+              - generic [ref=e238]: 65%
+        - generic [ref=e241]:
+          - generic [ref=e242]:
+            - paragraph [ref=e243]:
+              - img [ref=e244]
+              - text: Les 2 équipes marquent
+            - paragraph [ref=e248]: Non
+            - paragraph [ref=e249]: 18 clean sheets cette saison côté Inter, Bologne muet 11 fois.
+          - generic [ref=e250]:
+            - paragraph [ref=e251]:
+              - img [ref=e252]
+              - text: Plus de 2.5 buts
+            - paragraph [ref=e255]: Oui
+            - paragraph [ref=e256]: Inter cumule 2,3 buts/match cette saison, et 4 des 5 derniers ont dépassé 2,5 buts.
+        - generic [ref=e257]:
+          - heading "Confiance de l'IA" [level=4] [ref=e258]:
+            - img [ref=e259]
+            - text: Confiance de l'IA
+          - paragraph [ref=e263]: Élevée
+        - generic [ref=e264]:
+          - heading "Ce que disent les chiffres" [level=4] [ref=e265]
+          - paragraph [ref=e266]: Le différentiel offensif est massif (+92 % de buts pour l'Inter) mais le facteur déterminant reste la fragilité défensive bolognaise à domicile (1,5 but encaissé/match). Les indisponibles côté maison amplifient ce déséquilibre.
+        - paragraph [ref=e268]: ◆ Données détaillées ◆
+        - generic [ref=e269]:
+          - heading "Comparaison statistique" [level=4] [ref=e270]:
+            - img [ref=e271]
+            - text: Comparaison statistique
+          - generic [ref=e273]:
+            - generic [ref=e274]:
+              - generic [ref=e275]: Bologna
+              - generic [ref=e276]: Statistique
+              - generic [ref=e277]: Inter
+            - generic [ref=e278]:
+              - generic [ref=e279]: "1.2"
+              - generic [ref=e280]: Buts/match (saison)
+              - generic [ref=e281]: "2.3"
+            - generic [ref=e282]:
+              - generic [ref=e283]: "1.5"
+              - generic [ref=e284]: Buts encaissés/match
+              - generic [ref=e285]: "0.9"
+            - generic [ref=e286]:
+              - generic [ref=e287]: "8"
+              - generic [ref=e288]: Clean sheets
+              - generic [ref=e289]: "18"
+            - generic [ref=e290]:
+              - generic [ref=e291]: 4V-2N-4D
+              - generic [ref=e292]: Forme (10 derniers)
+              - generic [ref=e293]: 8V-1N-1D
+            - generic [ref=e294]:
+              - generic [ref=e295]: 47 %
+              - generic [ref=e296]: Possession moyenne
+              - generic [ref=e297]: 58 %
+        - generic [ref=e298]:
+          - heading "Comparaison globale" [level=4] [ref=e299]:
+            - img [ref=e300]
+            - text: Comparaison globale
+          - generic [ref=e306]:
+            - generic [ref=e307]:
+              - generic [ref=e310]: Bologna FC 1909
+              - generic [ref=e313]: FC Internazionale Milano
+            - img [ref=e314]:
+              - generic [ref=e339]: Attaque
+              - generic [ref=e340]: Défense
+              - generic [ref=e341]: Forme
+              - generic [ref=e342]: Régularité
+              - generic [ref=e343]: Globale
+            - generic [ref=e345]:
+              - generic [ref=e346]:
+                - paragraph [ref=e347]: Attaque
+                - paragraph [ref=e348]: "58"
+                - paragraph [ref=e349]: "82"
+              - generic [ref=e350]:
+                - paragraph [ref=e351]: Défense
+                - paragraph [ref=e352]: "62"
+                - paragraph [ref=e353]: "88"
+              - generic [ref=e354]:
+                - paragraph [ref=e355]: Forme
+                - paragraph [ref=e356]: "45"
+                - paragraph [ref=e357]: "86"
+              - generic [ref=e358]:
+                - paragraph [ref=e359]: Régularité
+                - paragraph [ref=e360]: "71"
+                - paragraph [ref=e361]: "79"
+              - generic [ref=e362]:
+                - paragraph [ref=e363]: Globale
+                - paragraph [ref=e364]: "59"
+                - paragraph [ref=e365]: "82"
+        - generic [ref=e366]:
+          - heading "Forme récente · 5 derniers" [level=4] [ref=e367]:
+            - img [ref=e368]
+            - text: Forme récente · 5 derniers
+          - generic [ref=e371]:
+            - generic [ref=e372]:
+              - generic [ref=e373]:
+                - generic [ref=e374]: Bologna
+                - generic [ref=e375]: 2V-1N-2D
+              - generic [ref=e376]:
+                - generic [ref=e377]: W
+                - generic [ref=e378]: W
+                - generic [ref=e379]: D
+                - generic [ref=e380]: L
+                - generic [ref=e381]: L
+            - generic [ref=e382]:
+              - generic [ref=e383]:
+                - generic [ref=e384]: Inter
+                - generic [ref=e385]: 3V-2N-0D
+              - generic [ref=e386]:
+                - generic [ref=e387]: W
+                - generic [ref=e388]: D
+                - generic [ref=e389]: W
+                - generic [ref=e390]: W
+                - generic [ref=e391]: D
+        - generic [ref=e392]:
+          - heading "Confrontations directes · 15 matchs" [level=4] [ref=e393]:
+            - img [ref=e394]
+            - text: Confrontations directes · 15 matchs
+          - generic [ref=e403]:
+            - generic [ref=e404]:
+              - paragraph [ref=e405]: "3"
+              - paragraph [ref=e406]: Bologna
+            - generic [ref=e407]:
+              - paragraph [ref=e408]: "4"
+              - paragraph [ref=e409]: Nuls
+            - generic [ref=e410]:
+              - paragraph [ref=e411]: "8"
+              - paragraph [ref=e412]: Inter
+        - generic [ref=e413]:
+          - heading "Formations type" [level=4] [ref=e414]:
+            - img [ref=e415]
+            - text: Formations type
+          - generic [ref=e420]:
+            - generic [ref=e421]:
+              - generic [ref=e422]: Bologna — 4-2-3-1
+              - img [ref=e423]
+            - generic [ref=e437]:
+              - generic [ref=e438]: Inter — 3-5-2
+              - img [ref=e439]
+        - generic [ref=e453]:
+          - heading "Top joueurs saison" [level=4] [ref=e454]:
+            - img [ref=e455]
+            - text: Top joueurs saison
+          - generic [ref=e457]:
+            - generic [ref=e458]:
+              - paragraph [ref=e459]: Bologna
+              - generic [ref=e460]:
+                - generic [ref=e461]: AD
+                - generic [ref=e462]:
+                  - paragraph [ref=e463]: R. Orsolini
+                  - paragraph [ref=e464]: 31 titu · 10b/8a · 47 passes clés
+                - generic [ref=e465]: "7.1"
+              - generic [ref=e466]:
+                - generic [ref=e467]: MC
+                - generic [ref=e468]:
+                  - paragraph [ref=e469]: L. Ferguson(C)
+                  - paragraph [ref=e470]: 28 titu · 7b/4a · 32 passes clés
+                - generic [ref=e471]: "7.0"
+            - generic [ref=e472]:
+              - paragraph [ref=e473]: Inter
+              - generic [ref=e474]:
+                - generic [ref=e475]: BU
+                - generic [ref=e476]:
+                  - paragraph [ref=e477]: Lautaro Martínez(C)
+                  - paragraph [ref=e478]: 34 titu · 17b/5a · 41 passes clés
+                - generic [ref=e479]: "7.6"
+              - generic [ref=e480]:
+                - generic [ref=e481]: MC
+                - generic [ref=e482]:
+                  - paragraph [ref=e483]: N. Barella
+                  - paragraph [ref=e484]: 30 titu · 4b/9a · 55 passes clés
+                - generic [ref=e485]: "7.4"
+        - generic [ref=e486]:
+          - heading "Indisponibles (4)" [level=4] [ref=e487]:
+            - img [ref=e488]
+            - text: Indisponibles (4)
+          - generic [ref=e491]:
+            - generic [ref=e492]:
+              - paragraph [ref=e493]: Bologna
+              - list [ref=e494]:
+                - listitem [ref=e495]:
+                  - text: Calafiori
+                  - generic [ref=e496]: — suspendu
+                - listitem [ref=e497]:
+                  - text: Saelemaekers
+                  - generic [ref=e498]: — blessure cuisse
+                - listitem [ref=e499]:
+                  - text: El Azzouzi
+                  - generic [ref=e500]: — reprise individuelle
+            - generic [ref=e501]:
+              - paragraph [ref=e502]: Inter
+              - list [ref=e503]:
+                - listitem [ref=e504]:
+                  - text: Acerbi
+                  - generic [ref=e505]: — blessure mollet
+        - generic [ref=e506]:
+          - heading "Tactique" [level=4] [ref=e507]
+          - generic [ref=e508]:
+            - generic [ref=e509]:
+              - paragraph [ref=e510]: Bologna (dom.)
+              - paragraph [ref=e511]: Bologne va défendre bas dans un 4-2-3-1 compact, comptant sur les transitions rapides via Orsolini sur le côté droit pour exploiter l'espace dans le dos d'Acerbi.
+            - generic [ref=e512]:
+              - paragraph [ref=e513]: Inter (ext.)
+              - paragraph [ref=e514]: L'Inter prend la possession dans son 3-5-2 habituel, avec Dimarco-Dumfries qui apportent la largeur et Calhanoglu qui distribue depuis l'axe.
+          - paragraph [ref=e515]: "Duel clé : Lautaro Martínez vs Calafiori absent : la défense bolognaise est rebattue, ouvrant des couloirs centraux que l'Inter sait exploiter."
+        - generic [ref=e516]:
+          - heading "Lecture de la forme" [level=4] [ref=e517]
+          - generic [ref=e518]:
+            - generic [ref=e519]:
+              - paragraph [ref=e520]: Bologna
+              - paragraph [ref=e521]: Bologne sort d'une série mitigée (2V-1N-2D sur 5) avec deux défaites consécutives à l'extérieur. À domicile la dynamique est meilleure mais les blessures pèsent.
+            - generic [ref=e522]:
+              - paragraph [ref=e523]: Inter
+              - paragraph [ref=e524]: L'Inter aligne 4 victoires sur les 5 derniers matchs et n'a encaissé qu'un seul but sur cette série. Confiance et automatismes en place.
+        - generic [ref=e525]:
+          - heading "Joueurs à surveiller" [level=4] [ref=e526]:
+            - img [ref=e527]
+            - text: Joueurs à surveiller
+          - generic [ref=e532]:
+            - generic [ref=e533]:
+              - paragraph [ref=e534]: Bologna
+              - list [ref=e535]:
+                - listitem [ref=e536]: R. Orsolini — Principal danger offensif, capable de débloquer sur action individuelle. Sa forme dépendra de la qualité de couverture défensive bolognaise.
+            - generic [ref=e537]:
+              - paragraph [ref=e538]: Inter
+              - list [ref=e539]:
+                - listitem [ref=e540]: Lautaro Martínez — Capitaine et premier buteur de la saison, profitera de l'absence de Calafiori pour attaquer la profondeur.
+                - listitem [ref=e541]: "N. Barella — Récupération + projection : il dictera le tempo des transitions inter-lignes."
+        - generic [ref=e542]:
+          - heading "Points faibles" [level=4] [ref=e543]
+          - generic [ref=e544]:
+            - generic [ref=e545]:
+              - paragraph [ref=e546]: Bologna
+              - paragraph [ref=e547]: 11 matchs sans marquer cette saison, dont 4 à domicile. La perte de Calafiori désorganise la charnière centrale au pire moment.
+            - generic [ref=e548]:
+              - paragraph [ref=e549]: Inter
+              - paragraph [ref=e550]: 3 défaites sur 18 matchs à l'extérieur. L'Inter peut relâcher quand la victoire semble acquise et se faire surprendre en fin de rencontre.
+        - paragraph [ref=e551]: Démonstration · Basée sur la sortie réelle d'une analyse pré-match deep · GPT-4o-mini
+    - generic [ref=e553]:
+      - generic [ref=e554]:
+        - paragraph [ref=e555]: Comment ça marche
+        - heading "Trois étapes, zéro effort" [level=2] [ref=e556]
+        - paragraph [ref=e557]: Tu n’as plus à éplucher les stats joueur par joueur. Le travail d’analyste est fait pour toi.
+      - generic [ref=e558]:
+        - generic [ref=e559]:
+          - generic [ref=e560]:
+            - img [ref=e561]
+            - generic [ref=e567]: "1"
+          - heading "Choisis un match" [level=3] [ref=e568]
+          - paragraph [ref=e569]: Top 5 européen, Champions League, Coupe du Monde 2026 — clique sur la fiche du match qui t’intéresse.
+        - generic [ref=e570]:
+          - generic [ref=e571]:
+            - img [ref=e572]
+            - generic [ref=e580]: "2"
+          - heading "L’IA fait le travail" [level=3] [ref=e581]
+          - paragraph [ref=e582]: Elle croise 50+ stats par équipe, forme récente, H2H, indisponibles et compositions officielles dès qu’elles sortent.
+        - generic [ref=e583]:
+          - generic [ref=e584]:
+            - img [ref=e585]
+            - generic [ref=e588]: "3"
+          - heading "Reçois ta lecture en 15s" [level=3] [ref=e589]
+          - paragraph [ref=e590]: 3 scénarios narrés, probabilités, points forts/faibles de chaque équipe. Tout est expliqué, rien à recroiser.
+    - generic [ref=e592]:
+      - generic [ref=e593]:
+        - paragraph [ref=e594]: Couverture
+        - heading "Tout ce qui compte, en un seul endroit" [level=2] [ref=e595]
+      - generic [ref=e596]:
+        - generic [ref=e597]:
+          - generic [ref=e598]: 🏴󠁧󠁢󠁥󠁮󠁧󠁿
+          - generic [ref=e599]: Premier League
+        - generic [ref=e600]:
+          - generic [ref=e601]: 🇪🇸
+          - generic [ref=e602]: La Liga
+        - generic [ref=e603]:
+          - generic [ref=e604]: 🇮🇹
+          - generic [ref=e605]: Serie A
+        - generic [ref=e606]:
+          - generic [ref=e607]: 🇩🇪
+          - generic [ref=e608]: Bundesliga
+        - generic [ref=e609]:
+          - generic [ref=e610]: 🇫🇷
+          - generic [ref=e611]: Ligue 1
+        - generic [ref=e612]:
+          - generic [ref=e613]: 🇧🇪
+          - generic [ref=e614]: Jupiler Pro League
+        - generic [ref=e615]:
+          - generic [ref=e616]: 🇪🇺
+          - generic [ref=e617]: Champions League
+        - generic [ref=e618]:
+          - generic [ref=e619]: 🌍
+          - generic [ref=e620]: Coupe du Monde 2026
+      - generic [ref=e621]:
+        - generic [ref=e622]:
+          - img [ref=e624]
+          - heading "7 compétitions majeures" [level=3] [ref=e630]
+          - paragraph [ref=e631]: Top 5 européen, Champions League et toute la Coupe du Monde 2026.
+        - generic [ref=e632]:
+          - img [ref=e634]
+          - heading "3 200+ joueurs trackés" [level=3] [ref=e639]
+          - paragraph [ref=e640]: Stats saison, ratings par match, blessures, transferts. Tout est en base.
+        - generic [ref=e641]:
+          - img [ref=e643]
+          - heading "Données fraîches" [level=3] [ref=e645]
+          - paragraph [ref=e646]: Scores live, compositions officielles dès leur sortie, classements à jour.
+        - generic [ref=e647]:
+          - img [ref=e649]
+          - heading "Multi-source" [level=3] [ref=e652]
+          - paragraph [ref=e653]: Football-Data, API-Football Pro et OpenAI gpt-4o-mini pour la synthèse.
+    - generic [ref=e655]:
+      - generic [ref=e656]:
+        - paragraph [ref=e657]: Questions fréquentes
+        - heading "Tout ce que tu veux savoir" [level=2] [ref=e658]
+      - generic [ref=e659]:
+        - generic [ref=e660]:
+          - button "Comment fonctionne l’IA ?" [ref=e661]:
+            - generic [ref=e662]: Comment fonctionne l’IA ?
+            - img [ref=e663]
+          - paragraph [ref=e667]: "On combine plusieurs sources de données football (stats équipes, performances joueurs, blessures, compositions), puis on les passe à un modèle GPT-4o-mini avec des consignes strictes. Le modèle ne devine rien : il synthétise ce que les chiffres disent."
+        - generic [ref=e668]:
+          - button "C’est gratuit ?" [ref=e669]:
+            - generic [ref=e670]: C’est gratuit ?
+            - img [ref=e671]
+          - paragraph [ref=e672]: Oui, totalement jusqu’au lancement public de Tactuo (juin 2026). Ensuite, un plan free avec quelques analyses par jour et un plan payant pour les analyses illimitées et détaillées.
+        - generic [ref=e673]:
+          - button "Est-ce que c’est une app de paris sportifs ?" [ref=e674]:
+            - generic [ref=e675]: Est-ce que c’est une app de paris sportifs ?
+            - img [ref=e676]
+          - paragraph [ref=e677]: "Non. Tactuo positionne l’analyse comme un outil de compréhension : \"voici tout ce qu’il faut savoir avant le match\". On donne des probabilités et des scénarios, jamais de conseil de pari."
+        - generic [ref=e678]:
+          - button "Quelles compétitions sont couvertes ?" [ref=e679]:
+            - generic [ref=e680]: Quelles compétitions sont couvertes ?
+            - img [ref=e681]
+          - paragraph [ref=e682]: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League et toute la Coupe du Monde 2026 (48 sélections). D’autres compétitions arriveront après le lancement.
+        - generic [ref=e683]:
+          - button "Mes données sont-elles fiables ?" [ref=e684]:
+            - generic [ref=e685]: Mes données sont-elles fiables ?
+            - img [ref=e686]
+          - paragraph [ref=e687]: Football-Data.org pour la structure (calendrier, classements), API-Football Pro pour les stats détaillées et compositions officielles. Mises à jour quotidiennes.
+    - generic [ref=e689]:
+      - generic [ref=e690]:
+        - img [ref=e691]
+        - text: Coupe du Monde 2026 · 11 juin
+      - heading "Prêt à analyser tes matchs autrement ?" [level=2] [ref=e694]
+      - paragraph [ref=e695]: Crée ton compte gratuit. Suis tes équipes, génère tes analyses, sois prêt pour le coup d’envoi du 11 juin.
+      - generic [ref=e696]:
+        - link "Créer mon compte gratuit" [ref=e697] [cursor=pointer]:
+          - /url: /signup
+          - button "Créer mon compte gratuit" [ref=e698]:
+            - text: Créer mon compte gratuit
+            - img
+        - link "J’ai déjà un compte" [ref=e699] [cursor=pointer]:
+          - /url: /login
+          - button "J’ai déjà un compte" [ref=e700]
+  - contentinfo [ref=e701]:
+    - generic [ref=e702]:
+      - generic [ref=e703]:
+        - generic [ref=e704]:
+          - img "Tactuo" [ref=e705]
+          - generic [ref=e706]: · L'analyse foot augmentée par l'IA.
+        - paragraph [ref=e707]: © 2026 Tactuo. Tous droits réservés.
+      - navigation [ref=e708]:
+        - link "À propos" [ref=e709] [cursor=pointer]:
+          - /url: /a-propos
+        - link "Méthodologie" [ref=e710] [cursor=pointer]:
+          - /url: /methodologie
+        - link "Mentions légales" [ref=e711] [cursor=pointer]:
+          - /url: /mentions-legales
+        - link "Confidentialité" [ref=e712] [cursor=pointer]:
+          - /url: /confidentialite
+  - alert [ref=e713]
