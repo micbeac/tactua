@@ -88,28 +88,59 @@ export function buildSportsEventJsonLd(args: {
       ? 'https://schema.org/EventCancelled'
       : args.status === 'postponed'
         ? 'https://schema.org/EventPostponed'
-        : args.status === 'finished'
-          ? 'https://schema.org/EventScheduled'
-          : 'https://schema.org/EventScheduled';
+        : 'https://schema.org/EventScheduled';
+
+  const homeName = home?.name ?? 'Domicile';
+  const awayName = away?.name ?? 'Extérieur';
+  const name = `${homeName} vs ${awayName}`;
+  const url = `${SITE_URL}/matches/${args.match_id}`;
+  const competitionName = args.competition_name ?? 'Football';
+
+  // Durée estimée d'un match : 2 h. Sert d'endDate raisonnable pour Google.
+  const startTs = new Date(args.kickoff_at_iso).getTime();
+  const endDate = Number.isFinite(startTs)
+    ? new Date(startTs + 2 * 60 * 60 * 1000).toISOString()
+    : undefined;
+
+  // Image principale : logo équipe domicile, puis extérieur, puis OG du site.
+  const image = home?.logo_url ?? away?.logo_url ?? `${SITE_URL}/logo.png`;
+
+  // performer : les deux équipes en SportsTeam (champ recommandé Google).
+  const performer = [home, away]
+    .filter((t): t is TeamRef => Boolean(t))
+    .map((t) => ({
+      '@type': 'SportsTeam',
+      name: t.name,
+      ...(t.logo_url && { logo: t.logo_url }),
+    }));
 
   return {
     '@context': 'https://schema.org',
     '@type': 'SportsEvent',
-    name: `${home?.name ?? 'Domicile'} vs ${away?.name ?? 'Extérieur'}`,
-    url: `${SITE_URL}/matches/${args.match_id}`,
+    name,
+    url,
+    description: `${homeName} affronte ${awayName} en ${competitionName}. Compositions, score et analyse tactique sur Tactuo.`,
     startDate: args.kickoff_at_iso,
+    ...(endDate && { endDate }),
     eventStatus,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     sport: 'Football',
+    image,
+    // location : toujours présent (champ critique pour Google). Fallback
+    // sur un Place générique quand le stade n'est pas renseigné en base.
+    location: {
+      '@type': 'Place',
+      name: args.venue ?? 'Stade à confirmer',
+    },
+    organizer: {
+      '@type': 'SportsOrganization',
+      name: args.competition_name ?? SITE_NAME,
+    },
+    ...(performer.length > 0 && { performer }),
     ...(args.competition_name && {
       superEvent: {
         '@type': 'SportsEvent',
         name: args.competition_name,
-      },
-    }),
-    ...(args.venue && {
-      location: {
-        '@type': 'Place',
-        name: args.venue,
       },
     }),
     ...(home && {

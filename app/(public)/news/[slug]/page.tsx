@@ -244,9 +244,10 @@ export default async function NewsPage({
     : '';
 
   // Crumbs : Accueil > Actualités > [Équipe] > [Titre]
+  // Tous les crumbs ont un href : Google rejette les ListItems sans item.
   const crumbs = [
     { label: 'Accueil', href: '/' },
-    { label: 'Actualités' },
+    { label: 'Actualités', href: '/news' },
     ...(team
       ? [
           {
@@ -317,7 +318,7 @@ export default async function NewsPage({
         }}
       />
 
-      <NewsBreadcrumb crumbs={crumbs} />
+      <NewsBreadcrumb crumbs={crumbs} current_url={url} />
 
       <article>
         {/* Hero avec logo équipe en grand */}
