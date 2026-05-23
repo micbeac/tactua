@@ -148,16 +148,19 @@ function WatchlistCard({ match }: { match: WatchlistMatch }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className={`rounded-xl border p-4 transition-all ${borderClass}`}
+      className={`w-full max-w-full overflow-hidden rounded-xl border p-4 transition-all ${borderClass}`}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] tracking-wide uppercase">
-          <Calendar className="size-3" aria-hidden />
-          {match.competition_name ?? '—'}
-          {match.matchday != null && ` · J${match.matchday}`}
+      {/* Header : nom compétition (truncate) + badge countdown (shrink-0) */}
+      <div className="mb-3 flex min-w-0 items-center justify-between gap-2">
+        <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[10px] tracking-wide uppercase">
+          <Calendar className="size-3 shrink-0" aria-hidden />
+          <span className="truncate">
+            {match.competition_name ?? '—'}
+            {match.matchday != null && ` · J${match.matchday}`}
+          </span>
         </p>
         <div
-          className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
+          className={`flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${
             cd.urgent
               ? 'bg-primary text-primary-foreground'
               : cd.imminent
@@ -172,24 +175,24 @@ function WatchlistCard({ match }: { match: WatchlistMatch }) {
 
       <Link
         href={matchHref(match.id)}
-        className="hover:bg-muted/30 -mx-2 mb-3 flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors"
+        className="hover:bg-muted/30 -mx-2 mb-3 flex min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors"
       >
         <TeamLogo team={match.home} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{match.home.name}</p>
         </div>
-        <span className="text-muted-foreground text-xs">vs</span>
+        <span className="text-muted-foreground shrink-0 text-xs">vs</span>
         <div className="min-w-0 flex-1 text-right">
           <p className="truncate text-sm font-semibold">{match.away.name}</p>
         </div>
         <TeamLogo team={match.away} />
       </Link>
 
-      <div className="text-muted-foreground flex items-center justify-between text-xs">
-        <span className="tabular-nums">
+      <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
+        <span className="min-w-0 truncate tabular-nums">
           {date} · {time}
         </span>
-        <Link href={`${matchHref(match.id)}#analyse`}>
+        <Link href={`${matchHref(match.id)}#analyse`} className="shrink-0">
           <Button size="sm" variant={cd.imminent ? 'default' : 'outline'}>
             <Sparkles className="mr-1 size-3.5" aria-hidden />
             {cd.past ? "Voir l'analyse" : 'Analyser'}
