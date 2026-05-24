@@ -45,6 +45,7 @@ export async function getPostMatchPerformance(
   matchId: number,
   homeTeamId: number | null,
   awayTeamId: number | null,
+  options: { top_n?: number | null } = {},
 ): Promise<PostMatchPerformance> {
   const [statsRes, lineupsRes, eventsRes] = await Promise.all([
     supabase
@@ -153,9 +154,10 @@ export async function getPostMatchPerformance(
     })
     .sort((a, b) => a.minute - b.minute);
 
+  const topN = options.top_n === undefined ? 6 : options.top_n;
   return {
-    home_performers: homePerf.slice(0, 6),
-    away_performers: awayPerf.slice(0, 6),
+    home_performers: topN == null ? homePerf : homePerf.slice(0, topN),
+    away_performers: topN == null ? awayPerf : awayPerf.slice(0, topN),
     goal_events: goalEvents,
   };
 }

@@ -13,7 +13,9 @@ import {
   MatchLineupSection,
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
+import { MatchPlayerRatingsSection } from '@/components/match/MatchPlayerRatingsSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
+import { getPostMatchPerformance } from '@/lib/data/match-performance';
 import { LiveAutoRefresh } from '@/components/match/LiveAutoRefresh';
 import {
   LiveEventTimeline,
@@ -229,6 +231,15 @@ export default async function MatchPage({ params }: MatchPageParams) {
   const homeStats = teamStats.find((s) => s.team_id === homeId) ?? null;
   const awayStats = teamStats.find((s) => s.team_id === awayId) ?? null;
   const showStats = match.status === 'live' || match.status === 'finished';
+
+  // Notes des joueurs (post-match seulement). Renvoie vide si match_player_stats
+  // n'a pas encore été enrichi via /fixtures/players API-Football.
+  const postPerformance =
+    match.status === 'finished'
+      ? await getPostMatchPerformance(supabase, matchId, homeId, awayId, {
+          top_n: null,
+        })
+      : null;
 
   // Contexte d'avant-match (fraîcheur / classement / xG) — pur DB.
   // Affiché uniquement avant ou pendant le match.
@@ -570,6 +581,15 @@ export default async function MatchPage({ params }: MatchPageParams) {
           }}
           home_stats={homeStats}
           away_stats={awayStats}
+        />
+      )}
+
+      {postPerformance && (
+        <MatchPlayerRatingsSection
+          home_team_name={match.home_team?.name ?? 'Domicile'}
+          away_team_name={match.away_team?.name ?? 'Extérieur'}
+          home_performers={postPerformance.home_performers}
+          away_performers={postPerformance.away_performers}
         />
       )}
 
