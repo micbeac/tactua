@@ -13,9 +13,11 @@ import {
   MatchLineupSection,
   type TeamLineup,
 } from '@/components/match/MatchLineupSection';
+import { MatchIntlScorersSection } from '@/components/match/MatchIntlScorersSection';
 import { MatchPlayerRatingsSection } from '@/components/match/MatchPlayerRatingsSection';
 import { MatchStatsSection } from '@/components/match/MatchStatsSection';
 import { getPostMatchPerformance } from '@/lib/data/match-performance';
+import { getTeamTopIntlScorers } from '@/lib/data/team-intl-scorers';
 import { LiveAutoRefresh } from '@/components/match/LiveAutoRefresh';
 import {
   LiveEventTimeline,
@@ -240,6 +242,17 @@ export default async function MatchPage({ params }: MatchPageParams) {
           top_n: null,
         })
       : null;
+
+  // Top scoreurs en sélection (carrière) — visible si au moins une des deux
+  // équipes est une sélection nationale (national_team_squads peuplé).
+  const [homeIntlScorers, awayIntlScorers] = await Promise.all([
+    homeId != null
+      ? getTeamTopIntlScorers(supabase, homeId, 5)
+      : Promise.resolve([]),
+    awayId != null
+      ? getTeamTopIntlScorers(supabase, awayId, 5)
+      : Promise.resolve([]),
+  ]);
 
   // Contexte d'avant-match (fraîcheur / classement / xG) — pur DB.
   // Affiché uniquement avant ou pendant le match.
@@ -592,6 +605,13 @@ export default async function MatchPage({ params }: MatchPageParams) {
           away_performers={postPerformance.away_performers}
         />
       )}
+
+      <MatchIntlScorersSection
+        home_team_name={match.home_team?.name ?? 'Domicile'}
+        away_team_name={match.away_team?.name ?? 'Extérieur'}
+        home_scorers={homeIntlScorers}
+        away_scorers={awayIntlScorers}
+      />
 
       <MatchTeamsNewsSection
         home={
