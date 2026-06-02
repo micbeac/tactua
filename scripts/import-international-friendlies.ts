@@ -112,21 +112,35 @@ async function main() {
     if (r.away_team_id != null) wcDbTeamIds.add(r.away_team_id);
   }
 
-  // Map DB team_id → AF team_id
-  const { data: teamRows } = await supabase
+  // Map DB team_id → AF team_id (uniquement les sélections CDM, sert au filtre)
+  const { data: wcTeamRows } = await supabase
     .from('teams')
     .select('id, api_football_id, name')
     .in('id', Array.from(wcDbTeamIds))
     .not('api_football_id', 'is', null);
 
   type TeamRow = { id: number; api_football_id: number | null; name: string };
+  const wcAfIds = new Set<number>();
+  for (const t of (wcTeamRows ?? []) as TeamRow[]) {
+    if (t.api_football_id != null) wcAfIds.add(t.api_football_id);
+  }
+  console.log(`  ${wcAfIds.size} sélections nationales CDM`);
+
+  // Map global AF team_id → DB team_id pour TOUTES les équipes connues
+  // (clubs Top 5, sélections, etc.). Sert à résoudre les adversaires des
+  // amicaux qui peuvent être hors CDM (Pays de Galles, Andorre…).
+  const { data: allTeams } = await supabase
+    .from('teams')
+    .select('id, api_football_id, name')
+    .not('api_football_id', 'is', null)
+    .limit(20000);
   const afToDb = new Map<number, { id: number; name: string }>();
-  for (const t of (teamRows ?? []) as TeamRow[]) {
+  for (const t of (allTeams ?? []) as TeamRow[]) {
     if (t.api_football_id != null) {
       afToDb.set(t.api_football_id, { id: t.id, name: t.name });
     }
   }
-  console.log(`  ${afToDb.size} sélections nationales mappées AF↔DB`);
+  console.log(`  ${afToDb.size} équipes connues en base (toutes confondues)`);
 
   // 2) Fetch toutes les fixtures du league friendlies
   const json = await af<FixturesResponse>(
@@ -152,7 +166,38 @@ async function main() {
     ht_away: number | null;
   }> = [];
 
+  // Offset pour les nouvelles équipes hors top-5 / hors CDM (ex : sélections
+  // non-qualifiées qui ne sont qu'adversaires d'amicaux). Évite la collision
+  // avec les ids FD existants.
+  const NEW_TEAM_OFFSET = 50000;
+
+  async function ensureTeamInDb(afTeam: {
+    id: number;
+    name: string;
+  }): Promise<{ id: number; name: string } | null> {
+    const existing = afToDb.get(afTeam.id);
+    if (existing) return existing;
+    // Crée à la volée une entrée minimale.
+    const dbId = afTeam.id + NEW_TEAM_OFFSET;
+    const { error } = await supabase.from('teams').upsert(
+      {
+        id: dbId,
+        name: afTeam.name,
+        api_football_id: afTeam.id,
+      },
+      { onConflict: 'id' },
+    );
+    if (error) {
+      console.error(`  ✗ create team ${afTeam.name}: ${error.message}`);
+      return null;
+    }
+    const entry = { id: dbId, name: afTeam.name };
+    afToDb.set(afTeam.id, entry);
+    return entry;
+  }
+
   let skipped = 0;
+  let createdTeams = 0;
   for (const fx of json.response) {
     const ts = Date.parse(fx.fixture.date);
     if (!Number.isFinite(ts)) continue;
@@ -160,8 +205,24 @@ async function main() {
       skipped += 1;
       continue;
     }
-    const home = afToDb.get(fx.teams.home.id);
-    const away = afToDb.get(fx.teams.away.id);
+    // Au moins une des deux équipes doit être une sélection CDM
+    const homeIsWc = wcAfIds.has(fx.teams.home.id);
+    const awayIsWc = wcAfIds.has(fx.teams.away.id);
+    if (!homeIsWc && !awayIsWc) {
+      skipped += 1;
+      continue;
+    }
+    // Résout l'équipe domicile (ou crée à la volée si inconnue)
+    let home = afToDb.get(fx.teams.home.id) ?? null;
+    if (!home) {
+      home = await ensureTeamInDb(fx.teams.home);
+      if (home) createdTeams += 1;
+    }
+    let away = afToDb.get(fx.teams.away.id) ?? null;
+    if (!away) {
+      away = await ensureTeamInDb(fx.teams.away);
+      if (away) createdTeams += 1;
+    }
     if (!home || !away) {
       skipped += 1;
       continue;
@@ -179,7 +240,9 @@ async function main() {
       ht_away: fx.score.halftime?.away ?? null,
     });
   }
-  console.log(`  ${candidates.length} match(s) retenu(s) (${skipped} ignoré(s))`);
+  console.log(
+    `  ${candidates.length} match(s) retenu(s) (${skipped} ignoré(s), ${createdTeams} équipe(s) auto-créée(s))`,
+  );
 
   // 4) Upsert dans matches. On utilise l'AF fixture id comme matches.id pour
   // éviter de gérer les collisions avec les ids FD (ranges très différents).
