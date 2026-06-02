@@ -104,6 +104,90 @@ function wcToCard(m: WCMatch): MatchCardProps {
   };
 }
 
+type FriendlyTeam = {
+  id: number;
+  name: string;
+  tla: string | null;
+  logo_url: string | null;
+} | null;
+
+function FriendlyCard({
+  m,
+}: {
+  m: {
+    id: number;
+    kickoff_at: string;
+    status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+    score_home: number | null;
+    score_away: number | null;
+    home_team: FriendlyTeam;
+    away_team: FriendlyTeam;
+  };
+}) {
+  const isFinished = m.status === 'finished';
+  const isLive = m.status === 'live';
+  return (
+    <Link
+      href={`/matches/${m.id}`}
+      className="bg-card hover:border-primary/40 border-border group block rounded-xl border p-3 text-sm transition-colors"
+    >
+      <div className="text-muted-foreground mb-2 flex items-center justify-between text-[10px]">
+        <span>{DATE_FMT.format(new Date(m.kickoff_at))}</span>
+        {isLive && (
+          <span className="bg-primary/15 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-semibold tracking-wide uppercase">
+            <span className="bg-primary inline-block size-1 animate-pulse rounded-full" />
+            Live
+          </span>
+        )}
+        {isFinished && (
+          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[9px] uppercase">
+            FT
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="bg-muted relative size-6 shrink-0 overflow-hidden rounded-full">
+            {m.home_team?.logo_url && (
+              <Image
+                src={m.home_team.logo_url}
+                alt=""
+                fill
+                sizes="24px"
+                className="object-contain p-0.5"
+              />
+            )}
+          </div>
+          <span className="truncate text-xs font-medium">
+            {m.home_team?.name ?? 'À déterminer'}
+          </span>
+        </div>
+        <span className="text-foreground shrink-0 text-sm font-bold tabular-nums">
+          {isFinished || isLive
+            ? `${m.score_home ?? 0} - ${m.score_away ?? 0}`
+            : 'vs'}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
+          <div className="bg-muted relative size-6 shrink-0 overflow-hidden rounded-full">
+            {m.away_team?.logo_url && (
+              <Image
+                src={m.away_team.logo_url}
+                alt=""
+                fill
+                sizes="24px"
+                className="object-contain p-0.5"
+              />
+            )}
+          </div>
+          <span className="truncate text-xs font-medium">
+            {m.away_team?.name ?? 'À déterminer'}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function MatchMini({
   m,
   prediction,
@@ -198,6 +282,14 @@ function MatchMini({
 export default async function WorldCup2026Page() {
   const supabase = await createClient();
   const today = todayParis();
+  const nowIso = new Date().toISOString();
+  const friendlyLookbackIso = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const friendlyHorizonIso = new Date(
+    Date.now() + 60 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
   const [
     matches,
     standings,
@@ -205,6 +297,7 @@ export default async function WorldCup2026Page() {
     knockoutPredsRes,
     todayGroups,
     wcNews,
+    friendliesRes,
   ] = await Promise.all([
     getAllWCMatches(supabase),
     getGroupStandings(supabase),
@@ -216,7 +309,47 @@ export default async function WorldCup2026Page() {
       ),
     getMatchesForDay(supabase, today, WC_COMPETITION_ID),
     getLatestWCNews(supabase, 6),
+    // Matchs amicaux internationaux des 30 derniers jours et 60 prochains
+    supabase
+      .from('matches')
+      .select(
+        `id, kickoff_at, status, score_home, score_away,
+         home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
+         away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)`,
+      )
+      .eq('competition_id', 9990)
+      .gte('kickoff_at', friendlyLookbackIso)
+      .lte('kickoff_at', friendlyHorizonIso)
+      .order('kickoff_at', { ascending: true })
+      .limit(60),
   ]);
+
+  type FriendlyRow = {
+    id: number;
+    kickoff_at: string;
+    status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+    score_home: number | null;
+    score_away: number | null;
+    home_team: {
+      id: number;
+      name: string;
+      tla: string | null;
+      logo_url: string | null;
+    } | null;
+    away_team: {
+      id: number;
+      name: string;
+      tla: string | null;
+      logo_url: string | null;
+    } | null;
+  };
+  const friendlies = (friendliesRes.data ?? []) as unknown as FriendlyRow[];
+  const upcomingFriendlies = friendlies.filter(
+    (f) => f.kickoff_at >= nowIso && f.status === 'scheduled',
+  );
+  const recentFriendlies = friendlies
+    .filter((f) => f.status === 'finished')
+    .reverse();
 
   const koPredsMap = new Map<number, KnockoutPrediction>();
   for (const p of (knockoutPredsRes.data ?? []) as KnockoutPrediction[]) {
@@ -379,6 +512,14 @@ export default async function WorldCup2026Page() {
         >
           🏆 Phase finale
         </Link>
+        {(upcomingFriendlies.length > 0 || recentFriendlies.length > 0) && (
+          <Link
+            href="#preparation"
+            className="bg-card border-border hover:border-primary/40 rounded-full border px-4 py-1.5 text-xs font-semibold"
+          >
+            🤝 Matchs de préparation
+          </Link>
+        )}
         {wcNews.length > 0 && (
           <Link
             href="#actu"
@@ -394,6 +535,48 @@ export default async function WorldCup2026Page() {
           ❓ Questions fréquentes
         </Link>
       </nav>
+
+      {/* MATCHS DE PRÉPARATION — amicaux internationaux pré-CDM */}
+      {(upcomingFriendlies.length > 0 || recentFriendlies.length > 0) && (
+        <section id="preparation" className="mb-16 scroll-mt-24">
+          <header className="mb-6">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+              <span aria-hidden>🤝</span>
+              Matchs de préparation
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Les amicaux des 48 sélections engagées à la CDM 2026, dans la
+              fenêtre [-30 jours, +60 jours].
+            </p>
+          </header>
+
+          {upcomingFriendlies.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-widest uppercase">
+                À venir
+              </h3>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {upcomingFriendlies.slice(0, 12).map((m) => (
+                  <FriendlyCard key={m.id} m={m} />
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {recentFriendlies.length > 0 && (
+            <div>
+              <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-widest uppercase">
+                Récents
+              </h3>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {recentFriendlies.slice(0, 9).map((m) => (
+                  <FriendlyCard key={m.id} m={m} />
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* TOUS LES MATCHS — vue jour + accordéons par stage */}
       <section id="matchs" className="mb-16 scroll-mt-24">
