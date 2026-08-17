@@ -58,6 +58,8 @@ La CDM 2026 a été retirée des accordéons du dashboard (`app/page.tsx`) : son
 | 7h | `refresh-player-stats` | Stats joueurs par compétition |
 | 8h | `generate-analysis` | Analyses IA pré/post-match |
 | 9h | `generate-content-angles` | Angles vidéo TikTok |
+| 10h | `refresh-jupiler` | Jupiler Pro League : équipes, calendrier, classement |
+| 11h (dim.) | `refresh-jupiler?part=squads` | Effectifs des clubs belges |
 
 ⚠️ La précision Hobby est de ±59 min : **ne jamais compter sur l'ordre d'exécution** entre deux jobs. Chaque route doit tolérer que la précédente n'ait pas encore tourné.
 
@@ -104,6 +106,20 @@ Deux protections en place, à ne pas retirer :
 2. Toute lecture de `team_season_stats` doit trier **par `season` DESC en clé primaire**. Le tri par points départage les compétitions d'une même saison (championnat avant Coupe d'Europe) ; utilisé seul, il fait remonter la saison précédente terminée, plus riche en points, devant la saison en cours qui démarre à 0.
 
 Le même réflexe vaut pour les stats joueurs : `refresh-player-stats` calcule sa saison via `currentSeason()` (`lib/season.ts`, bascule au 1er juillet) et non par une constante.
+
+### ⚠️ La Jupiler Pro League ne passe pas par Football-Data
+
+FD ne la couvre pas : `refresh-structures` et `refresh-rankings` la sautent explicitement (`if (code === 'BJL') continue;`). Tout passe par API-Football, via `lib/api-football/jupiler.ts` et le cron `refresh-jupiler`.
+
+Conventions d'identifiants à respecter, sous peine de dédoubler les lignes existantes :
+
+- `team_id` = `api_football_id + 50 000`, **sauf** si l'équipe est déjà en base via une autre compétition (Coupe d'Europe) — on garde alors son id Football-Data
+- `match_id` = `fixture_id + 9 000 000`
+- pour un joueur déjà connu, on réutilise son id interne ; l'id API-Football brut ne sert que pour les inconnus
+
+⚠️ L'import doit écrire `competitions.current_season` : la page `/competitions/[code]` lit ce champ puis filtre le classement dessus. L'oublier alimente la nouvelle saison pendant que la page continue d'afficher l'ancienne.
+
+Les scripts `scripts/import-jupiler-pro-league.ts` et `scripts/refresh-jpl-squads.ts` restent utiles en local mais sont désormais redondants — et leur `SEASON` est figé, ne pas s'y fier.
 
 ### Règles métier
 
