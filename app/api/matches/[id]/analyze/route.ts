@@ -330,6 +330,7 @@ export async function POST(
               'position, played, wins, draws, losses, goals_for, goals_against, form_last_5',
             )
             .eq('team_id', teamDbId)
+            .order('season', { ascending: false })
             .order('points', { ascending: false, nullsFirst: false })
             .limit(1)
             .maybeSingle();

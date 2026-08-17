@@ -43,6 +43,7 @@ async function getTeamContext(
       .from('team_season_stats')
       .select('position, form_last_5, competition:competitions(name)')
       .eq('team_id', teamId)
+      .order('season', { ascending: false })
       .order('points', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),

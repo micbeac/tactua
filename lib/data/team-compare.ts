@@ -93,6 +93,7 @@ async function loadTeamSnapshot(
        season, competition:competitions(name)`,
     )
     .eq('team_id', teamId)
+    .order('season', { ascending: false })
     .order('points', { ascending: false })
     .limit(1);
 

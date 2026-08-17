@@ -48,8 +48,16 @@ export type TeamSeasonStatsRow = {
 
 /**
  * Stats saison principales d'une équipe sur ses compétitions actives.
- * On garde toutes les lignes (1 par compétition), ordonnées par points DESC
- * puis position ASC — la "principale" est la première.
+ *
+ * On garde toutes les lignes (1 par compétition), ordonnées par saison DESC,
+ * puis points DESC, puis position ASC — la "principale" est la première.
+ *
+ * ⚠️ Le tri par saison est indispensable et doit rester en premier. Le tri
+ * par points départage les compétitions d'une MÊME saison (le championnat
+ * passe devant la Coupe d'Europe), mais appliqué seul il compare aussi les
+ * saisons entre elles : en août, la saison précédente terminée à 65 points
+ * écrase la saison en cours qui démarre à 0, et la fiche équipe affiche le
+ * classement de l'an dernier.
  */
 export async function getTeamSeasonStats(
   supabase: Supa,
@@ -63,6 +71,7 @@ export async function getTeamSeasonStats(
        competition:competitions(id, name, country)`,
     )
     .eq('team_id', teamId)
+    .order('season', { ascending: false })
     .order('points', { ascending: false })
     .order('position', { ascending: true });
   if (error) {
