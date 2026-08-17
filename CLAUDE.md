@@ -52,7 +52,7 @@ La CDM 2026 a été retirée des accordéons du dashboard (`app/page.tsx`) : son
 |---|---|---|
 | 2h | `refresh-narratives` | Scraping Apify de l'actu par équipe |
 | 3h | `generate-news-content` | Rédaction IA des news scrapées |
-| 4h (lundi) | `refresh-structures` | Métadonnées, équipes, squads, calendrier |
+| 4h | `refresh-structures?code=…` | Métadonnées, équipes, squads, calendrier — **une compétition par jour** : CL lundi, PL mardi, PD mercredi, SA jeudi, BL1 vendredi, FL1 samedi |
 | 5h | `send-daily-digest` | Digest email matinal (7h Paris) |
 | 6h | `refresh-rankings` | Classements + forme récente |
 | 7h | `refresh-player-stats` | Stats joueurs par compétition |
@@ -72,15 +72,19 @@ La CDM 2026 a été retirée des accordéons du dashboard (`app/page.tsx`) : son
 
 Ces deux routes ne peuvent pas être mises dans `vercel.json` sur Hobby (il leur faut un intervalle infra-horaire), mais le trigger externe rend le passage en Pro beaucoup moins urgent qu'il n'y paraît.
 
-### ⚠️ Timeout de 60 s : `refresh-structures` ne finit jamais
+### ⚠️ Timeout de 60 s sur les jobs longs
 
-Le run complet enchaîne 7 compétitions et dépasse la limite Hobby (`Vercel Runtime Timeout Error: Task timed out after 60 seconds`, constaté le 17/08/2026). Les dernières compétitions de `TRACKED_COMPETITIONS` ne sont donc jamais rafraîchies.
+Football-Data plafonne à **10 req/min** et `refresh-structures` fait 3 appels par compétition : le run complet (7 compétitions) demande plus de 2 minutes de throttling incompressible et se faisait couper à 60 s.
 
-Contournement : le paramètre `code` traite une seule compétition par appel.
+**Résolu** en découpant le cron en une entrée par compétition — Vercel accepte les query strings dans les chemins de cron :
 
 ```
 GET /api/cron/refresh-structures?code=PL
 ```
+
+Chaque run tient alors largement dans les 60 s. La route trie aussi par `competitions.last_updated_at` croissant et s'arrête à 25 s, de sorte qu'un run sans paramètre reste exploitable.
+
+⚠️ `competitions` est upsertée **en dernier** dans la boucle, volontairement : `last_updated_at` sert de curseur de reprise, l'écrire en début de boucle marquait comme à jour une compétition ensuite interrompue.
 
 Les routes déclarant `maxDuration = 300` (`refresh-narratives`, `generate-news-content`, `refresh-player-stats`, `send-daily-digest`) sont dans le même cas : la déclaration est ignorée, Hobby coupe à 60 s.
 
