@@ -2,12 +2,12 @@
 // Pour chaque équipe ayant un api_football_id dans une compétition trackée,
 // récupère les stats agrégées via API-Football et upsert dans player_season_stats.
 //
-// Auth : header `Authorization: Bearer ${CRON_SECRET}`.
-// Pas dans vercel.json (limite 2 cron sur Hobby) : à invoquer manuellement
-// pour l'instant, ou depuis une orchestration externe.
+// Auth : header `Authorization: Bearer ${CRON_SECRET}`, envoyé
+// automatiquement par Vercel Cron.
 //
-// Quota AF : ~3 req par équipe × ~110 équipes ≈ 330 req par run. À lancer
-// 1× par semaine en production (les stats évoluent lentement entre matchs).
+// Quota AF : ~3 req par équipe × ~110 équipes ≈ 330 req par run. Sans effet
+// sur le plan Ultra ; ce serait rédhibitoire sur le free tier (100 req/jour),
+// où il faudrait découper en lots.
 
 import { NextResponse } from 'next/server';
 import { requireCronAuth } from '@/lib/cron/auth';
@@ -16,13 +16,17 @@ import {
   type TrackedCompetitionCode,
 } from '@/lib/cron/competitions';
 import { fetchTopPerformers } from '@/lib/api-football/deep-stats';
+import { currentSeason } from '@/lib/season';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // refresh long : 110 équipes × ~3 req
 export const dynamic = 'force-dynamic';
 
-const SEASON = 2025; // saison 2025-26
+// Saison calculée à chaque run, jamais figée : une constante en dur ferait
+// silencieusement récupérer les stats de la saison précédente à partir de
+// chaque mois de juillet.
+const SEASON = currentSeason();
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);

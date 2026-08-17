@@ -46,32 +46,29 @@ La CDM 2026 a été retirée des accordéons du dashboard (`app/page.tsx`) : son
 | Hobby | **100** | **1× par jour** | ±59 min |
 | Pro | 100 | 1× par minute | à la minute |
 
-Conséquences concrètes :
+### Crons planifiés (`vercel.json`) — heures en **UTC**
 
-- ✅ **On peut ajouter autant de crons quotidiens qu'on veut, gratuitement.** Les jobs journaliers (news, digest, analyses, stats joueurs, narratives) peuvent tous être planifiés dans `vercel.json` dès maintenant.
-- ❌ **`refresh-matchday` reste impossible sur Hobby** : il lui faut du `*/3`, qui fait échouer le déploiement (`Hobby accounts are limited to daily cron jobs`). Seules solutions : passer en Pro, ou déclencher l'endpoint depuis un service externe (cron-job.org, GitHub Actions).
-
-`vercel.json` ne déclare aujourd'hui que :
-
-- `refresh-structures` — lundi 4h (métadonnées, équipes, squads, calendrier)
-- `refresh-rankings` — quotidien 6h (classements + forme récente)
-
-**Les 8 autres routes cron existent mais ne sont pas planifiées** — la plupart pourraient l'être sans rien payer :
-
-| Route | Rôle | Conséquence de l'absence de schedule |
+| Heure | Route | Rôle |
 |---|---|---|
-| Route | Rôle | Planifiable sur Hobby ? |
-|---|---|---|
-| `refresh-matchday` | Scores + lineups + stats, fenêtre H-2 → H+24 | ❌ besoin de `*/3` → **Pro ou trigger externe** |
-| `dispatch-notifications` | 3 events : compo confirmée, coup d'envoi, score final | ❌ besoin d'être infra-horaire |
-| `generate-analysis` | Analyses IA pré/post-match | ⚠️ quotidien possible, mais rate les matchs du soir |
-| `generate-news-content` | Rédaction IA des news scrapées | ✅ quotidien suffit |
-| `refresh-narratives` | Scraping Apify de l'actu par équipe | ✅ quotidien (⚠️ lent, batcher) |
-| `generate-content-angles` | Angles vidéo TikTok | ✅ quotidien suffit |
-| `refresh-player-stats` | Stats joueurs par compétition | ✅ quotidien suffit |
-| `send-daily-digest` | Digest email matinal | ✅ quotidien par définition |
+| 2h | `refresh-narratives` | Scraping Apify de l'actu par équipe |
+| 3h | `generate-news-content` | Rédaction IA des news scrapées |
+| 4h (lundi) | `refresh-structures` | Métadonnées, équipes, squads, calendrier |
+| 5h | `send-daily-digest` | Digest email matinal (7h Paris) |
+| 6h | `refresh-rankings` | Classements + forme récente |
+| 7h | `refresh-player-stats` | Stats joueurs par compétition |
+| 8h | `generate-analysis` | Analyses IA pré/post-match |
+| 9h | `generate-content-angles` | Angles vidéo TikTok |
 
-→ Les 5 lignes ✅ peuvent être ajoutées à `vercel.json` sans rien payer. Seuls les scores live et les notifications temps réel justifient le passage en Pro.
+⚠️ La précision Hobby est de ±59 min : **ne jamais compter sur l'ordre d'exécution** entre deux jobs. Chaque route doit tolérer que la précédente n'ait pas encore tourné.
+
+### Crons NON planifiés — bloqués par le plan Hobby
+
+| Route | Rôle | Pourquoi |
+|---|---|---|
+| `refresh-matchday` | Scores + lineups, fenêtre H-2 → H+24 | Besoin de `*/3`, refusé au déploiement sur Hobby |
+| `dispatch-notifications` | Compo confirmée, coup d'envoi, score final | Doit tourner en infra-horaire |
+
+→ **C'est le seul vrai argument pour passer en Pro** : scores live et notifications temps réel. Alternative gratuite : déclencher ces deux endpoints depuis un service externe (cron-job.org, GitHub Actions) avec le header `Authorization: Bearer ${CRON_SECRET}`.
 
 ⚠️ Le scraping Apify est lent (~15-30 s/équipe) et les fonctions Hobby coupent à 60 s : garder un `limit` bas.
 
@@ -128,7 +125,7 @@ Auth, favoris, dashboard, fiches match/équipe/joueur, analyses IA pré/post-mat
 ## Coûts observés
 
 - **OpenAI** : ~$0.0001-0.0002 par analyse `gpt-4o-mini`. Négligeable. Les news en `gpt-4o` coûtent nettement plus — surveiller si le volume monte.
-- **Football-Data** : free tier 10 req/min. **API-Football** : free tier 100 req/jour — c'est la contrainte la plus serrée, throttling en place dans `lib/api-football`.
+- **Football-Data** : free tier 10 req/min. **API-Football** : **plan Ultra** — le quota n'est pas un facteur limitant (un throttling reste en place dans `lib/api-football`, hérité de l'époque free tier).
 - **Supabase** : free tier (500 MB / 2 GB bande passante).
 - **Resend** : free tier 3000 emails/mois. ⚠️ Sans domaine custom vérifié, les emails ne partent qu'à l'adresse du compte Resend.
 

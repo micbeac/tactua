@@ -2,12 +2,36 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/cron/refresh-narratives",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/generate-news-content",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/cron/refresh-structures",
       "schedule": "0 4 * * 1"
     },
     {
+      "path": "/api/cron/send-daily-digest",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/cron/refresh-rankings",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-player-stats",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/generate-analysis",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/generate-content-angles",
+      "schedule": "0 9 * * *"
     }
   ]
 }
