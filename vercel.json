@@ -52,6 +52,14 @@
     {
       "path": "/api/cron/generate-content-angles",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-jupiler",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-jupiler?part=squads",
+      "schedule": "0 11 * * 0"
     }
   ]
 }

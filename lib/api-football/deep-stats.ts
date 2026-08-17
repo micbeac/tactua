@@ -40,7 +40,12 @@ function releaseSlot() {
   if (next) next();
 }
 
-async function af<T>(path: string): Promise<T> {
+/**
+ * Requête API-Football throttlée. Exportée pour que les autres modules
+ * (import Jupiler Pro League notamment) partagent le même contrôle de débit
+ * plutôt que d'ouvrir un second canal non throttlé vers l'API.
+ */
+export async function af<T>(path: string): Promise<T> {
   await acquireSlot();
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
