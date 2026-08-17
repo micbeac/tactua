@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getAllWCMatches, getWCChampion } from '@/lib/data/world-cup';
+import { frTeamName } from '@/lib/national-teams-fr';
 import { createClient } from '@/lib/supabase/server';
 import { teamHref } from '@/lib/url';
 
@@ -107,12 +108,13 @@ export default async function CalendrierPage() {
               href={teamHref(champion.winner.id, champion.winner.name)}
               className="hover:text-primary text-lg font-semibold"
             >
-              {champion.winner.name}
+              {frTeamName(champion.winner.name)}
             </Link>
           </div>
           <p className="text-muted-foreground text-sm">
-            Victoire {champion.score} en finale face à {champion.runner_up.name}
-            , le 19 juillet 2026 au MetLife Stadium.
+            Finale du 19 juillet 2026 au MetLife Stadium :{' '}
+            {frTeamName(champion.winner.name)} {champion.score}{' '}
+            {frTeamName(champion.runner_up.name)}.
           </p>
         </section>
       ) : null}

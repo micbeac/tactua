@@ -139,7 +139,11 @@ export function buildWCFaq(
   return [
     {
       q: 'Qui a gagné la Coupe du Monde 2026 ?',
-      a: `${champion.winner} a remporté la Coupe du Monde 2026 en battant ${champion.runner_up} ${champion.score} en finale, le 19 juillet 2026 au MetLife Stadium de New York / New Jersey.`,
+      // Formulé en apposition (« Vainqueur : X », « X 1-0 Y ») plutôt qu'en
+      // phrase construite : les noms de pays exigent un article variable en
+      // français (l'Espagne, le Brésil, les Pays-Bas) qu'on ne peut pas
+      // déduire du nom. Cette tournure reste correcte pour les 100+ pays.
+      a: `Vainqueur de la Coupe du Monde 2026 : ${champion.winner}. Score de la finale, jouée le 19 juillet 2026 au MetLife Stadium de New York / New Jersey : ${champion.winner} ${champion.score} ${champion.runner_up}.`,
     },
     ...WC_FAQ,
   ];

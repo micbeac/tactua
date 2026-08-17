@@ -9,6 +9,7 @@ import { FaqAccordion } from '@/components/shared/FaqAccordion';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { buildFaqPageJsonLd, JsonLd } from '@/components/seo/JsonLd';
 import { buildWCFaq, WC_FACTS } from '@/lib/content/world-cup';
+import { frTeamName } from '@/lib/national-teams-fr';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import {
   getAllWCMatches,
@@ -92,13 +93,13 @@ function wcToCard(m: WCMatch): MatchCardProps {
     score_away: m.score_away,
     home: {
       id: m.home?.id ?? null,
-      name: m.home?.name ?? 'À déterminer',
+      name: frTeamName(m.home?.name) || 'À déterminer',
       tla: m.home?.tla ?? null,
       logo_url: m.home?.logo_url ?? null,
     },
     away: {
       id: m.away?.id ?? null,
-      name: m.away?.name ?? 'À déterminer',
+      name: frTeamName(m.away?.name) || 'À déterminer',
       tla: m.away?.tla ?? null,
       logo_url: m.away?.logo_url ?? null,
     },
@@ -160,7 +161,7 @@ function FriendlyCard({
             )}
           </div>
           <span className="truncate text-xs font-medium">
-            {m.home_team?.name ?? 'À déterminer'}
+            {frTeamName(m.home_team?.name) || 'À déterminer'}
           </span>
         </div>
         <span className="text-foreground shrink-0 text-sm font-bold tabular-nums">
@@ -181,7 +182,7 @@ function FriendlyCard({
             )}
           </div>
           <span className="truncate text-xs font-medium">
-            {m.away_team?.name ?? 'À déterminer'}
+            {frTeamName(m.away_team?.name) || 'À déterminer'}
           </span>
         </div>
       </div>
@@ -245,7 +246,7 @@ function MatchMini({
             )}
           </div>
           <span className="truncate text-xs font-medium">
-            {m.home?.name ?? 'À déterminer'}
+            {frTeamName(m.home?.name) || 'À déterminer'}
           </span>
         </div>
         <span className="text-foreground shrink-0 text-sm font-bold tabular-nums">
@@ -272,7 +273,7 @@ function MatchMini({
             )}
           </div>
           <span className="truncate text-xs font-medium">
-            {m.away?.name ?? 'À déterminer'}
+            {frTeamName(m.away?.name) || 'À déterminer'}
           </span>
         </div>
       </div>
@@ -364,8 +365,8 @@ export default async function WorldCup2026Page() {
   const wcFaq = buildWCFaq(
     champion
       ? {
-          winner: champion.winner.name,
-          runner_up: champion.runner_up.name,
+          winner: frTeamName(champion.winner.name),
+          runner_up: frTeamName(champion.runner_up.name),
           score: champion.score,
         }
       : null,
@@ -433,13 +434,14 @@ export default async function WorldCup2026Page() {
                   href={teamHref(champion.winner.id, champion.winner.name)}
                   className="hover:text-primary text-lg font-semibold sm:text-xl"
                 >
-                  {champion.winner.name}
+                  {frTeamName(champion.winner.name)}
                 </Link>
               </div>
               <p className="text-muted-foreground text-xs">
-                {champion.score} en finale
-                <br className="hidden sm:block" /> face à{' '}
-                {champion.runner_up.name}
+                Finale
+                <br className="hidden sm:block" />{' '}
+                {frTeamName(champion.winner.name)} {champion.score}{' '}
+                {frTeamName(champion.runner_up.name)}
               </p>
             </div>
           ) : (
@@ -486,11 +488,11 @@ export default async function WorldCup2026Page() {
             Jersey
             {champion ? (
               <>
-                , remportée par{' '}
+                , conclue sur le score de{' '}
                 <strong className="text-foreground">
-                  {champion.winner.name}
-                </strong>{' '}
-                face à {champion.runner_up.name} ({champion.score})
+                  {frTeamName(champion.winner.name)} {champion.score}{' '}
+                  {frTeamName(champion.runner_up.name)}
+                </strong>
               </>
             ) : null}
             .
@@ -758,7 +760,7 @@ export default async function WorldCup2026Page() {
                             href={teamHref(t.team.id, t.team.name)}
                             className="hover:text-primary flex-1 truncate font-medium"
                           >
-                            {t.team.name}
+                            {frTeamName(t.team.name)}
                           </Link>
                           <span className="text-muted-foreground shrink-0 font-mono tabular-nums">
                             {t.played > 0
@@ -887,7 +889,7 @@ export default async function WorldCup2026Page() {
                       <p className="text-primary truncate text-[10px] font-semibold tracking-widest uppercase">
                         {n.category === 'tournoi'
                           ? 'Tournoi'
-                          : (n.team?.name ?? 'Sélection')}
+                          : (frTeamName(n.team?.name) || 'Sélection')}
                       </p>
                       <p className="text-muted-foreground text-[10px]">
                         {DATE_FMT.format(
