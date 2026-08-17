@@ -251,6 +251,25 @@ export async function importJplCore(
     stats.standings = standingRows.length;
   }
 
+  // ---- 4. Saison courante de la compétition --------------------------------
+  // Indispensable : la page /competitions/[code] lit `current_season` puis
+  // filtre le classement dessus. Sans cette écriture, on alimente la saison
+  // 2026 pendant que la page continue d'afficher la table 2025 — c'est ce qui
+  // laissait le classement JPL bloqué sur le playoff de la saison passée.
+  const { error: compErr } = await supabase.from('competitions').upsert(
+    {
+      id: JPL_COMPETITION_ID,
+      name: 'Jupiler Pro League',
+      code: 'BJL',
+      country: 'Belgium',
+      current_season: String(season),
+      api_football_league_id: JPL_AF_LEAGUE_ID,
+      last_updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
+  if (compErr) throw new Error(`competitions upsert: ${compErr.message}`);
+
   return stats;
 }
 
