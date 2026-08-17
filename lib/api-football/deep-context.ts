@@ -23,15 +23,26 @@ export type BuildDeepTeamContextInput = {
 const EMPTY_SPLIT = { home: 0, away: 0, total: 0 };
 const EMPTY_AVG = { home: '0', away: '0', total: '0' };
 
+/**
+ * En dessous de ce nombre de matchs joués, la saison en cours ne dit rien :
+ * on adjoint le bilan de la saison précédente pour que l'analyse ait de la
+ * matière. Au-delà, l'historique devient du bruit et on s'en passe.
+ */
+const EARLY_SEASON_THRESHOLD = 8;
+
 export async function buildDeepTeamContext(
   input: BuildDeepTeamContextInput,
 ): Promise<DeepTeamContext> {
   const { af_team_id, af_league_id, season, team_name, team_country } = input;
 
-  const [stats, top, injuries] = await Promise.all([
+  // La saison précédente est récupérée systématiquement (1 appel de plus par
+  // équipe, sans incidence sur le plan Ultra) mais n'est transmise au modèle
+  // que si la saison en cours est trop jeune — voir EARLY_SEASON_THRESHOLD.
+  const [stats, top, injuries, prevStats] = await Promise.all([
     fetchTeamStats(af_team_id, af_league_id, season),
     fetchTopPerformers(af_team_id, af_league_id, season, 7),
     fetchActiveInjuries(af_team_id, season, input.match_date),
+    fetchTeamStats(af_team_id, af_league_id, season - 1).catch(() => null),
   ]);
 
   // AF peut retourner un objet quasi-vide si pas de stats pour la
@@ -86,6 +97,28 @@ export async function buildDeepTeamContext(
   const forTiming = goalTiming(safeStats.goals?.for?.minute);
   const againstTiming = goalTiming(safeStats.goals?.against?.minute);
 
+  // Bilan de la saison précédente, uniquement si la saison en cours est trop
+  // jeune pour être exploitable.
+  const prevFx = prevStats?.fixtures;
+  const previousSeason =
+    fx.played.total < EARLY_SEASON_THRESHOLD &&
+    prevFx &&
+    prevFx.played.total > 0
+      ? {
+          label: `${season - 1}-${String(season % 100).padStart(2, '0')}`,
+          played: prevFx.played.total,
+          wins: prevFx.wins.total,
+          draws: prevFx.draws.total,
+          loses: prevFx.loses.total,
+          goals_for_avg: prevStats?.goals?.for?.average?.total ?? '—',
+          goals_against_avg: prevStats?.goals?.against?.average?.total ?? '—',
+          clean_sheets: prevStats?.clean_sheet?.total ?? 0,
+          // Les 10 derniers résultats de la saison passée : plus parlant que
+          // la séquence complète, et évite de noyer le prompt.
+          form_tail: (prevStats?.form ?? '').slice(-10),
+        }
+      : null;
+
   return {
     name: safeStats.team?.name ?? team_name,
     country: team_country,
@@ -127,6 +160,7 @@ export async function buildDeepTeamContext(
       kind: i.kind,
     })),
     starting_eleven: input.starting_eleven,
+    previous_season: previousSeason,
     goal_timing: {
       scored_early_pct: forTiming.early,
       scored_late_pct: forTiming.late,

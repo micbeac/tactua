@@ -1,6 +1,7 @@
 // Mappers Football-Data.org → tables Supabase.
 // Fonctions pures, typées sur l'Insert type généré par Supabase.
 
+import { FD_TO_AF_LEAGUE } from '@/lib/cron/competitions';
 import type { Database } from '@/types/database';
 import type {
   FdCompetition,
@@ -60,6 +61,10 @@ export function mapCompetition(c: FdCompetition): CompetitionInsert {
     code: c.code ?? null,
     country: c.area?.name ?? null,
     current_season: seasonYear(c),
+    // Persisté depuis la constante : la colonne n'était alimentée que pour la
+    // JPL et les amicaux (par migration), donc NULL pour le top 5 et la C1.
+    // Or c'est elle qui conditionne la voie « deep » de l'analyse IA.
+    api_football_league_id: FD_TO_AF_LEAGUE[c.id] ?? null,
     last_updated_at: new Date().toISOString(),
   };
 }

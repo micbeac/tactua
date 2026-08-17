@@ -12,6 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { buildDeepTeamContext } from '@/lib/api-football/deep-context';
+import { FD_TO_AF_LEAGUE } from '@/lib/cron/competitions';
 import {
   fetchH2H,
   fetchMatchOdds,
@@ -228,8 +229,16 @@ export async function POST(
         .map((r) => r.players?.name)
         .filter((n): n is string => Boolean(n));
 
-      // Voie deep : si toutes les données AF nécessaires sont disponibles
-      const afLeagueId = m.competition?.api_football_league_id ?? null;
+      // Voie deep : si toutes les données AF nécessaires sont disponibles.
+      //
+      // ⚠️ `competitions.api_football_league_id` n'est alimenté par aucun cron :
+      // seules la JPL et les amicaux le reçoivent, via leurs migrations. Pour
+      // le top 5 et la C1 il est NULL, ce qui faisait silencieusement retomber
+      // toutes les analyses sur la voie basique — beaucoup plus pauvre.
+      // FD_TO_AF_LEAGUE fait autorité dans le code : on s'en sert en repli.
+      const afLeagueId =
+        m.competition?.api_football_league_id ??
+        (m.competition?.id != null ? (FD_TO_AF_LEAGUE[m.competition.id] ?? null) : null);
       const afHomeId = m.home_team.api_football_id;
       const afAwayId = m.away_team.api_football_id;
       const canDeep = Boolean(

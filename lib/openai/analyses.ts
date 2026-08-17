@@ -218,6 +218,25 @@ export type DeepTeamContext = {
     xg_for_avg: number;
     xg_against_avg: number;
   } | null;
+  /**
+   * Bilan de la saison PRÉCÉDENTE, terminée.
+   *
+   * Renseigné uniquement en début de saison, quand la saison en cours compte
+   * trop peu de matchs pour dire quoi que ce soit : sur 2 journées, « 2
+   * victoires, 3 buts/match » n'a aucune valeur prédictive. Sans ce repli,
+   * l'analyse d'un match de la 3ᵉ journée est forcément indigente.
+   */
+  previous_season?: {
+    label: string;
+    played: number;
+    wins: number;
+    draws: number;
+    loses: number;
+    goals_for_avg: string;
+    goals_against_avg: string;
+    clean_sheets: number;
+    form_tail: string;
+  } | null;
 };
 
 export type RecentNarrative = {
@@ -316,6 +335,11 @@ Règles :
   * "xG saison" : compare le xG aux buts réellement marqués/encaissés (champs "Buts marqués/encaissés / match"). Un xG marqué supérieur aux buts réels = équipe qui sous-performe sa finition (va probablement se corriger à la hausse) ; un xG concédé inférieur aux buts encaissés = défense chanceuse. C'est un signal FORT de la vraie valeur d'une équipe — utilise-le pour nuancer la lecture des résultats bruts et calibrer "prediction".
   * "Entraîneur" : tu peux le citer pour parler du style/de l'approche tactique de l'équipe.
   * Indisponibles : distingue bien SUSPENDU (manque mécaniquement, certain) de blessé (incertain). Un cadre suspendu est une absence sûre à intégrer.
+  * "Saison précédente" : ce bloc n'apparaît qu'en DÉBUT DE SAISON, quand la saison en cours compte trop peu de matchs pour être significative. Dans ce cas :
+    - Appuie-toi dessus pour établir le NIVEAU des équipes (hiérarchie, puissance offensive, solidité défensive) — c'est ta principale matière chiffrée.
+    - Nomme toujours la saison quand tu cites ces chiffres ("la saison dernière", "en 2025-26"). Ne les présente JAMAIS comme la forme du moment.
+    - Dis explicitement que l'échantillon de la saison en cours est encore mince, au lieu de tirer des conclusions de 2 ou 3 matchs.
+    - Prends en compte que les effectifs ont pu changer au mercato : le niveau passé est un repère, pas une garantie.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
@@ -426,6 +450,18 @@ function fmtGoalTiming(t: DeepTeamContext): string {
   return parts.length > 0 ? `\n- Tempo des buts : ${parts.join(', ')}` : '';
 }
 
+function fmtPreviousSeason(t: DeepTeamContext): string {
+  const p = t.previous_season;
+  if (!p) return '';
+  return (
+    `\n- Saison précédente (${p.label}, TERMINÉE — repère de niveau, pas de forme actuelle) : ` +
+    `${p.wins}V ${p.draws}N ${p.loses}D sur ${p.played} matchs, ` +
+    `${p.goals_for_avg} but(s) marqué(s) et ${p.goals_against_avg} encaissé(s) par match, ` +
+    `${p.clean_sheets} clean sheets` +
+    (p.form_tail ? `, fin de saison : ${p.form_tail}` : '')
+  );
+}
+
 function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   const fmtTeam = (t: DeepTeamContext, side: 'Domicile' | 'Extérieur') =>
     `
@@ -438,7 +474,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
 - Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
-- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}
+- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}${fmtPreviousSeason(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${
