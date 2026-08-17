@@ -10,7 +10,7 @@ export const LANDING_FAQ = [
   },
   {
     q: 'C’est gratuit ?',
-    a: 'Oui, totalement jusqu’au lancement public de Tactuo (juin 2026). Ensuite, un plan free avec quelques analyses par jour et un plan payant pour les analyses illimitées et détaillées.',
+    a: 'Oui. La création de compte, les favoris, les analyses et les notifications sont gratuits. Un plan payant avec analyses illimitées et détaillées arrivera plus tard — les comptes existants seront prévenus à l’avance.',
   },
   {
     q: 'Est-ce que c’est une app de paris sportifs ?',
@@ -18,7 +18,7 @@ export const LANDING_FAQ = [
   },
   {
     q: 'Quelles compétitions sont couvertes ?',
-    a: 'Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League et toute la Coupe du Monde 2026 (48 sélections). D’autres compétitions arriveront après le lancement.',
+    a: 'Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League et Jupiler Pro League, suivies en direct sur toute la saison 2026-27. La Coupe du Monde 2026 reste consultable en archive, avec l’intégralité des résultats et des analyses des 104 matchs.',
   },
   {
     q: 'Mes données sont-elles fiables ?',

@@ -22,15 +22,15 @@ export function LandingFinalCta() {
       >
         <div className="bg-primary/10 text-primary mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase">
           <Sparkles className="size-3.5" aria-hidden />
-          Coupe du Monde 2026 · 11 juin
+          Saison 2026-27 · analyses en direct
         </div>
 
         <h2 className="mb-5 text-3xl font-semibold tracking-tight sm:text-5xl">
           Prêt à analyser tes matchs autrement ?
         </h2>
         <p className="text-muted-foreground mx-auto mb-8 max-w-xl text-base">
-          Crée ton compte gratuit. Suis tes équipes, génère tes analyses, sois
-          prêt pour le coup d’envoi du 11 juin.
+          Crée ton compte gratuit. Suis tes équipes, génère tes analyses, et
+          arrive prêt à chaque coup d’envoi.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3">

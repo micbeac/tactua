@@ -38,13 +38,16 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
   },
   keywords: [
-    'coupe du monde 2026',
     'analyse foot',
-    'compositions',
+    'analyse match football',
     'compositions probables',
     'classement',
     'IA football',
     'stats joueurs',
+    'premier league',
+    'ligue 1',
+    'champions league',
+    'coupe du monde 2026',
   ],
   openGraph: {
     type: 'website',

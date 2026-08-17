@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { CompetitionAccordion } from '@/components/dashboard/CompetitionAccordion';
 import { DailyRecapSection } from '@/components/dashboard/DailyRecapSection';
 import { MatchesOfDaySection } from '@/components/dashboard/MatchesOfDaySection';
@@ -24,6 +25,13 @@ import { createClient } from '@/lib/supabase/server';
 
 export const revalidate = 60;
 
+// Canonical explicite : sans ça, la home n'émet aucun <link rel="canonical">
+// (le layout racine n'en déclare pas, et en déclarer un là-bas le propagerait
+// à toutes les pages enfants qui n'en définissent pas).
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
+
 // Compétitions affichées sur le dashboard, dans cet ordre.
 // Chaque entrée a son propre header coloré + lien vers /competitions/[code].
 //
@@ -40,7 +48,6 @@ const DASHBOARD_COMPETITIONS: Array<{
   mode: 'matchday' | 'limit';
   limit: number;
 }> = [
-  { id: 2000, code: 'wc', label: 'Coupe du Monde 2026', flag: '🌍', mode: 'limit', limit: 8 },
   { id: 2001, code: 'cl', label: 'Champions League', flag: '🇪🇺', mode: 'matchday', limit: 6 },
   { id: 2021, code: 'pl', label: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', mode: 'matchday', limit: 6 },
   { id: 2014, code: 'pd', label: 'La Liga', flag: '🇪🇸', mode: 'matchday', limit: 6 },
@@ -48,6 +55,9 @@ const DASHBOARD_COMPETITIONS: Array<{
   { id: 2002, code: 'bl1', label: 'Bundesliga', flag: '🇩🇪', mode: 'matchday', limit: 6 },
   { id: 2015, code: 'fl1', label: 'Ligue 1', flag: '🇫🇷', mode: 'matchday', limit: 6 },
   { id: 9001, code: 'bjl', label: 'Jupiler Pro League', flag: '🇧🇪', mode: 'matchday', limit: 6 },
+  // La CDM 2026 (id 2000) est terminée : plus aucun match `scheduled`, son
+  // accordéon resterait vide en permanence. L'archive complète reste
+  // accessible sur /coupe-du-monde-2026.
 ];
 
 // Fenêtre (en ms) considérée comme « une journée » : tous les matchs dont
@@ -213,7 +223,7 @@ export default async function HomePage() {
     <main className="mx-auto max-w-6xl px-4 py-10">
       <section className="mb-6">
         <p className="text-primary mb-2 text-xs font-semibold tracking-widest uppercase">
-          Coupe du Monde 2026
+          Saison 2026-27
         </p>
         <h1 className="mb-2 text-3xl font-semibold tracking-tight sm:text-4xl">
           Tout ce qu&apos;il faut comprendre avant le match.

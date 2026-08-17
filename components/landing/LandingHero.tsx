@@ -182,7 +182,7 @@ export function LandingHero() {
             className="bg-primary/10 text-primary border-primary/20 mb-7 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold tracking-wide uppercase backdrop-blur"
           >
             <Sparkles className="size-3.5" aria-hidden />
-            Analyses augmentées par l’IA · Coupe du Monde 2026
+            Analyses augmentées par l’IA · Saison 2026-27
           </motion.div>
 
           {/* H1 impactant : très gros, tracking serré, dégradé sur la 2e partie + glow */}
@@ -263,8 +263,8 @@ export function LandingHero() {
             transition={{ delay: 0.85, duration: 0.5 }}
             className="text-muted-foreground/80 mt-7 text-xs"
           >
-            Premier 5 européen · Champions League · 48 sélections WC 2026 · 100 %
-            gratuit jusqu’au lancement
+            Top 5 européen · Champions League · Jupiler Pro League · 100 %
+            gratuit
           </motion.p>
         </motion.div>
 

@@ -8,7 +8,7 @@ const STEPS = [
     n: 1,
     icon: MousePointerClick,
     title: 'Choisis un match',
-    desc: 'Top 5 européen, Champions League, Coupe du Monde 2026 — clique sur la fiche du match qui t’intéresse.',
+    desc: 'Top 5 européen, Champions League, Jupiler Pro League — clique sur la fiche du match qui t’intéresse.',
   },
   {
     n: 2,

@@ -17,8 +17,8 @@ const COMPS = [
 const VALUE_PROPS = [
   {
     icon: Trophy,
-    title: '7 compétitions majeures',
-    desc: 'Top 5 européen, Champions League et toute la Coupe du Monde 2026.',
+    title: '8 compétitions majeures',
+    desc: 'Top 5 européen, Champions League, Jupiler Pro League et les archives complètes de la Coupe du Monde 2026.',
   },
   {
     icon: Users,
