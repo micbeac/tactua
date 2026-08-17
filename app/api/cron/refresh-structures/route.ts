@@ -1,10 +1,21 @@
 // Cron hebdo : refresh des données quasi-statiques.
 // Pour chaque compétition trackée : metadata + équipes (+ joueurs des squads) + matches.
 // Schedule prod : tous les lundis à 4h (vercel.json).
+//
+// ⚠️ Les 7 compétitions en série dépassent les 60 s de la limite Hobby : le
+// run complet est coupé en cours de route et les dernières compétitions de
+// TRACKED_COMPETITIONS ne sont jamais rafraîchies. D'où le paramètre `code`,
+// qui permet de traiter une seule compétition par appel :
+//   GET /api/cron/refresh-structures?code=PL
+// Le run sans paramètre reste en place pour le cron hebdo, mais il faut le
+// considérer comme « best effort » tant qu'on est sur Hobby.
 
 import { NextResponse } from 'next/server';
 import { requireCronAuth } from '@/lib/cron/auth';
-import { TRACKED_COMPETITIONS } from '@/lib/cron/competitions';
+import {
+  TRACKED_COMPETITIONS,
+  type TrackedCompetitionCode,
+} from '@/lib/cron/competitions';
 import { createFootballClient } from '@/lib/football-api/client';
 import {
   mapCompetition,
@@ -22,6 +33,12 @@ export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
   if (unauthorized) return unauthorized;
 
+  const url = new URL(request.url);
+  const codeFilter = url.searchParams.get('code')?.toUpperCase() as
+    | TrackedCompetitionCode
+    | null
+    | undefined;
+
   const football = createFootballClient();
   const supabase = createAdminClient();
 
@@ -34,7 +51,21 @@ export async function GET(request: Request) {
     errors: [] as CronError[],
   };
 
-  for (const { code } of TRACKED_COMPETITIONS) {
+  const comps = codeFilter
+    ? TRACKED_COMPETITIONS.filter((c) => c.code === codeFilter)
+    : TRACKED_COMPETITIONS;
+
+  if (codeFilter && comps.length === 0) {
+    return NextResponse.json(
+      {
+        error: `Compétition inconnue : ${codeFilter}`,
+        known: TRACKED_COMPETITIONS.map((c) => c.code),
+      },
+      { status: 400 },
+    );
+  }
+
+  for (const { code } of comps) {
     // Football-Data ne couvre pas la JPL (free tier) — l'import est manuel
     // via scripts/import-jupiler-pro-league.ts.
     if (code === 'BJL') continue;

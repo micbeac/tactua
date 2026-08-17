@@ -61,14 +61,28 @@ La CDM 2026 a été retirée des accordéons du dashboard (`app/page.tsx`) : son
 
 ⚠️ La précision Hobby est de ±59 min : **ne jamais compter sur l'ordre d'exécution** entre deux jobs. Chaque route doit tolérer que la précédente n'ait pas encore tourné.
 
-### Crons NON planifiés — bloqués par le plan Hobby
+### Crons hors `vercel.json`
 
-| Route | Rôle | Pourquoi |
+| Route | Rôle | État réel |
 |---|---|---|
-| `refresh-matchday` | Scores + lineups, fenêtre H-2 → H+24 | Besoin de `*/3`, refusé au déploiement sur Hobby |
-| `dispatch-notifications` | Compo confirmée, coup d'envoi, score final | Doit tourner en infra-horaire |
+| `refresh-matchday` | Scores + lineups, fenêtre H-2 → H+24 | ✅ **déjà déclenché toutes les ~60 s** par un service externe, via `tactua.vercel.app` (constaté dans les logs le 17/08/2026) |
+| `dispatch-notifications` | Compo confirmée, coup d'envoi, score final | ❓ à vérifier dans les logs avant de conclure |
 
-→ **C'est le seul vrai argument pour passer en Pro** : scores live et notifications temps réel. Alternative gratuite : déclencher ces deux endpoints depuis un service externe (cron-job.org, GitHub Actions) avec le header `Authorization: Bearer ${CRON_SECRET}`.
+⚠️ Ne pas répéter l'erreur consistant à déduire de `vercel.json` que ces routes ne tournent pas : un déclencheur externe existe et n'apparaît nulle part dans le dépôt. **Vérifier les logs (`vercel logs <url> --json`) avant d'affirmer qu'un job est inactif.**
+
+Ces deux routes ne peuvent pas être mises dans `vercel.json` sur Hobby (il leur faut un intervalle infra-horaire), mais le trigger externe rend le passage en Pro beaucoup moins urgent qu'il n'y paraît.
+
+### ⚠️ Timeout de 60 s : `refresh-structures` ne finit jamais
+
+Le run complet enchaîne 7 compétitions et dépasse la limite Hobby (`Vercel Runtime Timeout Error: Task timed out after 60 seconds`, constaté le 17/08/2026). Les dernières compétitions de `TRACKED_COMPETITIONS` ne sont donc jamais rafraîchies.
+
+Contournement : le paramètre `code` traite une seule compétition par appel.
+
+```
+GET /api/cron/refresh-structures?code=PL
+```
+
+Les routes déclarant `maxDuration = 300` (`refresh-narratives`, `generate-news-content`, `refresh-player-stats`, `send-daily-digest`) sont dans le même cas : la déclaration est ignorée, Hobby coupe à 60 s.
 
 ⚠️ Le scraping Apify est lent (~15-30 s/équipe) et les fonctions Hobby coupent à 60 s : garder un `limit` bas.
 
