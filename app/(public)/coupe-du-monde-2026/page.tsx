@@ -8,12 +8,13 @@ import type { MatchCardProps } from '@/components/match/MatchCard';
 import { FaqAccordion } from '@/components/shared/FaqAccordion';
 import { WorldCupCountdown } from '@/components/shared/WorldCupCountdown';
 import { buildFaqPageJsonLd, JsonLd } from '@/components/seo/JsonLd';
-import { WC_FACTS, WC_FAQ } from '@/lib/content/world-cup';
+import { buildWCFaq, WC_FACTS } from '@/lib/content/world-cup';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import {
   getAllWCMatches,
   getGroupPredictions,
   getGroupStandings,
+  getWCChampion,
   groupMatchesByStage,
   WC_COMPETITION_ID,
   type WCMatch,
@@ -32,16 +33,16 @@ type KnockoutPrediction = {
 };
 
 export const metadata: Metadata = {
-  title: 'Coupe du Monde 2026 · Groupes, Bracket, Pronos IA',
+  title: 'Coupe du Monde 2026 · Résultats, classements et bracket',
   description:
-    "Suivi complet de la Coupe du Monde 2026 (USA / Canada / Mexique) : phase de groupes en direct, prédictions IA classements et bracket des phases finales.",
+    'Tous les résultats de la Coupe du Monde 2026 (USA / Canada / Mexique) : les 104 matchs, les classements finaux des 12 groupes, le bracket complet des phases finales et les analyses IA de chaque rencontre.',
   alternates: { canonical: `${SITE_URL}/coupe-du-monde-2026` },
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/coupe-du-monde-2026`,
-    title: 'Coupe du Monde 2026 · Tactuo',
+    title: 'Coupe du Monde 2026 · Résultats et classements',
     description:
-      'Pronostics IA, classements de groupes, bracket des phases finales, analyses tactiques.',
+      'Les 104 matchs, les classements finaux des groupes, le bracket des phases finales et les analyses IA.',
     siteName: SITE_NAME,
   },
 };
@@ -358,6 +359,17 @@ export default async function WorldCup2026Page() {
 
   const byStage = groupMatchesByStage(matches);
   const hasAssignments = standings.some((g) => g.teams.length > 0);
+  // Tournoi terminé → on affiche le palmarès au lieu du compte à rebours.
+  const champion = getWCChampion(matches);
+  const wcFaq = buildWCFaq(
+    champion
+      ? {
+          winner: champion.winner.name,
+          runner_up: champion.runner_up.name,
+          score: champion.score,
+        }
+      : null,
+  );
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -378,7 +390,7 @@ export default async function WorldCup2026Page() {
       />
       <JsonLd
         data={buildFaqPageJsonLd(
-          WC_FAQ.map((f) => ({ question: f.q, answer: f.a })),
+          wcFaq.map((f) => ({ question: f.q, answer: f.a })),
         )}
       />
 
@@ -395,15 +407,48 @@ export default async function WorldCup2026Page() {
           Coupe du Monde 2026
         </h1>
         <p className="text-muted-foreground relative mb-6 max-w-2xl text-sm sm:text-base">
-          48 équipes, 12 groupes, 104 matchs. Pronostics IA, classements de
-          groupes en direct, bracket des phases finales.
+          {champion
+            ? '48 équipes, 12 groupes, 104 matchs. Tous les résultats, les classements finaux des groupes, le bracket complet et les analyses IA de chaque rencontre.'
+            : '48 équipes, 12 groupes, 104 matchs. Pronostics IA, classements de groupes en direct, bracket des phases finales.'}
         </p>
         <div className="relative">
-          <WorldCupCountdown
-            kickoff_iso={
-              matches.find((m) => m.stage === 'GROUP_STAGE')?.kickoff_at
-            }
-          />
+          {champion ? (
+            <div className="border-primary/30 bg-card/60 inline-flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 backdrop-blur">
+              {champion.winner.logo_url ? (
+                <Image
+                  src={champion.winner.logo_url}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="size-9 object-contain"
+                />
+              ) : (
+                <Trophy className="text-primary size-7" aria-hidden />
+              )}
+              <div>
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                  Championne du monde
+                </p>
+                <Link
+                  href={teamHref(champion.winner.id, champion.winner.name)}
+                  className="hover:text-primary text-lg font-semibold sm:text-xl"
+                >
+                  {champion.winner.name}
+                </Link>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {champion.score} en finale
+                <br className="hidden sm:block" /> face à{' '}
+                {champion.runner_up.name}
+              </p>
+            </div>
+          ) : (
+            <WorldCupCountdown
+              kickoff_iso={
+                matches.find((m) => m.stage === 'GROUP_STAGE')?.kickoff_at
+              }
+            />
+          )}
         </div>
       </section>
 
@@ -414,26 +459,41 @@ export default async function WorldCup2026Page() {
         </h2>
         <div className="text-muted-foreground space-y-3 text-sm leading-relaxed sm:text-base">
           <p>
-            La Coupe du Monde 2026 est la {WC_FACTS.edition}. Elle se déroule
+            La Coupe du Monde 2026 {champion ? 'a été' : 'est'} la{' '}
+            {WC_FACTS.edition}. Elle {champion ? 's’est déroulée' : 'se déroule'}{' '}
             du <strong className="text-foreground">{WC_FACTS.startLabel}</strong>{' '}
             au <strong className="text-foreground">{WC_FACTS.endLabel}</strong>,
-            et marque un tournant dans l&apos;histoire du tournoi : c&apos;est
-            la première édition organisée conjointement par{' '}
+            et {champion ? 'a marqué' : 'marque'} un tournant dans
+            l&apos;histoire du tournoi : c&apos;est la première édition
+            organisée conjointement par{' '}
             <strong className="text-foreground">trois pays</strong> — les
             États-Unis, le Canada et le Mexique — et la première à réunir{' '}
             <strong className="text-foreground">48 sélections</strong> au lieu
             de 32.
           </p>
           <p>
-            Ce nouveau format porte le nombre de rencontres à{' '}
-            <strong className="text-foreground">104 matchs</strong>, répartis
-            sur {WC_FACTS.hostCitiesCount} villes hôtes. Les 48 équipes sont
-            réparties en 12 groupes de 4 : les deux premiers de chaque groupe et
-            les huit meilleurs troisièmes se qualifient pour une phase à
-            élimination directe inédite, qui débute par des 16ᵉ de finale. La
-            compétition s&apos;ouvre le 11 juin 2026 à l&apos;Estadio Azteca de
-            Mexico et se conclut par la finale du 19 juillet au MetLife Stadium
-            de New York / New Jersey.
+            Ce nouveau format {champion ? 'a porté' : 'porte'} le nombre de
+            rencontres à <strong className="text-foreground">104 matchs</strong>
+            , répartis sur {WC_FACTS.hostCitiesCount} villes hôtes. Les 48
+            équipes {champion ? 'étaient' : 'sont'} réparties en 12 groupes de
+            4 : les deux premiers de chaque groupe et les huit meilleurs
+            troisièmes {champion ? 'se sont qualifiés' : 'se qualifient'} pour
+            une phase à élimination directe inédite, qui{' '}
+            {champion ? 'débutait' : 'débute'} par des 16ᵉ de finale. La
+            compétition {champion ? 's’est ouverte' : 's’ouvre'} le 11 juin 2026
+            à l&apos;Estadio Azteca de Mexico et {champion ? 's’est conclue' : 'se conclut'}{' '}
+            par la finale du 19 juillet au MetLife Stadium de New York / New
+            Jersey
+            {champion ? (
+              <>
+                , remportée par{' '}
+                <strong className="text-foreground">
+                  {champion.winner.name}
+                </strong>{' '}
+                face à {champion.runner_up.name} ({champion.score})
+              </>
+            ) : null}
+            .
           </p>
         </div>
 
@@ -861,7 +921,7 @@ export default async function WorldCup2026Page() {
             L&apos;essentiel à savoir sur la Coupe du Monde 2026.
           </p>
         </header>
-        <FaqAccordion items={WC_FAQ} />
+        <FaqAccordion items={wcFaq} />
       </section>
 
       {/* Footer */}

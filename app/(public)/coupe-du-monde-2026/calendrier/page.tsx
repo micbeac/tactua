@@ -1,24 +1,30 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import { getAllWCMatches, getWCChampion } from '@/lib/data/world-cup';
+import { createClient } from '@/lib/supabase/server';
+import { teamHref } from '@/lib/url';
 
 export const metadata: Metadata = {
-  title: 'Calendrier de la Coupe du Monde 2026 : dates clés',
+  title: 'Calendrier et résultats de la Coupe du Monde 2026',
   description:
-    'Le calendrier de la Coupe du Monde 2026 : dates du match d’ouverture, de la phase de groupes, des phases finales et de la finale du 19 juillet 2026.',
+    'Le calendrier complet de la Coupe du Monde 2026 : dates du match d’ouverture, de la phase de groupes, des phases finales et de la finale du 19 juillet 2026, avec le vainqueur du tournoi.',
   alternates: { canonical: '/coupe-du-monde-2026/calendrier' },
 };
+
+export const revalidate = 3600; // 1 h — le calendrier ne bouge plus.
 
 // Dates des phases — calendrier officiel FIFA de la Coupe du Monde 2026.
 const PHASES: Array<{ phase: string; dates: string; note: string }> = [
   {
     phase: 'Match d’ouverture',
     dates: '11 juin 2026',
-    note: 'Le coup d’envoi du tournoi est donné à l’Estadio Azteca de Mexico.',
+    note: 'Le coup d’envoi du tournoi a été donné à l’Estadio Azteca de Mexico.',
   },
   {
     phase: 'Phase de groupes',
     dates: '11 → 27 juin 2026',
-    note: '72 matchs : les 12 groupes de 4 équipes disputent leurs trois journées.',
+    note: '72 matchs : les 12 groupes de 4 équipes ont disputé leurs trois journées.',
   },
   {
     phase: '16ᵉ de finale',
@@ -43,16 +49,20 @@ const PHASES: Array<{ phase: string; dates: string; note: string }> = [
   {
     phase: 'Match pour la 3ᵉ place',
     dates: '18 juillet 2026',
-    note: 'Les deux perdants des demi-finales s’affrontent.',
+    note: 'Les deux perdants des demi-finales se sont affrontés.',
   },
   {
     phase: 'Finale',
     dates: '19 juillet 2026',
-    note: 'La finale se joue au MetLife Stadium de New York / New Jersey.',
+    note: 'La finale s’est jouée au MetLife Stadium de New York / New Jersey.',
   },
 ];
 
-export default function CalendrierPage() {
+export default async function CalendrierPage() {
+  const supabase = await createClient();
+  const matches = await getAllWCMatches(supabase);
+  const champion = getWCChampion(matches);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <nav className="text-muted-foreground mb-6 text-xs">
@@ -71,10 +81,41 @@ export default function CalendrierPage() {
           Le calendrier de la Coupe du Monde 2026
         </h1>
         <p className="text-muted-foreground mt-3 text-sm">
-          La Coupe du Monde 2026 se déroule du 11 juin au 19 juillet 2026. Voici
-          les dates clés de chaque phase du tournoi.
+          La Coupe du Monde 2026 s’est déroulée du 11 juin au 19 juillet 2026,
+          aux États-Unis, au Canada et au Mexique. Voici les dates clés de
+          chaque phase du tournoi.
         </p>
       </header>
+
+      {/* Palmarès — dérivé de la finale en base, pas codé en dur. */}
+      {champion ? (
+        <section className="border-primary/30 bg-primary/5 mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border p-4">
+          {champion.winner.logo_url ? (
+            <Image
+              src={champion.winner.logo_url}
+              alt=""
+              width={40}
+              height={40}
+              className="size-10 object-contain"
+            />
+          ) : null}
+          <div>
+            <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+              Championne du monde
+            </p>
+            <Link
+              href={teamHref(champion.winner.id, champion.winner.name)}
+              className="hover:text-primary text-lg font-semibold"
+            >
+              {champion.winner.name}
+            </Link>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Victoire {champion.score} en finale face à {champion.runner_up.name}
+            , le 19 juillet 2026 au MetLife Stadium.
+          </p>
+        </section>
+      ) : null}
 
       <ol className="space-y-3">
         {PHASES.map((p) => (
@@ -95,7 +136,8 @@ export default function CalendrierPage() {
 
       <section className="bg-primary/5 border-primary/20 mt-8 rounded-xl border p-4 text-sm">
         <p className="text-foreground/90">
-          Le calendrier match par match, jour par jour, est disponible sur la
+          Le détail match par match, avec tous les scores, les classements
+          finaux des 12 groupes et le bracket des phases finales, est sur la
           page{' '}
           <Link
             href="/coupe-du-monde-2026"
@@ -103,7 +145,7 @@ export default function CalendrierPage() {
           >
             Coupe du Monde 2026
           </Link>{' '}
-          — avec les scores en direct et les pronostics IA.
+          — chaque rencontre a sa fiche avec l’analyse IA.
         </p>
       </section>
     </main>

@@ -88,42 +88,59 @@ export const WC_STAGES: Array<{ label: string; detail: string }> = [
   {
     label: 'Finale',
     detail:
-      'Le 19 juillet 2026 au MetLife Stadium de New York / New Jersey. Un match pour la 3ᵉ place est joué la veille.',
+      'Le 19 juillet 2026 au MetLife Stadium de New York / New Jersey. Un match pour la 3ᵉ place a été joué la veille.',
   },
 ];
 
 // FAQ — questions factuelles. Sert aussi au JSON-LD FAQPage (citations IA).
+// Rédigée au passé : le tournoi est terminé depuis le 19 juillet 2026.
 export const WC_FAQ: Array<{ q: string; a: string }> = [
   {
-    q: 'Quand a lieu la Coupe du Monde 2026 ?',
-    a: 'La Coupe du Monde 2026 se déroule du 11 juin au 19 juillet 2026, soit un peu plus de cinq semaines de compétition.',
+    q: 'Quand a eu lieu la Coupe du Monde 2026 ?',
+    a: 'La Coupe du Monde 2026 s’est déroulée du 11 juin au 19 juillet 2026, soit un peu plus de cinq semaines de compétition.',
   },
   {
-    q: 'Où se déroule la Coupe du Monde 2026 ?',
-    a: "Le tournoi est organisé conjointement par trois pays — les États-Unis, le Canada et le Mexique — répartis sur 16 villes hôtes. C'est la première Coupe du Monde co-organisée par trois nations.",
+    q: 'Où s’est déroulée la Coupe du Monde 2026 ?',
+    a: "Le tournoi a été organisé conjointement par trois pays — les États-Unis, le Canada et le Mexique — répartis sur 16 villes hôtes. C'est la première Coupe du Monde co-organisée par trois nations.",
   },
   {
-    q: 'Combien d’équipes participent à la Coupe du Monde 2026 ?',
-    a: '48 sélections participent à la Coupe du Monde 2026, contre 32 lors des éditions précédentes. C’est la première Coupe du Monde au format à 48 équipes.',
+    q: 'Combien d’équipes ont participé à la Coupe du Monde 2026 ?',
+    a: '48 sélections ont participé à la Coupe du Monde 2026, contre 32 lors des éditions précédentes. C’est la première Coupe du Monde au format à 48 équipes.',
   },
   {
-    q: 'Comment fonctionne le format à 48 équipes ?',
-    a: 'Les 48 équipes sont réparties en 12 groupes de 4. Les deux premiers de chaque groupe et les huit meilleurs troisièmes — soit 32 équipes — se qualifient pour une phase à élimination directe qui débute par les 16ᵉ de finale.',
+    q: 'Comment fonctionnait le format à 48 équipes ?',
+    a: 'Les 48 équipes étaient réparties en 12 groupes de 4. Les deux premiers de chaque groupe et les huit meilleurs troisièmes — soit 32 équipes — se sont qualifiés pour une phase à élimination directe qui débutait par les 16ᵉ de finale.',
   },
   {
-    q: 'Combien de matchs sont joués pendant la Coupe du Monde 2026 ?',
-    a: '104 matchs sont disputés au total, contre 64 au format précédent à 32 équipes.',
+    q: 'Combien de matchs ont été joués pendant la Coupe du Monde 2026 ?',
+    a: '104 matchs ont été disputés au total, contre 64 au format précédent à 32 équipes.',
   },
   {
-    q: 'Où se joue la finale de la Coupe du Monde 2026 ?',
-    a: 'La finale a lieu le 19 juillet 2026 au MetLife Stadium de New York / New Jersey, aux États-Unis.',
+    q: 'Où s’est jouée la finale de la Coupe du Monde 2026 ?',
+    a: 'La finale a eu lieu le 19 juillet 2026 au MetLife Stadium de New York / New Jersey, aux États-Unis.',
   },
   {
-    q: 'Quel est le match d’ouverture de la Coupe du Monde 2026 ?',
-    a: 'La compétition s’ouvre le 11 juin 2026 à l’Estadio Azteca de Mexico, qui accueille le premier match du tournoi.',
-  },
-  {
-    q: 'Qui est le tenant du titre ?',
-    a: "L'Argentine est la tenante du titre : elle a remporté la Coupe du Monde 2022 au Qatar face à la France.",
+    q: 'Quel était le match d’ouverture de la Coupe du Monde 2026 ?',
+    a: 'La compétition s’est ouverte le 11 juin 2026 à l’Estadio Azteca de Mexico, qui a accueilli le premier match du tournoi.',
   },
 ];
+
+/**
+ * FAQ complète de la page Coupe du Monde.
+ *
+ * La question « qui a gagné » est la plus recherchée une fois le tournoi
+ * terminé : on la met en tête, mais uniquement si le vainqueur est connu en
+ * base — pas de réponse codée en dur qui pourrait mentir.
+ */
+export function buildWCFaq(
+  champion: { winner: string; runner_up: string; score: string } | null,
+): Array<{ q: string; a: string }> {
+  if (!champion) return WC_FAQ;
+  return [
+    {
+      q: 'Qui a gagné la Coupe du Monde 2026 ?',
+      a: `${champion.winner} a remporté la Coupe du Monde 2026 en battant ${champion.runner_up} ${champion.score} en finale, le 19 juillet 2026 au MetLife Stadium de New York / New Jersey.`,
+    },
+    ...WC_FAQ,
+  ];
+}

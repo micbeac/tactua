@@ -340,6 +340,47 @@ export async function getGroupPredictions(
   return map;
 }
 
+export type WCChampion = {
+  winner: WCTeam;
+  runner_up: WCTeam;
+  score: string;
+  played_at: string;
+};
+
+/**
+ * Vainqueur du tournoi, déduit de la finale jouée.
+ *
+ * Volontairement dérivé de la base plutôt que codé en dur : le palmarès suit
+ * la donnée, et la page ne peut pas se retrouver désynchronisée du résultat.
+ * Retourne null tant que la finale n'est pas terminée — la page affiche alors
+ * le compte à rebours. Un score nul (finale aux tirs au but, non stockés)
+ * renvoie null aussi : mieux vaut ne rien annoncer que se tromper.
+ */
+export function getWCChampion(matches: WCMatch[]): WCChampion | null {
+  const final = matches.find(
+    (m) =>
+      (m.stage ?? '').toUpperCase() === 'FINAL' &&
+      m.status === 'finished' &&
+      m.score_home != null &&
+      m.score_away != null &&
+      m.score_home !== m.score_away &&
+      m.home != null &&
+      m.away != null,
+  );
+  if (!final) return null;
+
+  const homeWon = final.score_home! > final.score_away!;
+  return {
+    winner: (homeWon ? final.home : final.away)!,
+    runner_up: (homeWon ? final.away : final.home)!,
+    score: `${Math.max(final.score_home!, final.score_away!)}-${Math.min(
+      final.score_home!,
+      final.score_away!,
+    )}`,
+    played_at: final.kickoff_at,
+  };
+}
+
 /**
  * Groupe les matchs par stage (GROUP_STAGE, LAST_16, LAST_8, SEMI_FINALS, FINAL).
  */
