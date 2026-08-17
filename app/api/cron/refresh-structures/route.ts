@@ -48,14 +48,12 @@ export async function GET(request: Request) {
     teams: 0,
     players: 0,
     matches: 0,
+    processed: [] as string[],
+    skipped: [] as string[],
     errors: [] as CronError[],
   };
 
-  const comps = codeFilter
-    ? TRACKED_COMPETITIONS.filter((c) => c.code === codeFilter)
-    : TRACKED_COMPETITIONS;
-
-  if (codeFilter && comps.length === 0) {
+  if (codeFilter && !TRACKED_COMPETITIONS.some((c) => c.code === codeFilter)) {
     return NextResponse.json(
       {
         error: `Compétition inconnue : ${codeFilter}`,
@@ -65,10 +63,46 @@ export async function GET(request: Request) {
     );
   }
 
+  // Ordre de traitement : la compétition la moins récemment rafraîchie
+  // d'abord. Comme le run est coupé à 60 s avant d'avoir tout traité, un
+  // ordre fixe condamnerait toujours les mêmes compétitions en fin de liste
+  // à ne jamais être mises à jour. En repartant des plus anciennes, des
+  // appels successifs finissent par tout couvrir.
+  let comps = [...TRACKED_COMPETITIONS];
+  if (codeFilter) {
+    comps = comps.filter((c) => c.code === codeFilter);
+  } else {
+    const { data: freshness } = await supabase
+      .from('competitions')
+      .select('id, last_updated_at');
+    const updatedAtById = new Map<number, string>();
+    for (const r of (freshness ?? []) as Array<{
+      id: number;
+      last_updated_at: string;
+    }>) {
+      updatedAtById.set(r.id, r.last_updated_at);
+    }
+    // Jamais rafraîchie (absente de la table) → chaîne vide, donc en tête.
+    comps.sort((a, b) =>
+      (updatedAtById.get(a.fd_id) ?? '').localeCompare(
+        updatedAtById.get(b.fd_id) ?? '',
+      ),
+    );
+  }
+
+  // Budget : on s'arrête avant le couperet des 60 s de Vercel Hobby, pour
+  // rendre un compte rendu exploitable plutôt que de se faire tuer en vol.
+  const startedAt = Date.now();
+  const TIME_BUDGET_MS = 45_000;
+
   for (const { code } of comps) {
     // Football-Data ne couvre pas la JPL (free tier) — l'import est manuel
     // via scripts/import-jupiler-pro-league.ts.
     if (code === 'BJL') continue;
+    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      stats.skipped.push(code);
+      continue;
+    }
     try {
       const c = await football.getCompetition(code);
       const { error: cErr } = await supabase
@@ -109,6 +143,7 @@ export async function GET(request: Request) {
         if (mErr) throw new Error(`matches upsert: ${mErr.message}`);
         stats.matches += matchesResp.matches.length;
       }
+      stats.processed.push(code);
     } catch (e) {
       stats.errors.push({
         code,
