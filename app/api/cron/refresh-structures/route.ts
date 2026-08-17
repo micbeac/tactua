@@ -90,10 +90,12 @@ export async function GET(request: Request) {
     );
   }
 
-  // Budget : on s'arrête avant le couperet des 60 s de Vercel Hobby, pour
-  // rendre un compte rendu exploitable plutôt que de se faire tuer en vol.
+  // Budget : on n'entame pas une compétition qu'on ne pourra pas finir.
+  // Football-Data plafonne à 10 req/min et la route fait 3 appels par
+  // compétition, soit ~18 s de throttling incompressible — d'où un seuil bas
+  // au regard des 60 s de Vercel Hobby.
   const startedAt = Date.now();
-  const TIME_BUDGET_MS = 45_000;
+  const TIME_BUDGET_MS = 25_000;
 
   for (const { code } of comps) {
     // Football-Data ne couvre pas la JPL (free tier) — l'import est manuel
@@ -105,11 +107,6 @@ export async function GET(request: Request) {
     }
     try {
       const c = await football.getCompetition(code);
-      const { error: cErr } = await supabase
-        .from('competitions')
-        .upsert(mapCompetition(c), { onConflict: 'id' });
-      if (cErr) throw new Error(`competitions upsert: ${cErr.message}`);
-      stats.competitions += 1;
 
       const teamsResp = await football.getCompetitionTeams(code);
       if (teamsResp.teams.length) {
@@ -126,12 +123,25 @@ export async function GET(request: Request) {
             current_team_id: p.currentTeam?.id ?? t.id,
           })),
         );
-        if (players.length) {
+
+        // Déduplication obligatoire avant l'upsert : un joueur transféré en
+        // cours de mercato apparaît dans les effectifs de ses deux clubs, et
+        // Postgres rejette tout le lot avec « ON CONFLICT DO UPDATE command
+        // cannot affect row a second time ». L'exception interrompait la
+        // compétition avant la récupération des matchs — c'est ce qui laissait
+        // la Serie A bloquée sur la saison précédente.
+        // On garde la dernière occurrence : `currentTeam` de l'API fait foi
+        // sur le club réel, quel que soit l'effectif qui l'a fait remonter.
+        const playerById = new Map<number, (typeof players)[number]>();
+        for (const p of players) playerById.set(p.id, p);
+        const uniquePlayers = Array.from(playerById.values());
+
+        if (uniquePlayers.length) {
           const { error: pErr } = await supabase
             .from('players')
-            .upsert(players, { onConflict: 'id' });
+            .upsert(uniquePlayers, { onConflict: 'id' });
           if (pErr) throw new Error(`players upsert: ${pErr.message}`);
-          stats.players += players.length;
+          stats.players += uniquePlayers.length;
         }
       }
 
@@ -143,6 +153,17 @@ export async function GET(request: Request) {
         if (mErr) throw new Error(`matches upsert: ${mErr.message}`);
         stats.matches += matchesResp.matches.length;
       }
+
+      // Metadata de la compétition upsertée EN DERNIER, volontairement :
+      // `last_updated_at` sert de curseur de tri au prochain run. L'écrire en
+      // début de boucle marquait comme « à jour » une compétition dont le
+      // traitement se faisait ensuite couper par le timeout — elle repassait
+      // alors en fin de file et n'était jamais rattrapée.
+      const { error: cErr } = await supabase
+        .from('competitions')
+        .upsert(mapCompetition(c), { onConflict: 'id' });
+      if (cErr) throw new Error(`competitions upsert: ${cErr.message}`);
+      stats.competitions += 1;
       stats.processed.push(code);
     } catch (e) {
       stats.errors.push({

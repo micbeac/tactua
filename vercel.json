@@ -10,8 +10,28 @@
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/refresh-structures",
+      "path": "/api/cron/refresh-structures?code=CL",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/refresh-structures?code=PL",
+      "schedule": "0 4 * * 2"
+    },
+    {
+      "path": "/api/cron/refresh-structures?code=PD",
+      "schedule": "0 4 * * 3"
+    },
+    {
+      "path": "/api/cron/refresh-structures?code=SA",
+      "schedule": "0 4 * * 4"
+    },
+    {
+      "path": "/api/cron/refresh-structures?code=BL1",
+      "schedule": "0 4 * * 5"
+    },
+    {
+      "path": "/api/cron/refresh-structures?code=FL1",
+      "schedule": "0 4 * * 6"
     },
     {
       "path": "/api/cron/send-daily-digest",
