@@ -92,6 +92,19 @@ Les routes déclarant `maxDuration = 300` (`refresh-narratives`, `generate-news-
 
 Auth des crons : header `Authorization: Bearer ${CRON_SECRET}` (ou `x-cron-secret` selon la route — vérifier au cas par cas).
 
+### ⚠️ Le piège de la fenêtre inter-saisons
+
+Football-Data bascule `currentSeason` sur la saison suivante **avant** de réinitialiser son classement. Entre les deux, `/standings` renvoie la table finale de l'an dernier étiquetée avec la saison à venir.
+
+Constaté le 17/08/2026 : la Ligue 1 avait 34 matchs joués et 76 points enregistrés sous `season = '2026'`, si bien que les fiches équipe présentaient le classement 2025-26 comme celui du moment.
+
+Deux protections en place, à ne pas retirer :
+
+1. `refresh-rankings` **ignore** un classement dont la saison n'a pas encore commencé mais qui annonce des matchs joués.
+2. Toute lecture de `team_season_stats` doit trier **par `season` DESC en clé primaire**. Le tri par points départage les compétitions d'une même saison (championnat avant Coupe d'Europe) ; utilisé seul, il fait remonter la saison précédente terminée, plus riche en points, devant la saison en cours qui démarre à 0.
+
+Le même réflexe vaut pour les stats joueurs : `refresh-player-stats` calcule sa saison via `currentSeason()` (`lib/season.ts`, bascule au 1er juillet) et non par une constante.
+
 ### Règles métier
 
 - **Analyses IA** : générées une seule fois, jamais régénérées.

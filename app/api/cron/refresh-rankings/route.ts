@@ -18,6 +18,7 @@ export async function GET(request: Request) {
 
   const football = createFootballClient();
   const supabase = createAdminClient();
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   type CronError = { code: string; step: string; message: string };
   const stats = {
@@ -34,6 +35,38 @@ export async function GET(request: Request) {
       const standings = await football.getCompetitionStandings(code);
       const season = standings.season.startDate.slice(0, 4);
       const rows = mapStandingsToTeamSeasonStats(standings, season);
+
+      const playedMax = Math.max(0, ...rows.map((r) => r.played ?? 0));
+      console.log(
+        `[cron:refresh-rankings] ${code} season=${season} ` +
+          `start=${standings.season.startDate} ` +
+          `matchday=${standings.season.currentMatchday ?? 'n/a'} ` +
+          `rows=${rows.length} played_max=${playedMax}`,
+      );
+
+      // Garde-fou inter-saisons.
+      //
+      // Football-Data bascule `currentSeason` sur la saison suivante avant de
+      // réinitialiser son classement : pendant cette fenêtre, il sert la table
+      // FINALE de l'an dernier étiquetée avec la saison à venir. On écrivait
+      // donc 34 matchs joués sous la clé 2026, et les fiches équipe
+      // affichaient le classement périmé comme s'il était celui du moment
+      // (constaté sur la Ligue 1 le 17/08/2026).
+      //
+      // Un classement dont la saison n'a pas encore commencé ne peut pas
+      // contenir de match joué : dans ce cas on ne touche pas à la base.
+      const seasonNotStarted = standings.season.startDate > todayIso;
+      if (seasonNotStarted && playedMax > 0) {
+        stats.errors.push({
+          code,
+          step: 'refresh-rankings',
+          message:
+            `classement incohérent ignoré : saison ${season} démarre le ` +
+            `${standings.season.startDate} mais la table annonce ` +
+            `${playedMax} matchs joués (Football-Data sert encore la saison précédente)`,
+        });
+        continue;
+      }
 
       if (rows.length) {
         const { error } = await supabase
