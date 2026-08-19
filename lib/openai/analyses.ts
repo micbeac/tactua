@@ -226,6 +226,27 @@ export type DeepTeamContext = {
    * victoires, 3 buts/match » n'a aucune valeur prédictive. Sans ce repli,
    * l'analyse d'un match de la 3ᵉ journée est forcément indigente.
    */
+  /**
+   * Les derniers matchs joués, avec adversaire et score.
+   *
+   * `form_long` ne donne que « WWDLW » : battre le leader ou la lanterne
+   * rouge y produit le même caractère. Sans le détail, l'analyse ne peut pas
+   * juger la VALEUR des résultats récents — c'est ce qui distingue une
+   * lecture professionnelle d'un récit générique.
+   */
+  recent_fixtures?: Array<{
+    date: string;
+    competition: string;
+    opponent: string;
+    at_home: boolean;
+    goals_for: number;
+    goals_against: number;
+    result: 'W' | 'D' | 'L';
+  }>;
+  /** Discipline : cartons cumulés sur la saison. */
+  discipline?: { yellow: number; red: number } | null;
+  /** Penalties obtenus et convertis sur la saison. */
+  penalties?: { scored: number; missed: number; total: number } | null;
   previous_season?: {
     label: string;
     played: number;
@@ -340,6 +361,11 @@ Règles :
     - Nomme toujours la saison quand tu cites ces chiffres ("la saison dernière", "en 2025-26"). Ne les présente JAMAIS comme la forme du moment.
     - Dis explicitement que l'échantillon de la saison en cours est encore mince, au lieu de tirer des conclusions de 2 ou 3 matchs.
     - Prends en compte que les effectifs ont pu changer au mercato : le niveau passé est un repère, pas une garantie.
+  * "Derniers matchs" : c'est ta matière la plus concrète. Une chaîne "WWDLW" ne dit pas CONTRE QUI ; ici tu as l'adversaire, le lieu et le score exact.
+    - Cite ces résultats nommément dans "form_assessment" et "data_insight" ("battu 3-0 à Bilbao", "tenu en échec par le promu").
+    - Pondère la valeur des résultats : une victoire contre le dernier ne vaut pas une victoire chez le leader. Une défaite en coupe d'Europe trois jours avant explique souvent une contre-performance.
+    - Repère les dynamiques réelles (série de clean sheets, attaque en panne, matchs à répétition à l'extérieur) plutôt que de paraphraser la suite de lettres.
+  * "Discipline" : un total de cartons élevé annonce un match haché, un risque de suspension ou d'infériorité numérique — angle utile pour "x_factor" ou "things_to_watch". Le ratio de penalties convertis éclaire l'efficacité sur coups de pied arrêtés.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
@@ -462,6 +488,37 @@ function fmtPreviousSeason(t: DeepTeamContext): string {
   );
 }
 
+function fmtRecentFixtures(t: DeepTeamContext): string {
+  const list = t.recent_fixtures;
+  if (!list || list.length === 0) return '';
+  const lines = list
+    .map((f) => {
+      const where = f.at_home ? 'dom.' : 'ext.';
+      const res = f.result === 'W' ? 'V' : f.result === 'L' ? 'D' : 'N';
+      return `    · ${f.date.slice(5)} ${f.competition}, ${where} vs ${f.opponent} : ${f.goals_for}-${f.goals_against} (${res})`;
+    })
+    .join(String.fromCharCode(10));
+  return `
+- Derniers matchs (ordre chronologique, toutes compétitions) :
+${lines}`;
+}
+
+function fmtDiscipline(t: DeepTeamContext): string {
+  const parts: string[] = [];
+  if (t.discipline) {
+    parts.push(
+      `${t.discipline.yellow} carton(s) jaune(s), ${t.discipline.red} rouge(s)`,
+    );
+  }
+  if (t.penalties) {
+    parts.push(
+      `penalties : ${t.penalties.scored}/${t.penalties.total} convertis`,
+    );
+  }
+  return parts.length > 0 ? `
+- Discipline : ${parts.join(' · ')}` : '';
+}
+
 function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   const fmtTeam = (t: DeepTeamContext, side: 'Domicile' | 'Extérieur') =>
     `
@@ -477,7 +534,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}${fmtPreviousSeason(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}
-- XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${
+- XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${fmtDiscipline(t)}${fmtRecentFixtures(t)}${
     t.transferred_out && t.transferred_out.length > 0
       ? `\n- ⚠ NE PAS MENTIONNER (partis au mercato, ne jouent plus pour cette équipe) : ${t.transferred_out.join(', ')}`
       : ''

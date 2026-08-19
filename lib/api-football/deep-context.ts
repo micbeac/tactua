@@ -4,6 +4,7 @@
 import {
   fetchActiveInjuries,
   fetchTeamStats,
+  fetchRecentFixtures,
   fetchTopPerformers,
 } from './deep-stats.ts';
 import type { DeepTeamContext } from '@/lib/openai/analyses';
@@ -38,11 +39,14 @@ export async function buildDeepTeamContext(
   // La saison précédente est récupérée systématiquement (1 appel de plus par
   // équipe, sans incidence sur le plan Ultra) mais n'est transmise au modèle
   // que si la saison en cours est trop jeune — voir EARLY_SEASON_THRESHOLD.
-  const [stats, top, injuries, prevStats] = await Promise.all([
+  const [stats, top, injuries, prevStats, recent] = await Promise.all([
     fetchTeamStats(af_team_id, af_league_id, season),
     fetchTopPerformers(af_team_id, af_league_id, season, 7),
     fetchActiveInjuries(af_team_id, season, input.match_date),
     fetchTeamStats(af_team_id, af_league_id, season - 1).catch(() => null),
+    // Toutes compétitions confondues : une élimination en coupe ou un gros
+    // déplacement européen explique souvent une contre-performance en ligue.
+    fetchRecentFixtures(af_team_id, 6).catch(() => []),
   ]);
 
   // AF peut retourner un objet quasi-vide si pas de stats pour la
@@ -119,6 +123,24 @@ export async function buildDeepTeamContext(
         }
       : null;
 
+  // Discipline : l'API ventile les cartons par tranche de 15 minutes ;
+  // on agrège, le détail temporel n'apporte rien à l'analyse.
+  const sumCards = (b?: Record<string, { total: number | null }>) =>
+    b ? Object.values(b).reduce((acc, v) => acc + (v?.total ?? 0), 0) : 0;
+  const yellow = sumCards(safeStats.cards?.yellow);
+  const red = sumCards(safeStats.cards?.red);
+  const discipline = yellow + red > 0 ? { yellow, red } : null;
+
+  const pen = safeStats.penalty;
+  const penalties =
+    pen && (pen.total ?? 0) > 0
+      ? {
+          scored: pen.scored?.total ?? 0,
+          missed: pen.missed?.total ?? 0,
+          total: pen.total ?? 0,
+        }
+      : null;
+
   return {
     name: safeStats.team?.name ?? team_name,
     country: team_country,
@@ -161,6 +183,9 @@ export async function buildDeepTeamContext(
     })),
     starting_eleven: input.starting_eleven,
     previous_season: previousSeason,
+    recent_fixtures: recent,
+    discipline,
+    penalties,
     goal_timing: {
       scored_early_pct: forTiming.early,
       scored_late_pct: forTiming.late,

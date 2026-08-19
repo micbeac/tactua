@@ -129,6 +129,18 @@ export type TeamStatsResponse = {
     clean_sheet: { home: number; away: number; total: number };
     failed_to_score: { home: number; away: number; total: number };
     lineups: Array<{ formation: string; played: number }>;
+    // Renvoyés par l'API mais jusqu'ici ignorés : discipline et penalties
+    // sont deux angles concrets d'analyse (équipe qui joue au bord de la
+    // rupture, efficacité sur coups de pied arrêtés).
+    penalty?: {
+      scored: { total: number | null; percentage: string | null };
+      missed: { total: number | null; percentage: string | null };
+      total: number | null;
+    };
+    cards?: {
+      yellow?: Record<string, { total: number | null; percentage: string | null }>;
+      red?: Record<string, { total: number | null; percentage: string | null }>;
+    };
   };
 };
 
@@ -450,6 +462,67 @@ export async function fetchH2H(
   }));
 }
 
+// ============================================================================
+// Derniers matchs d'une équipe — /fixtures?team=X&last=N
+// ============================================================================
+
+type RecentFixturesResponse = {
+  response: Array<{
+    fixture: { id: number; date: string; status: { short: string } };
+    league: { id: number; name: string; round: string };
+    teams: {
+      home: { id: number; name: string; winner: boolean | null };
+      away: { id: number; name: string; winner: boolean | null };
+    };
+    goals: { home: number | null; away: number | null };
+  }>;
+};
+
+export type RecentFixture = {
+  date: string;
+  competition: string;
+  opponent: string;
+  /** true si l'équipe de référence recevait */
+  at_home: boolean;
+  goals_for: number;
+  goals_against: number;
+  result: 'W' | 'D' | 'L';
+};
+
+/**
+ * Les N derniers matchs JOUÉS d'une équipe, avec adversaire et score.
+ *
+ * Une chaîne de forme « WWDLW » ne dit pas contre qui : battre le leader ou
+ * le dernier produit le même caractère. Ce détail est ce qui permet à
+ * l'analyse de raisonner sur la valeur réelle des résultats récents.
+ */
+export async function fetchRecentFixtures(
+  teamId: number,
+  last = 6,
+): Promise<RecentFixture[]> {
+  const d = await af<RecentFixturesResponse>(
+    `/fixtures?team=${teamId}&last=${last}`,
+  );
+  return d.response
+    .filter((f) => f.goals.home != null && f.goals.away != null)
+    .map((f) => {
+      const atHome = f.teams.home.id === teamId;
+      const gf = (atHome ? f.goals.home : f.goals.away) ?? 0;
+      const ga = (atHome ? f.goals.away : f.goals.home) ?? 0;
+      return {
+        date: f.fixture.date.slice(0, 10),
+        competition: f.league.name,
+        opponent: atHome ? f.teams.away.name : f.teams.home.name,
+        at_home: atHome,
+        goals_for: gf,
+        goals_against: ga,
+        result: (gf > ga ? 'W' : gf < ga ? 'L' : 'D') as 'W' | 'D' | 'L',
+      };
+    })
+    // API-Football renvoie du plus récent au plus ancien : on remet dans
+    // l'ordre chronologique, plus lisible pour raconter une dynamique.
+    .reverse();
+}
 // ============================================================================
 // Player profile — /players/profiles (bio physique)
 // ============================================================================
