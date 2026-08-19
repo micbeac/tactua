@@ -2,6 +2,9 @@
 
 import Image from 'next/image';
 import { PlayerPopup } from '@/components/match/PlayerPopup';
+import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
+import { playerHref } from '@/lib/url';
 
 export type SquadPlayer = {
   id: number;
@@ -130,7 +133,7 @@ export function TeamSquadSection({
                     const age = computeAge(p.date_of_birth);
                     const stats = stats_by_player?.get(p.id);
                     return (
-                      <li key={p.id}>
+                      <li key={p.id} className="flex items-center gap-1">
                         <PlayerPopup
                           player={{
                             name: p.name,
@@ -181,6 +184,18 @@ export function TeamSquadSection({
                             </span>
                           </div>
                         </PlayerPopup>
+                        {/* Lien crawlable vers la fiche joueur.
+                            La popup est un composant client : son contenu n'existe pas dans
+                            le HTML servi, donc aucun robot n'atteignait les fiches joueurs
+                            depuis l'effectif. Ce lien frere reste hors du declencheur pour
+                            ne pas imbriquer deux elements interactifs. */}
+                        <Link
+                          href={playerHref(p.id, p.name)}
+                          aria-label={`Fiche de ${p.name}`}
+                          className="text-muted-foreground hover:text-primary hover:bg-muted/40 shrink-0 rounded-md p-1 transition-colors"
+                        >
+                          <ChevronRight className="size-4" aria-hidden />
+                        </Link>
                       </li>
                     );
                   })}

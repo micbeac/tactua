@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { playerHref } from '@/lib/url';
 import type { PlayerSeasonStat } from '@/lib/openai/types';
 
 /**
@@ -345,7 +346,7 @@ export function PlayerPopup({ player, children, team_name }: Props) {
             {/* CTA voir profil complet */}
             {player.db_player_id != null ? (
               <Link
-                href={`/players/${player.db_player_id}`}
+                href={playerHref(player.db_player_id, player.name)}
                 className="block"
                 onClick={() => setOpen(false)}
               >
