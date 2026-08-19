@@ -241,12 +241,24 @@ export async function POST(
         (m.competition?.id != null ? (FD_TO_AF_LEAGUE[m.competition.id] ?? null) : null);
       const afHomeId = m.home_team.api_football_id;
       const afAwayId = m.away_team.api_football_id;
-      const canDeep = Boolean(
-        afLeagueId &&
-          afHomeId &&
-          afAwayId &&
-          process.env.API_FOOTBALL_KEY,
-      );
+      // Diagnostic explicite : la voie basique est très pauvre (4 champs
+      // courts contre une quinzaine de sections en deep). Y retomber doit
+      // laisser une trace nommant la condition fautive — l'absence de log a
+      // laissé le site produire des analyses indigentes sans aucun signal.
+      const deepBlockers: string[] = [];
+      if (!afLeagueId) deepBlockers.push('competition.api_football_league_id');
+      if (!afHomeId)
+        deepBlockers.push(`home_team.api_football_id (${m.home_team.name})`);
+      if (!afAwayId)
+        deepBlockers.push(`away_team.api_football_id (${m.away_team.name})`);
+      if (!process.env.API_FOOTBALL_KEY) deepBlockers.push('API_FOOTBALL_KEY');
+
+      const canDeep = deepBlockers.length === 0;
+      if (!canDeep) {
+        console.warn(
+          `[analyze ${m.id}] VOIE BASIQUE (analyse pauvre) — manquant : ${deepBlockers.join(', ')}`,
+        );
+      }
 
       if (canDeep) {
         const season = afSeason(afLeagueId!, m.kickoff_at);
