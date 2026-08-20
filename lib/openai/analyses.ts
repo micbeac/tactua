@@ -186,6 +186,18 @@ export type DeepTeamContext = {
     reason: string | null;
     kind: 'suspension' | 'injury' | 'other';
   }>;
+  /**
+   * Joueurs à un carton jaune du seuil de suspension.
+   *
+   * Une absence probable au match SUIVANT en cas d'avertissement, qui pèse
+   * sur la gestion du match en cours : un cadre sous menace prend moins de
+   * risques, ou se fait ménager.
+   */
+  suspension_risks?: Array<{
+    player_name: string;
+    yellow_cards: number;
+    threshold: number;
+  }>;
   /** Entraîneur principal (nom + nationalité). Facultatif. */
   coach?: { name: string; nationality: string | null } | null;
   // XI titulaire si dispo (sinon vide)
@@ -242,6 +254,14 @@ export type DeepTeamContext = {
     goals_for: number;
     goals_against: number;
     result: 'W' | 'D' | 'L';
+    opponent_af_id?: number;
+    /**
+     * Position de l'adversaire au classement au moment de la lecture.
+     * Battre le 18e et battre le 2e ne disent pas la même chose, et une
+     * séquence VVV contre le bas de tableau ne vaut pas une série de nuls
+     * contre le haut.
+     */
+    opponent_position?: number | null;
   }>;
   /** Discipline : cartons cumulés sur la saison. */
   discipline?: { yellow: number; red: number } | null;
@@ -395,6 +415,8 @@ Règles :
     - Pondère la valeur des résultats : une victoire contre le dernier ne vaut pas une victoire chez le leader. Une défaite en coupe d'Europe trois jours avant explique souvent une contre-performance.
     - Repère les dynamiques réelles (série de clean sheets, attaque en panne, matchs à répétition à l'extérieur) plutôt que de paraphraser la suite de lettres.
   * "Discipline" : un total de cartons élevé annonce un match haché, un risque de suspension ou d'infériorité numérique — angle utile pour "x_factor" ou "things_to_watch". Le ratio de penalties convertis éclaire l'efficacité sur coups de pied arrêtés.
+- QUALITÉ DE L'ADVERSAIRE — Quand la position d'un adversaire est indiquée entre crochets dans les derniers matchs, pondère la forme avec : trois victoires contre le bas de tableau ne valent pas une série de nuls contre le haut. Dis-le explicitement dans "form_assessment" quand l'écart de calibre est net.
+- MENACE DE SUSPENSION — Si des joueurs sont signalés sous menace, c'est un angle concret et rarement traité ailleurs. Un cadre à un carton du seuil joue plus prudemment, peut être ménagé, ou manquera la journée suivante. Utilise-le dans "x_factor" ou "things_to_watch", jamais comme une absence pour CE match : le joueur est bien disponible aujourd'hui.
 - CONFRONTATIONS DIRECTES — Un bilan agrégé est fourni sous la liste des matchs. Sers-t'en plutôt que de recompter, et privilégie le bilan « quand cette équipe reçoit » : une domination à l'extérieur ne se transpose pas à domicile. Un historique déséquilibré est un angle fort, mais rappelle qu'il porte sur des effectifs et des entraîneurs qui ont pu changer.
 - ARBITRE — Si un arbitre est nommé, tu peux le citer comme élément de contexte. N'invente aucune statistique à son sujet : sans chiffres fournis, contente-toi de le nommer.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
@@ -531,7 +553,8 @@ function fmtRecentFixtures(t: DeepTeamContext): string {
     .map((f) => {
       const where = f.at_home ? 'dom.' : 'ext.';
       const res = f.result === 'W' ? 'V' : f.result === 'L' ? 'D' : 'N';
-      return `    · ${f.date.slice(5)} ${f.competition}, ${where} vs ${f.opponent} : ${f.goals_for}-${f.goals_against} (${res})`;
+      const rank = f.opponent_position ? ` [${f.opponent_position}e]` : '';
+      return `    · ${f.date.slice(5)} ${f.competition}, ${where} vs ${f.opponent}${rank} : ${f.goals_for}-${f.goals_against} (${res})`;
     })
     .join(String.fromCharCode(10));
   return `
@@ -553,6 +576,16 @@ function fmtDiscipline(t: DeepTeamContext): string {
   }
   return parts.length > 0 ? `
 - Discipline : ${parts.join(' · ')}` : '';
+}
+
+function fmtSuspensionRisks(t: DeepTeamContext): string {
+  const list = t.suspension_risks;
+  if (!list || list.length === 0) return '';
+  const names = list
+    .map((s) => `${s.player_name} (${s.yellow_cards}/${s.threshold})`)
+    .join(', ');
+  return `
+- ⚠ Sous menace de suspension (un jaune de plus = match suivant manqué) : ${names}`;
 }
 
 function fmtH2HSummary(ctx: DeepPreMatchContext): string {
@@ -593,7 +626,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
 - Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}${fmtPreviousSeason(t)}
 - Top performers : ${fmtTop(t.top_performers)}
-- Indisponibles récents : ${fmtInjuries(t.active_injuries)}
+- Indisponibles récents : ${fmtInjuries(t.active_injuries)}${fmtSuspensionRisks(t)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${fmtDiscipline(t)}${fmtRecentFixtures(t)}${
     t.transferred_out && t.transferred_out.length > 0
       ? `\n- ⚠ NE PAS MENTIONNER (partis au mercato, ne jouent plus pour cette équipe) : ${t.transferred_out.join(', ')}`

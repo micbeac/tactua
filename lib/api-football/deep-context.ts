@@ -7,6 +7,7 @@ import {
   fetchRecentFixtures,
   fetchTopPerformers,
 } from './deep-stats.ts';
+import { findSuspensionRisks } from './suspension.ts';
 import type { DeepTeamContext } from '@/lib/openai/analyses';
 
 export type BuildDeepTeamContextInput = {
@@ -50,7 +51,7 @@ export async function buildDeepTeamContext(
   // que si la saison en cours est trop jeune — voir EARLY_SEASON_THRESHOLD.
   const [stats, top, injuries, prevStats, recent] = await Promise.all([
     fetchTeamStats(af_team_id, af_league_id, season),
-    fetchTopPerformers(af_team_id, af_league_id, season, 7),
+    fetchTopPerformers(af_team_id, af_league_id, season, 30),
     fetchActiveInjuries(af_team_id, season, input.match_date),
     fetchTeamStats(af_team_id, af_league_id, season - 1).catch(() => null),
     // Toutes compétitions confondues : une élimination en coupe ou un gros
@@ -167,7 +168,7 @@ export async function buildDeepTeamContext(
       loses: big.streak.loses,
     },
     primary_formation: primaryFormation,
-    top_performers: top.map((p) => ({
+    top_performers: top.slice(0, 7).map((p) => ({
       af_player_id: p.player_id,
       photo: p.photo,
       name: p.player_name,
@@ -192,6 +193,7 @@ export async function buildDeepTeamContext(
     })),
     starting_eleven: input.starting_eleven,
     previous_season: previousSeason,
+    suspension_risks: findSuspensionRisks(top, af_league_id),
     recent_fixtures: recent,
     discipline,
     penalties,

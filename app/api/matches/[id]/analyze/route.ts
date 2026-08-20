@@ -315,6 +315,62 @@ export async function POST(
         const homeCtx = homeCtxR.value;
         const awayCtx = awayCtxR.value;
         const h2hAf = h2hAfR.value;
+
+        // Calibre des adversaires récents. « 3 victoires de suite » ne dit
+        // rien tant qu'on ignore contre qui : on annote chaque match récent
+        // de la position de l'adversaire au classement.
+        const opponentAfIds = [...homeCtx.recent_fixtures ?? [], ...awayCtx.recent_fixtures ?? []]
+          .map((fx) => fx.opponent_af_id)
+          .filter((v): v is number => typeof v === 'number');
+
+        if (opponentAfIds.length > 0) {
+          const { data: oppTeams } = await supabase
+            .from('teams')
+            .select('id, api_football_id')
+            .in('api_football_id', [...new Set(opponentAfIds)]);
+
+          const dbIdByAf = new Map<number, number>();
+          for (const t of (oppTeams ?? []) as Array<{
+            id: number;
+            api_football_id: number;
+          }>) {
+            dbIdByAf.set(t.api_football_id, t.id);
+          }
+
+          const positionByDbId = new Map<number, number>();
+          if (dbIdByAf.size > 0) {
+            const { data: standRows } = await supabase
+              .from('team_season_stats')
+              .select('team_id, position, season')
+              .in('team_id', [...dbIdByAf.values()])
+              .eq('competition_id', m.competition?.id ?? 0)
+              .order('season', { ascending: false });
+            for (const r of (standRows ?? []) as Array<{
+              team_id: number;
+              position: number | null;
+            }>) {
+              // Trié par saison décroissante : la 1re ligne vue par équipe
+              // est la plus récente, on ne l'écrase pas ensuite.
+              if (r.position != null && !positionByDbId.has(r.team_id)) {
+                positionByDbId.set(r.team_id, r.position);
+              }
+            }
+          }
+
+          const annotate = (ctx: typeof homeCtx) => {
+            if (!ctx.recent_fixtures) return;
+            for (const fx of ctx.recent_fixtures) {
+              const dbId = fx.opponent_af_id
+                ? dbIdByAf.get(fx.opponent_af_id)
+                : undefined;
+              fx.opponent_position = dbId
+                ? (positionByDbId.get(dbId) ?? null)
+                : null;
+            }
+          };
+          annotate(homeCtx);
+          annotate(awayCtx);
+        }
         // Cotes + prédiction AF : optionnelles, un échec ne bloque pas.
         const marketConsensus =
           oddsR.status === 'fulfilled' ? oddsR.value : null;

@@ -482,6 +482,8 @@ export type RecentFixture = {
   date: string;
   competition: string;
   opponent: string;
+  /** Id API-Football de l'adversaire, pour retrouver son classement. */
+  opponent_af_id: number;
   /** true si l'équipe de référence recevait */
   at_home: boolean;
   goals_for: number;
@@ -513,6 +515,7 @@ export async function fetchRecentFixtures(
         date: f.fixture.date.slice(0, 10),
         competition: f.league.name,
         opponent: atHome ? f.teams.away.name : f.teams.home.name,
+        opponent_af_id: atHome ? f.teams.away.id : f.teams.home.id,
         at_home: atHome,
         goals_for: gf,
         goals_against: ga,
