@@ -279,6 +279,31 @@ export type DeepPreMatchContext = {
     score_home: number | null;
     score_away: number | null;
   }>;
+  /**
+   * Bilan agrégé des confrontations directes.
+   *
+   * La liste des 10 derniers matchs est déjà fournie, mais laisser le
+   * modèle la compter lui-même est une source d'erreurs. On lui donne
+   * directement les totaux, et surtout le bilan LORSQUE CETTE ÉQUIPE
+   * REÇOIT, qui est la seule lecture pertinente pour ce match-ci.
+   */
+  h2h_summary?: {
+    total: number;
+    home_wins: number;
+    draws: number;
+    away_wins: number;
+    avg_goals: number;
+    btts_pct: number;
+    over_2_5_pct: number;
+    at_home_venue: {
+      total: number;
+      home_wins: number;
+      draws: number;
+      away_wins: number;
+    } | null;
+  } | null;
+  /** Arbitre désigné, si connu. */
+  referee?: string | null;
   /** Narratifs récents par équipe (news scrapées via Apify). Facultatif. */
   recent_narratives?: {
     home: RecentNarrative[];
@@ -370,6 +395,8 @@ Règles :
     - Pondère la valeur des résultats : une victoire contre le dernier ne vaut pas une victoire chez le leader. Une défaite en coupe d'Europe trois jours avant explique souvent une contre-performance.
     - Repère les dynamiques réelles (série de clean sheets, attaque en panne, matchs à répétition à l'extérieur) plutôt que de paraphraser la suite de lettres.
   * "Discipline" : un total de cartons élevé annonce un match haché, un risque de suspension ou d'infériorité numérique — angle utile pour "x_factor" ou "things_to_watch". Le ratio de penalties convertis éclaire l'efficacité sur coups de pied arrêtés.
+- CONFRONTATIONS DIRECTES — Un bilan agrégé est fourni sous la liste des matchs. Sers-t'en plutôt que de recompter, et privilégie le bilan « quand cette équipe reçoit » : une domination à l'extérieur ne se transpose pas à domicile. Un historique déséquilibré est un angle fort, mais rappelle qu'il porte sur des effectifs et des entraîneurs qui ont pu changer.
+- ARBITRE — Si un arbitre est nommé, tu peux le citer comme élément de contexte. N'invente aucune statistique à son sujet : sans chiffres fournis, contente-toi de le nommer.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue des marchés, la référence la plus fiable dont tu disposes pour calibrer tes prédictions.
@@ -528,6 +555,30 @@ function fmtDiscipline(t: DeepTeamContext): string {
 - Discipline : ${parts.join(' · ')}` : '';
 }
 
+function fmtH2HSummary(ctx: DeepPreMatchContext): string {
+  const s = ctx.h2h_summary;
+  if (!s || s.total === 0) return '';
+  const parts = [
+    `Bilan sur ${s.total} confrontations : ${s.home_wins} victoire(s) ${ctx.home.name}, ${s.draws} nul(s), ${s.away_wins} victoire(s) ${ctx.away.name}`,
+    `${s.avg_goals} but(s) par match en moyenne`,
+    `les deux équipes ont marqué dans ${s.btts_pct} % des cas`,
+    `${s.over_2_5_pct} % de ces matchs ont dépassé 2,5 buts`,
+  ];
+  if (s.at_home_venue && s.at_home_venue.total > 0) {
+    const v = s.at_home_venue;
+    parts.push(
+      `quand ${ctx.home.name} reçoit : ${v.home_wins}V ${v.draws}N ${v.away_wins}D sur ${v.total} match(s)`,
+    );
+  }
+  return `
+${parts.join('. ')}.`;
+}
+
+function fmtReferee(ctx: DeepPreMatchContext): string {
+  return ctx.referee ? `
+Arbitre désigné : ${ctx.referee}` : '';
+}
+
 function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   const fmtTeam = (t: DeepTeamContext, side: 'Domicile' | 'Extérieur') =>
     `
@@ -620,7 +671,7 @@ ${fmtTeam(ctx.home, 'Domicile')}
 
 ${fmtTeam(ctx.away, 'Extérieur')}
 
-Confrontations directes récentes :
+Confrontations directes récentes :${fmtH2HSummary(ctx)}${fmtReferee(ctx)}
 ${h2hLines}
 ${narratives}
 ${consensusBlock}${afPredBlock}

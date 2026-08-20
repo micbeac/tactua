@@ -473,6 +473,76 @@ function RichAbsents({
   );
 }
 
+/**
+ * Confrontation entre nos probabilités et le consensus des marchés.
+ *
+ * C'est le bloc le plus différenciant du produit : un agrégateur gratuit
+ * affiche soit ses propres chiffres, soit les cotes — jamais l'écart entre
+ * les deux. Un écart de 10 points ou plus est mis en avant, c'est là que
+ * notre lecture dit quelque chose que le marché ne dit pas.
+ */
+function RichMarketComparison({
+  rich,
+  prediction,
+  home_team_name,
+  away_team_name,
+}: {
+  rich: MatchRichData;
+  prediction: DeepPreMatchAnalysis['prediction'];
+  home_team_name: string;
+  away_team_name: string;
+}) {
+  const mk = rich.market;
+  if (!mk || mk.home_pct == null || mk.draw_pct == null || mk.away_pct == null) {
+    return null;
+  }
+  const rows: Array<{ label: string; ours: number; market: number }> = [
+    { label: home_team_name, ours: prediction.probabilities.home_win, market: mk.home_pct },
+    { label: 'Match nul', ours: prediction.probabilities.draw, market: mk.draw_pct },
+    { label: away_team_name, ours: prediction.probabilities.away_win, market: mk.away_pct },
+  ];
+  return (
+    <div>
+      <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+        <Swords className="size-3.5" aria-hidden />
+        Notre lecture face au marché
+      </div>
+      <div className="border-border overflow-hidden rounded-lg border">
+        <div className="text-muted-foreground bg-muted/30 grid grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 text-[10px] tracking-wide uppercase">
+          <span>Issue</span>
+          <span className="w-12 text-right">Tactuo</span>
+          <span className="w-12 text-right">Marché</span>
+          <span className="w-12 text-right">Écart</span>
+        </div>
+        {rows.map((r) => {
+          const gap = r.ours - r.market;
+          const notable = Math.abs(gap) >= 10;
+          return (
+            <div
+              key={r.label}
+              className="border-border grid grid-cols-[1fr_auto_auto_auto] gap-2 border-t px-3 py-2 text-sm"
+            >
+              <span className="truncate">{r.label}</span>
+              <span className="w-12 text-right font-semibold tabular-nums">{r.ours}%</span>
+              <span className="text-muted-foreground w-12 text-right tabular-nums">{r.market}%</span>
+              <span
+                className={`w-12 text-right tabular-nums ${notable ? 'text-primary font-semibold' : 'text-muted-foreground'}`}
+              >
+                {gap > 0 ? '+' : ''}
+                {gap}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground/70 mt-2 text-[10px]">
+        Consensus agrégé sur {mk.source_count} source(s). Une probabilité
+        n&rsquo;est pas une prédiction : un favori à 60 % perd 4 fois sur 10.
+      </p>
+    </div>
+  );
+}
+
 function RichH2HSummary({
   rich,
   home_team_name,
@@ -805,6 +875,16 @@ export function PreMatchAnalysisSection({
       {rich && (
         <RichForm
           rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Notre lecture face au marché */}
+      {rich && isDeep(analysis) && (
+        <RichMarketComparison
+          rich={rich}
+          prediction={analysis.prediction}
           home_team_name={home_team_name}
           away_team_name={away_team_name}
         />

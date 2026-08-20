@@ -55,7 +55,7 @@ type Body = {
 const MATCH_SELECT = `
   id, kickoff_at, status, stage, matchday, score_home, score_away,
   half_time_home, half_time_away, api_football_fixture_id,
-  venue, home_team_id, away_team_id,
+  venue, referee, home_team_id, away_team_id,
   competition:competitions(id, name, api_football_league_id, current_season),
   home_team:teams!matches_home_team_id_fkey(id, name, country, api_football_id),
   away_team:teams!matches_away_team_id_fkey(id, name, country, api_football_id)
@@ -73,6 +73,7 @@ type MatchRow = {
   half_time_away: number | null;
   api_football_fixture_id: number | null;
   venue: string | null;
+  referee: string | null;
   home_team_id: number | null;
   away_team_id: number | null;
   competition: {
@@ -581,6 +582,59 @@ export async function POST(
           .slice(0, 5)
           .map((n) => ({ title: n.title, snippet: n.snippet ?? '' }));
 
+        // Bilan agrégé des confrontations directes. Calculé ici plutôt que
+        // laissé au modèle : compter dix lignes est une source d'erreurs, et
+        // le bilan « quand cette équipe reçoit » est la seule lecture
+        // vraiment pertinente pour ce match-ci.
+        const h2hPlayed = h2hAf.filter(
+          (h) => h.score_home != null && h.score_away != null,
+        );
+        const h2hHomeName = m.home_team!.name;
+        const tallyH2H = (list: typeof h2hPlayed) => {
+          let hw = 0;
+          let dr = 0;
+          let aw = 0;
+          for (const h of list) {
+            const hostedByOurHome = h.home_team === h2hHomeName;
+            const sh = h.score_home as number;
+            const sa = h.score_away as number;
+            if (sh === sa) dr += 1;
+            else if ((sh > sa) === hostedByOurHome) hw += 1;
+            else aw += 1;
+          }
+          return { total: list.length, home_wins: hw, draws: dr, away_wins: aw };
+        };
+        const h2hOverall = tallyH2H(h2hPlayed);
+        const h2hGoals = h2hPlayed.reduce(
+          (acc, h) => acc + (h.score_home as number) + (h.score_away as number),
+          0,
+        );
+        const h2hPct = (n: number) =>
+          h2hPlayed.length > 0 ? Math.round((n / h2hPlayed.length) * 100) : 0;
+        const h2hSummary =
+          h2hPlayed.length > 0
+            ? {
+                ...h2hOverall,
+                avg_goals:
+                  Math.round((h2hGoals / h2hPlayed.length) * 100) / 100,
+                btts_pct: h2hPct(
+                  h2hPlayed.filter(
+                    (h) =>
+                      (h.score_home as number) > 0 && (h.score_away as number) > 0,
+                  ).length,
+                ),
+                over_2_5_pct: h2hPct(
+                  h2hPlayed.filter(
+                    (h) =>
+                      (h.score_home as number) + (h.score_away as number) > 2.5,
+                  ).length,
+                ),
+                at_home_venue: tallyH2H(
+                  h2hPlayed.filter((h) => h.home_team === h2hHomeName),
+                ),
+              }
+            : null;
+
         const deepCtx: DeepPreMatchContext = {
           competition: m.competition?.name ?? 'Compétition',
           stage_or_matchday:
@@ -596,6 +650,8 @@ export async function POST(
             score_home: h.score_home,
             score_away: h.score_away,
           })),
+          h2h_summary: h2hSummary,
+          referee: m.referee ?? null,
           recent_narratives:
             homeNarrs.length > 0 || awayNarrs.length > 0
               ? { home: homeNarrs, away: awayNarrs }

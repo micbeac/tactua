@@ -123,6 +123,19 @@ export type MatchRichData = {
   /** Formation type de chaque équipe. */
   formation_home: string | null;
   formation_away: string | null;
+  /**
+   * Consensus des marchés, affiché au lecteur depuis l'élargissement de la
+   * ligne éditoriale. Confronté aux probabilités du modèle : l'écart entre
+   * les deux est ce qu'aucun agrégateur gratuit ne montre.
+   */
+  market?: {
+    source_count: number;
+    home_pct: number | null;
+    draw_pct: number | null;
+    away_pct: number | null;
+    btts_yes_pct: number | null;
+    over_2_5_pct: number | null;
+  } | null;
   /** Récap H2H : nb victoires home / nuls / victoires away sur les derniers matchs. */
   h2h_summary: {
     home_wins: number;

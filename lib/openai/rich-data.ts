@@ -261,6 +261,16 @@ export function buildRichData(
   return {
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     radar: buildRadar(ctx.home, ctx.away),
+    market: ctx.market_consensus
+      ? {
+          source_count: ctx.market_consensus.source_count,
+          home_pct: ctx.market_consensus.match_winner?.home_pct ?? null,
+          draw_pct: ctx.market_consensus.match_winner?.draw_pct ?? null,
+          away_pct: ctx.market_consensus.match_winner?.away_pct ?? null,
+          btts_yes_pct: ctx.market_consensus.btts_yes_pct,
+          over_2_5_pct: ctx.market_consensus.over_2_5_pct,
+        }
+      : null,
     form_home: lastN(ctx.home.form_long, 5),
     form_away: lastN(ctx.away.form_long, 5),
     form_long_home: ctx.home.form_long.slice(-10),
