@@ -77,6 +77,8 @@ export type PreMatchAnalysisSectionProps = {
   home_team_name: string;
   away_team_name: string;
   generated_at?: string;
+  /** Modèle réellement utilisé, renvoyé par l'API. */
+  ai_model?: string;
 };
 
 function isDeep(
@@ -561,6 +563,7 @@ export function PreMatchAnalysisSection({
   home_team_name,
   away_team_name,
   generated_at,
+  ai_model,
 }: PreMatchAnalysisSectionProps) {
   if (!analysis) {
     return (
@@ -1035,7 +1038,8 @@ export function PreMatchAnalysisSection({
 
       {generated_at && (
         <p className="text-muted-foreground/70 text-right text-[10px]">
-          Générée le {DATE_FMT.format(new Date(generated_at))} · GPT-4o-mini
+          Générée le {DATE_FMT.format(new Date(generated_at))}
+          {ai_model ? ` · ${ai_model}` : null}
         </p>
       )}
     </section>

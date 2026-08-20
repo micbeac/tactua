@@ -6,6 +6,8 @@ export type PostMatchAnalysisSectionProps = {
   home_team_name: string;
   away_team_name: string;
   generated_at?: string;
+  /** Modèle réellement utilisé, renvoyé par l'API. */
+  ai_model?: string;
 };
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
@@ -34,6 +36,7 @@ export function PostMatchAnalysisSection({
   home_team_name,
   away_team_name,
   generated_at,
+  ai_model,
 }: PostMatchAnalysisSectionProps) {
   if (!analysis) {
     return (
@@ -131,6 +134,7 @@ export function PostMatchAnalysisSection({
       {generated_at && (
         <p className="text-muted-foreground/70 mt-5 text-right text-[10px]">
           Générée le {DATE_FMT.format(new Date(generated_at))}
+          {ai_model ? ` · ${ai_model}` : null}
         </p>
       )}
     </section>

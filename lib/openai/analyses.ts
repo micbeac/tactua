@@ -54,7 +54,7 @@ Règles :
 - Reste concis : chaque champ texte fait 1 à 3 phrases max.
 - Base-toi UNIQUEMENT sur le contexte fourni (formes, compositions, H2H). Pas d'invention de stats.
 - Si tu n'as pas d'info pour un champ, dis-le sobrement (ex : "Composition non encore publiée").
-- Pour la prédiction : reste mesurée, c'est une analyse pas un pronostic de paris. Le scoreline_guess doit être un score plausible (ex "1-1", "2-0 dom.", "0-1 ext.").`;
+- Pour la prédiction : tu peux assumer un favori et une confiance, mais accompagne le chiffre de son incertitude. Aucun conseil de mise. Le scoreline_guess doit être un score plausible (ex "1-1", "2-0 dom.", "0-1 ext.").`;
 
 function buildUserPrompt(ctx: PreMatchContext): string {
   const fmtForm = (form: FormResult[]) =>
@@ -286,8 +286,12 @@ export type DeepPreMatchContext = {
   };
   /**
    * Consensus de probabilités issu de données de marché agrégées.
-   * Donnée INTERNE de calibrage — jamais affichée, jamais mentionnée
-   * comme cote/bookmaker/pari dans le texte de l'analyse.
+   *
+   * Citable dans le texte sous le nom « consensus des marchés » depuis
+   * l'élargissement de la ligne éditoriale (20/08/2026). L'écart entre
+   * cette probabilité et celle du modèle est justement ce qui a le plus
+   * de valeur pour le lecteur. Restent interdits : la cote décimale brute,
+   * le nom d'un bookmaker, et tout conseil de mise.
    */
   market_consensus?: {
     source_count: number;
@@ -368,11 +372,16 @@ Règles :
   * "Discipline" : un total de cartons élevé annonce un match haché, un risque de suspension ou d'infériorité numérique — angle utile pour "x_factor" ou "things_to_watch". Le ratio de penalties convertis éclaire l'efficacité sur coups de pied arrêtés.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
-  * C'est une probabilité agrégée issue de données de marché, fiable pour calibrer tes prédictions.
+  * C'est une probabilité agrégée issue des marchés, la référence la plus fiable dont tu disposes pour calibrer tes prédictions.
   * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
-  * ⚠ Donnée INTERNE de calibrage : ne mentionne JAMAIS de cote, de bookmaker, de pari ni de "marché" dans le texte de l'analyse. C'est invisible pour le lecteur.
+  * Tu PEUX la citer dans le texte, sous le nom "consensus des marchés" ou "probabilités de marché". Exemples autorisés : "le marché voit les visiteurs favoris à 58 %", "notre lecture est nettement plus favorable au nul que le consensus".
+  * ⚠ ÉCART MODÈLE / MARCHÉ — c'est le point le plus utile au lecteur. Dès que ta probabilité s'écarte de plus de 10 points du consensus sur une issue, dis-le explicitement dans "data_insight" et justifie l'écart par des chiffres.
+  * Ne cite jamais une cote décimale brute ni un nom de bookmaker : tu ne disposes que de probabilités agrégées, pas d'une offre commerciale.
+  * INTERDIT en toutes circonstances : conseiller une mise, un montant, une bankroll ou un pari à jouer. Tu éclaires une décision, tu ne la prends pas.
 
-Reste mesuré, c'est de l'analyse pas du pari sportif.`;
+Tu peux employer le vocabulaire du pronostic — favori, outsider, confiance — et assumer tes probabilités.
+Accompagne toujours un chiffre de son incertitude : un favori à 60 % perd 4 fois sur 10.
+Aucune promesse de gain, aucun conseil de mise.`;
 
 function fmtSquad(squad: string[]): string {
   return squad.length === 0 ? 'non publiée' : squad.join(', ');

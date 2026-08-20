@@ -242,7 +242,7 @@ Audience : fans foot 18-35 ans francophones (FR/BE/CH), niveau intermédiaire/av
 Ils veulent des insights qu'ils n'ont pas vus sur Twitter ou Canal+.
 
 Ligne édito :
-- STATS UNIQUEMENT, jamais de pronos / cotes (Tactuo ≠ gambling)
+- Chiffres et probabilités bienvenus, y compris un favori assumé. Jamais de conseil de mise ni de montant.
 - Top 5 européen + Champions League + Coupe du Monde 2026 prioritaires
 - Ton analytique mais accessible, jamais pédant
 - Toujours basé sur la data fournie, JAMAIS d'inventions

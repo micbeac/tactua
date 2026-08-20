@@ -28,6 +28,7 @@ type Props = {
     | PostMatchAnalysis
     | null;
   initial_generated_at: string | null;
+  initial_ai_model: string | null;
 };
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', {
@@ -46,6 +47,7 @@ export function MatchAnalysisOnDemand({
   away_team_name,
   initial_analysis,
   initial_generated_at,
+  initial_ai_model,
 }: Props) {
   const [analysis, setAnalysis] = useState<
     PreMatchAnalysis | DeepPreMatchAnalysis | PostMatchAnalysis | null
@@ -53,6 +55,7 @@ export function MatchAnalysisOnDemand({
   const [generatedAt, setGeneratedAt] = useState<string | null>(
     initial_generated_at,
   );
+  const [aiModel, setAiModel] = useState<string | null>(initial_ai_model);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +84,7 @@ export function MatchAnalysisOnDemand({
       }
       setAnalysis(data.analysis);
       setGeneratedAt(data.generated_at);
+      setAiModel(data.ai_model ?? null);
       track('Analyse générée', {
         type,
         was_cached: Boolean(data.was_cached),
@@ -196,6 +200,7 @@ export function MatchAnalysisOnDemand({
             home_team_name={home_team_name}
             away_team_name={away_team_name}
             generated_at={generatedAt ?? undefined}
+            ai_model={aiModel ?? undefined}
           />
         ) : (
           <PostMatchAnalysisSection
@@ -203,6 +208,7 @@ export function MatchAnalysisOnDemand({
             home_team_name={home_team_name}
             away_team_name={away_team_name}
             generated_at={generatedAt ?? undefined}
+            ai_model={aiModel ?? undefined}
           />
         )}
 

@@ -31,6 +31,15 @@ const EMPTY_AVG = { home: '0', away: '0', total: '0' };
  */
 const EARLY_SEASON_THRESHOLD = 8;
 
+/**
+ * Nombre minimal de buts avant de calculer une répartition temporelle.
+ *
+ * Sur 3 buts, « 67 % marqués après la 75e » n'est pas une tendance, c'est du
+ * bruit — et le modèle le reprenait tel quel comme un motif de jeu établi.
+ * En dessous du seuil, on ne transmet rien plutôt que du faux signal.
+ */
+const MIN_GOALS_FOR_TIMING = 8;
+
 export async function buildDeepTeamContext(
   input: BuildDeepTeamContextInput,
 ): Promise<DeepTeamContext> {
@@ -92,7 +101,7 @@ export async function buildDeepTeamContext(
         late += t;
       }
     }
-    if (grand === 0) return { early: null, late: null };
+    if (grand < MIN_GOALS_FOR_TIMING) return { early: null, late: null };
     return {
       early: Math.round((early / grand) * 100),
       late: Math.round((late / grand) * 100),

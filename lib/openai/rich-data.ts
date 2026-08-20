@@ -69,24 +69,45 @@ function scoreOverall(t: DeepTeamContext): number {
   return clamp((pts / max) * 100);
 }
 
+/**
+ * Poids d'un a priori neutre, exprimé en nombre de matchs.
+ *
+ * Les scores du radar sont calculés sur la saison en cours. À la 1re
+ * journée, une équipe qui gagne obtient 100 partout et son adversaire 0 —
+ * un affichage absurde qui donne l'impression d'un site cassé.
+ *
+ * On régresse donc vers 50 proportionnellement à la taille de
+ * l'échantillon : sur 1 match, le score compte pour 1/7 et l'a priori pour
+ * 6/7 ; sur 20 matchs, la donnée réelle domine largement. Aucun effet une
+ * fois la saison installée, correction forte quand elle vient de commencer.
+ */
+const RADAR_PRIOR_MATCHES = 6;
+
+/** Ramène un score brut vers 50 selon le nombre de matchs observés. */
+function shrink(score: number, played: number): number {
+  const n = Math.max(0, played);
+  return (n * score + RADAR_PRIOR_MATCHES * 50) / (n + RADAR_PRIOR_MATCHES);
+}
+
 function buildRadar(
   home: DeepTeamContext,
   away: DeepTeamContext,
 ): RadarDimension[] {
+  const dim = (
+    label: string,
+    fn: (t: DeepTeamContext) => number,
+  ): RadarDimension => ({
+    label,
+    home: Math.round(shrink(fn(home), home.played.total)),
+    away: Math.round(shrink(fn(away), away.played.total)),
+  });
+
   return [
-    { label: 'Attaque', home: Math.round(scoreAttack(home)), away: Math.round(scoreAttack(away)) },
-    { label: 'Défense', home: Math.round(scoreDefense(home)), away: Math.round(scoreDefense(away)) },
-    { label: 'Forme', home: Math.round(scoreForm(home)), away: Math.round(scoreForm(away)) },
-    {
-      label: 'Régularité',
-      home: Math.round(scoreConsistency(home)),
-      away: Math.round(scoreConsistency(away)),
-    },
-    {
-      label: 'Globale',
-      home: Math.round(scoreOverall(home)),
-      away: Math.round(scoreOverall(away)),
-    },
+    dim('Attaque', scoreAttack),
+    dim('Défense', scoreDefense),
+    dim('Forme', scoreForm),
+    dim('Régularité', scoreConsistency),
+    dim('Globale', scoreOverall),
   ];
 }
 

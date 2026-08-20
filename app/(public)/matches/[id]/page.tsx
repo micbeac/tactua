@@ -518,6 +518,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
             null
           }
           initial_generated_at={postAnalysis?.generated_at ?? null}
+          initial_ai_model={postAnalysis?.ai_model ?? null}
         />
       )}
 
@@ -537,6 +538,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
               | undefined) ?? null
           }
           initial_generated_at={preAnalysis?.generated_at ?? null}
+          initial_ai_model={preAnalysis?.ai_model ?? null}
         />
       )}
 
