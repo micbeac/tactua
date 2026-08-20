@@ -1,10 +1,32 @@
 # Tactuo
 
-WebApp d'analyse football augmentée par l'IA. **Pas une app de paris sportifs.** Positionnement : "Voici tout ce qu'il faut comprendre avant le match", pas "voici ton pari".
+WebApp d'analyse football augmentée par l'IA, **assumée jusqu'au terrain du pronostic**. Positionnement : « voici tout ce qu'il faut comprendre avant le match, chiffres et probabilités compris ».
 
 - **Prod** : https://www.tactuo.com (`NEXT_PUBLIC_SITE_URL` pointe dessus ; sans la var, fallback sur `tactua.vercel.app`)
-- **Repo** : `micbeac/tactua`
+- **Repo** : `micbeac/tactua` — ⚠️ **public**
 - **Statut** : lancé publiquement le 11 juin 2026 pour la Coupe du Monde. Le tournoi est terminé (19 juillet 2026) ; le site couvre désormais la saison de clubs 2026-27.
+
+## Ligne éditoriale
+
+Le positionnement a été élargi le 20/08/2026. L'ancienne règle « pas une app de paris, jamais de cote » ne s'applique plus.
+
+**Ce que le contenu peut faire :**
+
+- Afficher des **probabilités d'issue** et les assumer comme telles
+- Citer le **consensus des marchés** (cotes agrégées) comme source, au lieu de le masquer
+- Traiter les marchés classiques : 1N2, **BTTS**, over/under, handicaps, scores exacts
+- Signaler un **écart entre notre lecture statistique et le marché** — c'est là qu'un modèle apporte de la valeur
+- Employer le vocabulaire du pronostic : favori, outsider, valeur, confiance
+
+**Les limites qui restent :**
+
+- **Pas de conseil de mise** : jamais de montant, de bankroll, de « mise X € sur Y ». On éclaire une décision, on ne la prend pas.
+- **L'incertitude va toujours avec le chiffre** : une probabilité n'est pas une prédiction. Un favori à 60 % perd 4 fois sur 10.
+- **Aucune promesse de gain**, aucun historique de rentabilité présenté comme reproductible.
+- ⚠️ **Contexte belge** : la Belgique encadre très strictement la publicité pour les jeux d'argent depuis 2023. L'analyse et les probabilités ne sont pas visées, mais **toute affiliation vers un bookmaker ou incitation directe à miser doit être validée juridiquement avant mise en ligne**.
+- Prévoir une mention de jeu responsable si le site pousse plus loin dans cette direction.
+
+⚠️ **Les prompts IA portent encore les anciennes interdictions** (`lib/openai/analyses.ts`, `content-angles.ts`, `wc-group-prediction.ts` : « ne mentionne JAMAIS de cote, de bookmaker, de pari »). Tant qu'elles ne sont pas levées, ce changement de ligne éditoriale reste sans effet sur le contenu généré.
 
 ## Stack technique
 
