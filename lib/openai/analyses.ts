@@ -217,6 +217,24 @@ export type DeepTeamContext = {
     points_behind_above: number | null;
     points_ahead_below: number | null;
   } | null;
+  /**
+   * Ventilation complète des buts par tranche de 15 minutes.
+   *
+   * L'API renvoie ce détail depuis toujours ; on n'en extrayait que deux
+   * pourcentages (avant la 15e, après la 75e) et le reste était jeté.
+   * La courbe entière dit bien plus : une équipe qui encaisse surtout
+   * entre la 60e et la 75e a un problème de gestion de l'effort, pas de
+   * défense.
+   *
+   * `null` tant que l'échantillon est trop faible — voir
+   * MIN_GOALS_FOR_TIMING.
+   */
+  goal_distribution?: {
+    scored: Array<{ bucket: string; total: number; pct: number }>;
+    conceded: Array<{ bucket: string; total: number; pct: number }>;
+  } | null;
+  /** Part des buts marqués sur penalty, en %. */
+  penalty_share_pct?: number | null;
   /** Répartition temporelle des buts (% marqués/encaissés tôt vs tard) */
   goal_timing?: {
     scored_early_pct: number | null; // 0-15'
@@ -415,6 +433,7 @@ Règles :
     - Pondère la valeur des résultats : une victoire contre le dernier ne vaut pas une victoire chez le leader. Une défaite en coupe d'Europe trois jours avant explique souvent une contre-performance.
     - Repère les dynamiques réelles (série de clean sheets, attaque en panne, matchs à répétition à l'extérieur) plutôt que de paraphraser la suite de lettres.
   * "Discipline" : un total de cartons élevé annonce un match haché, un risque de suspension ou d'infériorité numérique — angle utile pour "x_factor" ou "things_to_watch". Le ratio de penalties convertis éclaire l'efficacité sur coups de pied arrêtés.
+- VENTILATION DES BUTS — La répartition par tranche de 15 minutes est fournie pour les buts marqués ET encaissés. Cherche-y un motif exploitable : un pic d'encaissement entre la 60e et la 75e trahit une gestion de l'effort, un pic de buts marqués en fin de match une équipe qui finit fort. Croise les deux équipes (l'une marque tard, l'autre encaisse tard = scénario crédible) et sers-t'en dans "scenarios" et "things_to_watch". Ne parle JAMAIS de but sur corner ou coup franc : cette information n'est pas dans les données, seule la part des penaltys est connue.
 - QUALITÉ DE L'ADVERSAIRE — Quand la position d'un adversaire est indiquée entre crochets dans les derniers matchs, pondère la forme avec : trois victoires contre le bas de tableau ne valent pas une série de nuls contre le haut. Dis-le explicitement dans "form_assessment" quand l'écart de calibre est net.
 - MENACE DE SUSPENSION — Si des joueurs sont signalés sous menace, c'est un angle concret et rarement traité ailleurs. Un cadre à un carton du seuil joue plus prudemment, peut être ménagé, ou manquera la journée suivante. Utilise-le dans "x_factor" ou "things_to_watch", jamais comme une absence pour CE match : le joueur est bien disponible aujourd'hui.
 - CONFRONTATIONS DIRECTES — Un bilan agrégé est fourni sous la liste des matchs. Sers-t'en plutôt que de recompter, et privilégie le bilan « quand cette équipe reçoit » : une domination à l'extérieur ne se transpose pas à domicile. Un historique déséquilibré est un angle fort, mais rappelle qu'il porte sur des effectifs et des entraîneurs qui ont pu changer.
@@ -578,6 +597,25 @@ function fmtDiscipline(t: DeepTeamContext): string {
 - Discipline : ${parts.join(' · ')}` : '';
 }
 
+function fmtGoalDistribution(t: DeepTeamContext): string {
+  const d = t.goal_distribution;
+  const parts: string[] = [];
+  if (d) {
+    const line = (rows: typeof d.scored) =>
+      rows
+        .filter((r) => r.total > 0)
+        .map((r) => `${r.bucket}′ ${r.total} (${r.pct}%)`)
+        .join(', ');
+    parts.push(`buts marqués par tranche : ${line(d.scored)}`);
+    parts.push(`buts encaissés par tranche : ${line(d.conceded)}`);
+  }
+  if (t.penalty_share_pct != null) {
+    parts.push(`${t.penalty_share_pct} % des buts viennent d’un penalty`);
+  }
+  return parts.length > 0 ? `
+- Ventilation des buts : ${parts.join(' ; ')}` : '';
+}
+
 function fmtSuspensionRisks(t: DeepTeamContext): string {
   const list = t.suspension_risks;
   if (!list || list.length === 0) return '';
@@ -624,7 +662,7 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
 - Buts encaissés / match : home ${t.goals_against_avg.home}, away ${t.goals_against_avg.away}, total ${t.goals_against_avg.total}
 - Clean sheets : ${t.clean_sheets} / Failed to score : ${t.failed_to_score}
 - Meilleure série victoires : ${t.biggest_streak.wins} / Pire série défaites : ${t.biggest_streak.loses}
-- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}${fmtPreviousSeason(t)}
+- Formation principale : ${t.primary_formation ?? '—'}${fmtCoach(t)}${fmtStanding(t)}${fmtFreshness(t)}${fmtXG(t)}${fmtGoalTiming(t)}${fmtGoalDistribution(t)}${fmtPreviousSeason(t)}
 - Top performers : ${fmtTop(t.top_performers)}
 - Indisponibles récents : ${fmtInjuries(t.active_injuries)}${fmtSuspensionRisks(t)}
 - XI titulaire annoncé : ${fmtSquad(t.starting_eleven)}${fmtDiscipline(t)}${fmtRecentFixtures(t)}${

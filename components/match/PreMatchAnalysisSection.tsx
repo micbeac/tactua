@@ -481,6 +481,111 @@ function RichAbsents({
  * les deux. Un écart de 10 points ou plus est mis en avant, c'est là que
  * notre lecture dit quelque chose que le marché ne dit pas.
  */
+/**
+ * Ventilation des buts par tranche de 15 minutes.
+ *
+ * Deux barres par tranche : marqués vers le haut, encaissés vers le bas.
+ * C'est la lecture qui fait ressortir les motifs de gestion — un pic
+ * d'encaissement après l'heure de jeu saute aux yeux, là où une moyenne de
+ * buts par match ne dit rien.
+ */
+type GoalBucketRow = { bucket: string; scored: number; conceded: number };
+
+/** Une équipe dans la ventilation : barre haute marqués, barre basse encaissés. */
+function GoalDistributionTeam({
+  label,
+  rows,
+  max,
+}: {
+  label: string;
+  rows: GoalBucketRow[];
+  max: number;
+}) {
+  return (
+    <div>
+      <p className="text-muted-foreground mb-2 truncate text-[11px] font-medium">
+        {label}
+      </p>
+      <div className="flex items-end gap-1">
+        {rows.map((b) => (
+          <div
+            key={b.bucket}
+            className="flex flex-1 flex-col items-center gap-0.5"
+          >
+            <div className="flex h-10 w-full items-end justify-center">
+              <div
+                className="bg-primary/70 w-full rounded-t"
+                style={{ height: `${Math.round((b.scored / max) * 100)}%` }}
+                title={`${b.scored} marqué(s) entre ${b.bucket}′`}
+              />
+            </div>
+            <div className="flex h-10 w-full items-start justify-center">
+              <div
+                className="w-full rounded-b bg-red-500/40"
+                style={{ height: `${Math.round((b.conceded / max) * 100)}%` }}
+                title={`${b.conceded} encaissé(s) entre ${b.bucket}′`}
+              />
+            </div>
+            <span className="text-muted-foreground/70 text-[8px] tabular-nums">
+              {b.bucket.split('-')[1]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ventilation des buts par tranche de 15 minutes.
+ *
+ * C'est la lecture qui fait ressortir les motifs de gestion — un pic
+ * d'encaissement après l'heure de jeu saute aux yeux, là où une moyenne de
+ * buts par match ne dit rien.
+ */
+function RichGoalDistribution({
+  rich,
+  home_team_name,
+  away_team_name,
+}: {
+  rich: MatchRichData;
+  home_team_name: string;
+  away_team_name: string;
+}) {
+  const d = rich.goal_distribution;
+  if (!d) return null;
+
+  const maxVal = Math.max(
+    1,
+    ...[...d.home, ...d.away].flatMap((b) => [b.scored, b.conceded]),
+  );
+
+  return (
+    <div>
+      <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+        <Activity className="size-3.5" aria-hidden />
+        Ventilation des buts par tranche
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <GoalDistributionTeam
+          label={home_team_name}
+          rows={d.home}
+          max={maxVal}
+        />
+        <GoalDistributionTeam
+          label={away_team_name}
+          rows={d.away}
+          max={maxVal}
+        />
+      </div>
+      <p className="text-muted-foreground/70 mt-2 text-[10px]">
+        Barre haute : buts marqués. Barre basse : buts encaissés. Minute de fin
+        de tranche en abscisse.
+      </p>
+    </div>
+  );
+}
+
 function RichMarketComparison({
   rich,
   prediction,
@@ -874,6 +979,15 @@ export function PreMatchAnalysisSection({
       {/* Forme récente */}
       {rich && (
         <RichForm
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
+      {/* Ventilation des buts */}
+      {rich && (
+        <RichGoalDistribution
           rich={rich}
           home_team_name={home_team_name}
           away_team_name={away_team_name}

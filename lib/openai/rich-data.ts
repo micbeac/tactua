@@ -89,6 +89,27 @@ function shrink(score: number, played: number): number {
   return (n * score + RADAR_PRIOR_MATCHES * 50) / (n + RADAR_PRIOR_MATCHES);
 }
 
+/**
+ * Fusionne buts marqués et encaissés par tranche, pour un affichage en
+ * deux barres opposées. Renvoie null si une des deux équipes manque de
+ * données : une ventilation à moitié vide induirait en erreur.
+ */
+function buildGoalDistribution(ctx: DeepPreMatchContext) {
+  const merge = (t: DeepTeamContext) => {
+    const d = t.goal_distribution;
+    if (!d) return null;
+    const concededByBucket = new Map(d.conceded.map((c) => [c.bucket, c.total]));
+    return d.scored.map((s) => ({
+      bucket: s.bucket,
+      scored: s.total,
+      conceded: concededByBucket.get(s.bucket) ?? 0,
+    }));
+  };
+  const home = merge(ctx.home);
+  const away = merge(ctx.away);
+  return home && away ? { home, away } : null;
+}
+
 function buildRadar(
   home: DeepTeamContext,
   away: DeepTeamContext,
@@ -260,6 +281,7 @@ export function buildRichData(
 ): MatchRichData {
   return {
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
+    goal_distribution: buildGoalDistribution(ctx),
     radar: buildRadar(ctx.home, ctx.away),
     market: ctx.market_consensus
       ? {

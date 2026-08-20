@@ -108,6 +108,41 @@ export async function buildDeepTeamContext(
       late: Math.round((late / grand) * 100),
     };
   };
+  // Ventilation complète par tranche. Les tranches sont renvoyées dans un
+  // ordre non garanti par l'API : on impose l'ordre chronologique, sans
+  // quoi la courbe devient illisible pour le modèle.
+  const BUCKET_ORDER = ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90', '91-105', '106-120'];
+  const distribute = (
+    minute?: Record<string, { total: number | null }>,
+  ): Array<{ bucket: string; total: number; pct: number }> | null => {
+    if (!minute) return null;
+    const entries = BUCKET_ORDER.map((b) => ({
+      bucket: b,
+      total: minute[b]?.total ?? 0,
+    })).filter((e) => minute[e.bucket] !== undefined);
+    const grand = entries.reduce((acc, e) => acc + e.total, 0);
+    if (grand < MIN_GOALS_FOR_TIMING) return null;
+    return entries.map((e) => ({
+      ...e,
+      pct: Math.round((e.total / grand) * 100),
+    }));
+  };
+  const scoredDist = distribute(safeStats.goals?.for?.minute);
+  const concededDist = distribute(safeStats.goals?.against?.minute);
+  const goalDistribution =
+    scoredDist && concededDist
+      ? { scored: scoredDist, conceded: concededDist }
+      : null;
+
+  // Part des buts venus d'un penalty : le seul découpage par origine que
+  // l'API expose. Corner et coup franc n'y figurent pas.
+  const totalScored = gls.for.total.total;
+  const penaltyScored = safeStats.penalty?.scored?.total ?? 0;
+  const penaltyShare =
+    totalScored > 0 && penaltyScored > 0
+      ? Math.round((penaltyScored / totalScored) * 100)
+      : null;
+
   const forTiming = goalTiming(safeStats.goals?.for?.minute);
   const againstTiming = goalTiming(safeStats.goals?.against?.minute);
 
@@ -194,6 +229,8 @@ export async function buildDeepTeamContext(
     starting_eleven: input.starting_eleven,
     previous_season: previousSeason,
     suspension_risks: findSuspensionRisks(top, af_league_id),
+    goal_distribution: goalDistribution,
+    penalty_share_pct: penaltyShare,
     recent_fixtures: recent,
     discipline,
     penalties,

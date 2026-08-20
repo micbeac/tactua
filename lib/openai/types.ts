@@ -136,6 +136,11 @@ export type MatchRichData = {
     btts_yes_pct: number | null;
     over_2_5_pct: number | null;
   } | null;
+  /** Ventilation des buts par tranche de 15 minutes, marqués et encaissés. */
+  goal_distribution?: {
+    home: Array<{ bucket: string; scored: number; conceded: number }>;
+    away: Array<{ bucket: string; scored: number; conceded: number }>;
+  } | null;
   /** Récap H2H : nb victoires home / nuls / victoires away sur les derniers matchs. */
   h2h_summary: {
     home_wins: number;
