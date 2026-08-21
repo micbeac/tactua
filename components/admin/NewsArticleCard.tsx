@@ -3,14 +3,16 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
-  CATEGORY_LABELS,
-  NEWS_CATEGORIES,
   deleteNewsArticle,
   requeueNewsArticle,
   setNewsStatus,
   updateNewsArticle,
-  type NewsCategory,
 } from '@/app/admin/news/actions';
+import {
+  CATEGORY_LABELS,
+  NEWS_CATEGORIES,
+  type NewsCategory,
+} from '@/lib/news/categories';
 import { Button } from '@/components/ui/button';
 
 const STATUS_LABEL: Record<string, string> = {

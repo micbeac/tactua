@@ -2,7 +2,7 @@ import {
   NewsArticleCard,
   type AdminNewsArticle,
 } from '@/components/admin/NewsArticleCard';
-import { CATEGORY_LABELS, NEWS_CATEGORIES } from './actions';
+import { CATEGORY_LABELS, NEWS_CATEGORIES } from '@/lib/news/categories';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';

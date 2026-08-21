@@ -5,27 +5,10 @@ import { getAdminUser } from '@/lib/data/admin';
 import { extractYoutubeId } from '@/lib/data/video-clips';
 import { buildNewsSlug } from '@/lib/openai/news-content';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { NEWS_CATEGORIES } from '@/lib/news/categories';
 
 type Result = { ok: boolean; message: string };
 
-/** Catégories éditoriales autorisées. Doit rester aligné sur le prompt. */
-export const NEWS_CATEGORIES = [
-  'mercato',
-  'avant_match',
-  'blessure',
-  'resultat',
-  'club',
-] as const;
-
-export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
-
-export const CATEGORY_LABELS: Record<NewsCategory, string> = {
-  mercato: 'Mercato',
-  avant_match: 'Avant-match',
-  blessure: 'Blessures',
-  resultat: 'Résultats',
-  club: 'Vie du club',
-};
 
 async function requireAdmin(): Promise<boolean> {
   const admin = await getAdminUser();
