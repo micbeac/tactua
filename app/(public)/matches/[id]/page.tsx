@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { MatchAnalysisOnDemand } from '@/components/match/MatchAnalysisOnDemand';
 import { MatchFormSection } from '@/components/match/MatchFormSection';
 import {
@@ -216,7 +216,7 @@ export default async function MatchPage({ params }: MatchPageParams) {
     match.away_team?.name,
     match.kickoff_at,
   );
-  if (canonicalPath !== `/matches/${id}`) redirect(canonicalPath);
+  if (canonicalPath !== `/matches/${id}`) permanentRedirect(canonicalPath);
 
   const lineupRows = await getLineups(matchId);
   const anyConfirmed = lineupRows.some((r) => r.is_confirmed);
