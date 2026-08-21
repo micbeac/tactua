@@ -103,7 +103,7 @@ type MatchRow = {
 const MATCH_SELECT = `
   id, kickoff_at, status, stage, matchday, score_home, score_away, live_minute,
   venue, referee, home_team_id, away_team_id,
-  competition:competitions(id, name, country, current_season),
+  competition:competitions(id, name, code, country, current_season),
   home_team:teams!matches_home_team_id_fkey(id, name, tla, logo_url),
   away_team:teams!matches_away_team_id_fkey(id, name, tla, logo_url)
 `;
