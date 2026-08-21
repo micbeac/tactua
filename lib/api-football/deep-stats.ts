@@ -995,9 +995,45 @@ function asNumber(v: number | string | null): number | null {
  * On récupère toutes les pages, on filtre sur la league cible, on trie par
  * (goals + assists) desc, on garde les 7 premiers.
  */
+type LeaguesResponse = {
+  response: Array<{
+    league: { id: number; name: string; type: string };
+    seasons: Array<{ year: number }>;
+  }>;
+};
+
+/**
+ * Compétition domestique disputée par une équipe lors d'une saison donnée.
+ *
+ * Sert au repli de début de saison : un promu ou un relégué n'a aucune
+ * statistique dans sa compétition actuelle pour l'exercice précédent, et
+ * /teams/statistics exige une compétition. On va donc la chercher.
+ *
+ * On retient le type « League » (championnat) plutôt qu'une coupe : c'est
+ * le juge de paix du niveau réel.
+ */
+export async function fetchTeamMainLeague(
+  teamId: number,
+  season: number,
+): Promise<number | null> {
+  const d = await af<LeaguesResponse>(
+    `/leagues?team=${teamId}&season=${season}`,
+  );
+  const league = d.response.find((r) => r.league.type === 'League');
+  return league?.league.id ?? null;
+}
+
 export async function fetchTopPerformers(
   teamId: number,
-  leagueId: number,
+  /**
+   * Compétition à retenir. `null` = on prend celle où le joueur a le plus
+   * joué cette saison-là.
+ *
+   * Indispensable pour un promu : Coventry montait de Championship, ses
+   * statistiques 2025-26 ne sont pas dans la Premier League et le filtre
+   * strict les écartait toutes — l'équipe apparaissait sans aucun joueur.
+   */
+  leagueId: number | null,
   season: number,
   topN = 7,
   maxPages = 5,
@@ -1016,7 +1052,14 @@ export async function fetchTopPerformers(
     totalPages = d.paging.total;
 
     for (const p of d.response) {
-      const s = p.statistics.find((st) => st.league.id === leagueId);
+      const s =
+        leagueId != null
+          ? p.statistics.find((st) => st.league.id === leagueId)
+          : // Sans compétition imposée : celle où il a le plus joué.
+            [...p.statistics].sort(
+              (a, b) =>
+                (b.games.appearences ?? 0) - (a.games.appearences ?? 0),
+            )[0];
       if (!s || !s.games.appearences || s.games.appearences === 0) continue;
       const rating = s.games.rating ? Number(s.games.rating) : null;
       performers.push({
@@ -1212,4 +1255,42 @@ export async function fetchAggregatedTeamPerformers(
   });
 
   return performers.slice(0, topN);
+}
+
+// ============================================================================
+// Résolution d'un fixture par équipes + date — /fixtures
+// ============================================================================
+
+type FixtureByDateResponse = {
+  response: Array<{
+    fixture: { id: number };
+    teams: { home: { id: number }; away: { id: number } };
+  }>;
+};
+
+/**
+ * Retrouve l'identifiant API-Football d'un match à partir des deux équipes.
+ *
+ * `matches.api_football_fixture_id` n'est renseigné que par refresh-matchday,
+ * dans sa fenêtre H-2 → H+24. Une analyse pré-match générée le matin pour un
+ * match du soir se retrouvait donc sans identifiant — et perdait du même coup
+ * les cotes et les probabilités du modèle tiers, les deux appels étant
+ * conditionnés à sa présence.
+ *
+ * Le rapprochement se fait sur les identifiants d'équipes, pas sur les noms :
+ * aucune ambiguïté possible.
+ */
+export async function resolveFixtureId(
+  afHomeId: number,
+  afAwayId: number,
+  kickoffIso: string,
+): Promise<number | null> {
+  const date = kickoffIso.slice(0, 10);
+  const d = await af<FixtureByDateResponse>(
+    `/fixtures?date=${date}&team=${afHomeId}`,
+  );
+  const hit = d.response.find(
+    (f) => f.teams.home.id === afHomeId && f.teams.away.id === afAwayId,
+  );
+  return hit?.fixture.id ?? null;
 }

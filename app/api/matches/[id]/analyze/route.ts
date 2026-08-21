@@ -17,6 +17,7 @@ import {
   fetchH2H,
   fetchMatchOdds,
   fetchMatchPrediction,
+  resolveFixtureId,
 } from '@/lib/api-football/deep-stats';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
@@ -263,6 +264,26 @@ export async function POST(
 
       if (canDeep) {
         const season = afSeason(afLeagueId!, m.kickoff_at);
+
+        // L'identifiant AF du match n'est renseigné que par refresh-matchday,
+        // dans sa fenêtre H-2 → H+24. Une analyse générée le matin pour un
+        // match du soir perdait donc les cotes ET les probabilités du modèle
+        // tiers, toutes deux conditionnées à sa présence. On le résout à la
+        // demande, et on le persiste pour ne pas recommencer.
+        let afFixtureId = m.api_football_fixture_id;
+        if (afFixtureId == null) {
+          afFixtureId = await resolveFixtureId(
+            afHomeId!,
+            afAwayId!,
+            m.kickoff_at,
+          ).catch(() => null);
+          if (afFixtureId != null) {
+            await supabase
+              .from('matches')
+              .update({ api_football_fixture_id: afFixtureId })
+              .eq('id', m.id);
+          }
+        }
         const matchDate = new Date(m.kickoff_at);
         console.log(
           `[analyze ${m.id}] deep mode AF league=${afLeagueId} season=${season} home=${afHomeId} away=${afAwayId}`,
@@ -289,12 +310,12 @@ export async function POST(
           }),
           fetchH2H(afHomeId!, afAwayId!, 10),
           // Cotes → consensus probabiliste (calibrage interne, non bloquant)
-          m.api_football_fixture_id != null
-            ? fetchMatchOdds(m.api_football_fixture_id)
+          afFixtureId != null
+            ? fetchMatchOdds(afFixtureId)
             : Promise.resolve(null),
           // Prédiction statistique AF (calibrage interne, non bloquant)
-          m.api_football_fixture_id != null
-            ? fetchMatchPrediction(m.api_football_fixture_id)
+          afFixtureId != null
+            ? fetchMatchPrediction(afFixtureId)
             : Promise.resolve(null),
         ]);
         if (homeCtxR.status === 'rejected') {

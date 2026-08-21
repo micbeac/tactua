@@ -5,6 +5,7 @@ import {
   fetchActiveInjuries,
   fetchTeamStats,
   fetchRecentFixtures,
+  fetchTeamMainLeague,
   fetchTopPerformers,
 } from './deep-stats.ts';
 import { findSuspensionRisks } from './suspension.ts';
@@ -86,8 +87,18 @@ export async function buildDeepTeamContext(
   // comptent dans la limite par minute qui faisait échouer les
   // régénérations.
   const needsPreviousSeason = fx.played.total < EARLY_SEASON_THRESHOLD;
+
+  // Compétition disputée la saison passée. Pour un promu ou un relégué,
+  // ce n'est pas la compétition actuelle : Coventry montait de Championship,
+  // et chercher ses stats 2025-26 en Premier League ne renvoyait rien —
+  // l'équipe s'affichait sans le moindre chiffre ni joueur.
+  const previousLeagueId = needsPreviousSeason
+    ? ((await fetchTeamMainLeague(af_team_id, season - 1).catch(() => null)) ??
+      af_league_id)
+    : af_league_id;
+
   const prevStats = needsPreviousSeason
-    ? await fetchTeamStats(af_team_id, af_league_id, season - 1).catch(
+    ? await fetchTeamStats(af_team_id, previousLeagueId, season - 1).catch(
         () => null,
       )
     : null;
@@ -98,7 +109,7 @@ export async function buildDeepTeamContext(
   const performers =
     top.length > 0
       ? top
-      : await fetchTopPerformers(af_team_id, af_league_id, season - 1, 30, 2).catch(
+      : await fetchTopPerformers(af_team_id, null, season - 1, 30, 2).catch(
           () => [],
         );
 
