@@ -15,12 +15,12 @@ export type H2HRow = {
   away_team_id: number | null;
   score_home: number | null;
   score_away: number | null;
-  competition: { id: number; name: string } | null;
+  competition: { id: number; name: string; code: string | null } | null;
 };
 
 const H2H_SELECT = `
   id, kickoff_at, status, home_team_id, away_team_id, score_home, score_away,
-  competition:competitions(id, name)
+  competition:competitions(id, name, code)
 `;
 
 /**

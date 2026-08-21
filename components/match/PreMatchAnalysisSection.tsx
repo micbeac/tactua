@@ -818,8 +818,11 @@ function RichMarketComparison({
               <span
                 className={`w-12 text-right tabular-nums ${notable ? 'text-primary font-semibold' : 'text-muted-foreground'}`}
               >
-                {gap > 0 ? '+' : ''}
-                {gap}
+                {notable ? (
+                  <strong>{gap > 0 ? '+' : ''}{gap}</strong>
+                ) : (
+                  <>{gap > 0 ? '+' : ''}{gap}</>
+                )}
               </span>
             </div>
           );
@@ -983,7 +986,7 @@ export function PreMatchAnalysisSection({
         </p>
         <p className="text-sm">{analysis.prediction.summary}</p>
         <p className="text-primary mt-2 text-sm font-semibold tabular-nums">
-          Score plausible : {analysis.prediction.scoreline_guess}
+          Score plausible : <strong>{analysis.prediction.scoreline_guess}</strong>
         </p>
       </div>
 

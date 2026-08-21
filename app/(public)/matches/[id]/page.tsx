@@ -27,7 +27,13 @@ import {
   MatchTeamsNewsSection,
   type MatchNewsItem,
 } from '@/components/match/MatchTeamsNewsSection';
-import { buildSportsEventJsonLd, JsonLd } from '@/components/seo/JsonLd';
+import {
+  buildAnalysisArticleJsonLd,
+  buildBreadcrumbJsonLd,
+  buildSportsEventJsonLd,
+  JsonLd,
+} from '@/components/seo/JsonLd';
+import { SITE_URL } from '@/lib/site';
 import { getAnalysis } from '@/lib/data/analysis';
 import { isFavorite } from '@/lib/data/favorites';
 import {
@@ -71,6 +77,7 @@ type TeamEmbed = {
 type CompetitionEmbed = {
   id: number;
   name: string;
+  code: string | null;
   country: string | null;
   current_season: string | null;
 };
@@ -416,6 +423,19 @@ export default async function MatchPage({ params }: MatchPageParams) {
   // Tracking passif : log un "viewed" si user logged-in et qu'une analyse existe.
   // Throttle : un seul event "viewed" par user/match/type/jour (anti-spam).
   // Le write passe par admin client (table protégée par RLS write).
+  // L'analyse comme Article : SportsEvent décrit la rencontre, il ne dit
+  // rien du texte rédigé qui constitue le contenu propre de la page.
+  // Émis uniquement si une analyse existe — déclarer un Article sans
+  // contenu serait une déclaration mensongère.
+  const articleJsonLd = buildAnalysisArticleJsonLd({
+    headline: `${match.home_team?.name ?? "Domicile"} - ${match.away_team?.name ?? "Extérieur"} : analyse avant match`,
+    description:
+      'Compositions probables, forme récente, confrontations directes, probabilités d’issue et comparaison au consensus des marchés.',
+    url: `${SITE_URL}${canonicalPath}`,
+    published_at: preAnalysis?.generated_at ?? null,
+    section: match.competition?.name ?? 'Football',
+  });
+
   if (user && (preAnalysis || postAnalysis)) {
     const admin = createAdminClient();
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -448,6 +468,27 @@ export default async function MatchPage({ params }: MatchPageParams) {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <LiveAutoRefresh enabled={match.status === 'live'} interval_seconds={60} />
+      {/* Fil d’Ariane : Google l’affiche à la place de l’URL brute. */}
+      <JsonLd
+        data={buildBreadcrumbJsonLd([
+          { name: 'Accueil', url: SITE_URL },
+          ...(match.competition?.name && match.competition?.code
+            ? [
+                {
+                  name: match.competition.name,
+                  url: `${SITE_URL}/competitions/${match.competition.code}`,
+                },
+              ]
+            : []),
+          {
+            name: `${match.home_team?.name ?? "Domicile"} - ${match.away_team?.name ?? "Extérieur"}`,
+            url: `${SITE_URL}${canonicalPath}`,
+          },
+        ])}
+      />
+
+      {articleJsonLd ? <JsonLd data={articleJsonLd} /> : null}
+
       <JsonLd
         data={buildSportsEventJsonLd({
           match_id: match.id,

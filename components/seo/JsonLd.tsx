@@ -212,3 +212,67 @@ export function buildPersonJsonLd(args: {
     }),
   };
 }
+
+/**
+ * Fil d'Ariane : Accueil → Compétition → Match.
+ *
+ * Google l'affiche à la place de l'URL dans les résultats, ce qui rend une
+ * fiche match nettement plus lisible qu'un chemin brut.
+ */
+export function buildBreadcrumbJsonLd(
+  items: Array<{ name: string; url: string }>,
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
+/**
+ * L'analyse pré-match comme Article.
+ *
+ * SportsEvent décrit la RENCONTRE ; il ne dit rien du texte d'analyse, qui
+ * est pourtant le contenu propre de la page — plusieurs centaines de mots
+ * rédigés, datés, avec un auteur. Sans type éditorial, les outils d'audit ne
+ * détectent aucune structure forte et le contenu reste invisible pour les
+ * moteurs qui cherchent de l'article.
+ *
+ * Renvoie `null` s'il n'y a pas d'analyse : déclarer un Article vide serait
+ * une déclaration mensongère.
+ */
+export function buildAnalysisArticleJsonLd(args: {
+  headline: string;
+  description: string;
+  url: string;
+  published_at: string | null;
+  section: string;
+}): Record<string, unknown> | null {
+  if (!args.published_at) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: args.headline.slice(0, 110),
+    description: args.description,
+    articleSection: args.section,
+    datePublished: args.published_at,
+    dateModified: args.published_at,
+    inLanguage: 'fr',
+    mainEntityOfPage: { '@type': 'WebPage', '@id': args.url },
+    author: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  };
+}
