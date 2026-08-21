@@ -335,6 +335,52 @@ export function buildRichData(
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     goal_distribution: buildGoalDistribution(ctx),
     radar: buildRadar(ctx.home, ctx.away),
+    recent_fixtures:
+      ctx.home.recent_fixtures || ctx.away.recent_fixtures
+        ? {
+            home: (ctx.home.recent_fixtures ?? []).map((f) => ({
+              date: f.date,
+              competition: f.competition,
+              opponent: f.opponent,
+              opponent_position: f.opponent_position ?? null,
+              at_home: f.at_home,
+              goals_for: f.goals_for,
+              goals_against: f.goals_against,
+              result: f.result,
+            })),
+            away: (ctx.away.recent_fixtures ?? []).map((f) => ({
+              date: f.date,
+              competition: f.competition,
+              opponent: f.opponent,
+              opponent_position: f.opponent_position ?? null,
+              at_home: f.at_home,
+              goals_for: f.goals_for,
+              goals_against: f.goals_against,
+              result: f.result,
+            })),
+          }
+        : null,
+    discipline: {
+      home: ctx.home.discipline
+        ? {
+            ...ctx.home.discipline,
+            penalties_scored: ctx.home.penalties?.scored ?? null,
+            penalties_total: ctx.home.penalties?.total ?? null,
+          }
+        : null,
+      away: ctx.away.discipline
+        ? {
+            ...ctx.away.discipline,
+            penalties_scored: ctx.away.penalties?.scored ?? null,
+            penalties_total: ctx.away.penalties?.total ?? null,
+          }
+        : null,
+    },
+    suspension_risks: {
+      home: ctx.home.suspension_risks ?? [],
+      away: ctx.away.suspension_risks ?? [],
+    },
+    referee: ctx.referee ?? null,
     own_model: ctx.own_model
       ? {
           home_win: ctx.own_model.home_win,

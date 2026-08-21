@@ -105,6 +105,30 @@ export type AbsentPlayer = {
   reason: string | null;
 };
 
+export type RecentFixtureRow = {
+  date: string;
+  competition: string;
+  opponent: string;
+  opponent_position: number | null;
+  at_home: boolean;
+  goals_for: number;
+  goals_against: number;
+  result: 'W' | 'D' | 'L';
+};
+
+export type DisciplineRow = {
+  yellow: number;
+  red: number;
+  penalties_scored: number | null;
+  penalties_total: number | null;
+};
+
+export type SuspensionRow = {
+  player_name: string;
+  yellow_cards: number;
+  threshold: number;
+};
+
 export type MatchRichData = {
   /** Comparaison stat par stat (6-8 lignes). */
   stats_compare: StatComparison[];
@@ -139,6 +163,29 @@ export type MatchRichData = {
    */
   season_source?: { used_previous: boolean; label: string | null } | null;
   /** Notre estimation calculée (Poisson), indépendante du marché. */
+  /**
+   * Derniers matchs, avec l'adversaire et sa position au classement.
+ *
+   * Ces données nourrissaient le prompt sans jamais être montrées. Or
+   * « battu par le 2e, vainqueur contre le 18e » se lit mieux dans un
+   * tableau que noyé dans un paragraphe.
+   */
+  recent_fixtures?: {
+    home: RecentFixtureRow[];
+    away: RecentFixtureRow[];
+  } | null;
+  /** Cartons et penaltys de la saison, par équipe. */
+  discipline?: {
+    home: DisciplineRow | null;
+    away: DisciplineRow | null;
+  } | null;
+  /** Joueurs à un carton du seuil de suspension. */
+  suspension_risks?: {
+    home: SuspensionRow[];
+    away: SuspensionRow[];
+  } | null;
+  /** Arbitre désigné, si connu. */
+  referee?: string | null;
   own_model?: {
     home_win: number;
     draw: number;

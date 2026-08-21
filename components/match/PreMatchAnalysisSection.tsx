@@ -21,6 +21,8 @@ import { PlayerPopup, fromSeasonStat } from '@/components/match/PlayerPopup';
 import { RichRadarPentagon } from '@/components/match/RichRadarPentagon';
 import type {
   DeepPreMatchAnalysis,
+  DisciplineRow,
+  RecentFixtureRow,
   MatchRichData,
   PlayerSeasonStat,
   PreMatchAnalysis,
@@ -586,6 +588,165 @@ function RichGoalDistribution({
   );
 }
 
+/** Colonne des derniers matchs d'une équipe. */
+function RecentFixturesColumn({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: RecentFixtureRow[];
+}) {
+  if (rows.length === 0) return null;
+  const tone = (r: RecentFixtureRow) =>
+    r.result === 'W'
+      ? 'text-emerald-500'
+      : r.result === 'L'
+        ? 'text-red-500'
+        : 'text-muted-foreground';
+  return (
+    <div>
+      <p className="text-muted-foreground mb-2 truncate text-[11px] font-medium">
+        {label}
+      </p>
+      <ul className="space-y-1">
+        {rows.map((r) => (
+          <li
+            key={`${r.date}-${r.opponent}`}
+            className="flex items-baseline gap-2 text-[11px]"
+          >
+            <span className={`w-3 font-bold ${tone(r)}`}>
+              {r.result === 'W' ? 'V' : r.result === 'L' ? 'D' : 'N'}
+            </span>
+            <span className="text-muted-foreground/70 w-9 tabular-nums">
+              {r.date.slice(5)}
+            </span>
+            <span className="text-muted-foreground/70 w-7">
+              {r.at_home ? 'dom' : 'ext'}
+            </span>
+            <span className="flex-1 truncate">
+              {r.opponent}
+              {r.opponent_position ? (
+                <span className="text-muted-foreground/60">
+                  {' '}
+                  ({r.opponent_position}ᵉ)
+                </span>
+              ) : null}
+            </span>
+            <span className="tabular-nums">
+              {r.goals_for}-{r.goals_against}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Résume cartons et penaltys d'une équipe en une ligne. */
+function disciplineLine(d: DisciplineRow | null): string {
+  if (!d) return '—';
+  const parts = [`${d.yellow} jaune(s)`, `${d.red} rouge(s)`];
+  if (d.penalties_total) {
+    parts.push(`${d.penalties_scored ?? 0}/${d.penalties_total} penaltys`);
+  }
+  return parts.join(' · ');
+}
+
+/**
+ * Derniers matchs, discipline, suspensions et arbitre.
+ *
+ * Ces quatre éléments alimentaient le prompt sans jamais être montrés au
+ * lecteur. Ce sont pourtant les plus concrets : la position de l'adversaire
+ * qualifie une série de victoires, et un cadre à un carton du seuil pèse sur
+ * la gestion du match.
+ */
+function RichContextBlocks({
+  rich,
+  home_team_name,
+  away_team_name,
+}: {
+  rich: MatchRichData;
+  home_team_name: string;
+  away_team_name: string;
+}) {
+  const rf = rich.recent_fixtures;
+  const disc = rich.discipline;
+  const susp = rich.suspension_risks;
+  const hasFixtures = Boolean(rf && (rf.home.length > 0 || rf.away.length > 0));
+  const hasDiscipline = Boolean(disc && (disc.home || disc.away));
+  const hasSusp = Boolean(susp && (susp.home.length > 0 || susp.away.length > 0));
+  if (!hasFixtures && !hasDiscipline && !hasSusp && !rich.referee) return null;
+
+  return (
+    <div className="space-y-4">
+      {hasFixtures && rf ? (
+        <div>
+          <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+            <Activity className="size-3.5" aria-hidden />
+            Derniers matchs
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <RecentFixturesColumn label={home_team_name} rows={rf.home} />
+            <RecentFixturesColumn label={away_team_name} rows={rf.away} />
+          </div>
+          <p className="text-muted-foreground/70 mt-2 text-[10px]">
+            Position de l&rsquo;adversaire entre parenthèses : trois victoires
+            contre le bas de tableau ne valent pas une série de nuls contre le
+            haut.
+          </p>
+        </div>
+      ) : null}
+
+      {hasDiscipline || hasSusp || rich.referee ? (
+        <div>
+          <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+            <Swords className="size-3.5" aria-hidden />
+            Discipline et arbitrage
+          </div>
+          <div className="border-border overflow-hidden rounded-lg border">
+            {hasDiscipline && disc ? (
+              <div className="grid grid-cols-2 gap-2 px-3 py-2">
+                <div>
+                  <p className="text-muted-foreground truncate text-[10px] uppercase">
+                    {home_team_name}
+                  </p>
+                  <p className="text-xs">{disciplineLine(disc.home)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground truncate text-[10px] uppercase">
+                    {away_team_name}
+                  </p>
+                  <p className="text-xs">{disciplineLine(disc.away)}</p>
+                </div>
+              </div>
+            ) : null}
+            {hasSusp && susp ? (
+              <div className="border-border border-t px-3 py-2">
+                <p className="text-muted-foreground mb-1 text-[10px] uppercase">
+                  Sous menace de suspension
+                </p>
+                <p className="text-xs">
+                  {[...susp.home, ...susp.away]
+                    .map((s) => `${s.player_name} (${s.yellow_cards}/${s.threshold})`)
+                    .join(', ')}
+                </p>
+                <p className="text-muted-foreground/70 mt-1 text-[10px]">
+                  Un avertissement de plus et ils manquent la journée suivante.
+                </p>
+              </div>
+            ) : null}
+            {rich.referee ? (
+              <div className="border-border text-muted-foreground border-t px-3 py-2 text-xs">
+                Arbitre : <span className="text-foreground">{rich.referee}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RichMarketComparison({
   rich,
   prediction,
@@ -837,6 +998,15 @@ export function PreMatchAnalysisSection({
           away_team_name={away_team_name}
         />
       )}
+
+      {/* Contexte concret : derniers matchs, discipline, arbitre */}
+      {rich ? (
+        <RichContextBlocks
+          rich={rich}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      ) : null}
 
       {/* Scénarios (IA, deep only) */}
       {deep && analysis.scenarios.length > 0 && (

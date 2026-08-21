@@ -475,6 +475,12 @@ export async function fetchMatchPrediction(
   if (!c) return null;
 
   const pct = r?.predictions?.percent;
+  // Trace des valeurs brutes : deux matchs de suite ont renvoyé 33/33/33,
+  // ce qui ne ressemble pas à une estimation. Soit API-Football ne calcule
+  // rien pour ces rencontres, soit notre lecture du champ est fautive.
+  console.log(
+    `[af:predictions] fixture=${fixtureId} percent=${JSON.stringify(pct ?? null)}`,
+  );
   const last5 = (v?: PredictionLast5) =>
     v
       ? {
