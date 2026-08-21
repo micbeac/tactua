@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL as BASE_URL } from '@/lib/site';
 import { createClient } from '@/lib/supabase/server';
-import { playerHref, teamHref } from '@/lib/url';
+import { matchHref, playerHref, teamHref } from '@/lib/url';
 
 // Cap par section pour rester sous la limite de 50k URLs sitemap.
 const MAX_TEAMS = 500;
@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(MAX_PLAYERS),
     supabase
       .from('matches')
-      .select('id, kickoff_at, last_updated_at')
+      .select('id, kickoff_at, last_updated_at, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
       .order('kickoff_at', { ascending: false })
       .limit(MAX_MATCHES),
     supabase
@@ -140,7 +140,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const matchEntries: MetadataRoute.Sitemap = matches.map((m) => ({
-    url: `${BASE_URL}/matches/${m.id}`,
+    url: `${BASE_URL}${matchHref(
+      m.id,
+      (m as unknown as { home_team: { name: string } | null }).home_team?.name,
+      (m as unknown as { away_team: { name: string } | null }).away_team?.name,
+      m.kickoff_at,
+    )}`,
     lastModified: m.last_updated_at ? new Date(m.last_updated_at) : now,
     changeFrequency: 'hourly',
     priority: 0.8,

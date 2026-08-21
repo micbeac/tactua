@@ -1,3 +1,4 @@
+import { matchHref } from '@/lib/url';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -127,7 +128,7 @@ export function MatchCard(props: MatchCardProps) {
 
   return (
     <Link
-      href={`/matches/${id}`}
+      href={matchHref(id, home.name, away.name, kickoff_at)}
       className="group bg-card hover:border-primary/40 focus-visible:border-primary border-border block w-full max-w-full overflow-hidden rounded-xl border p-4 transition-colors focus-visible:outline-none"
     >
       {/* Header : date à gauche, stage/matchday/statut à droite. min-w-0

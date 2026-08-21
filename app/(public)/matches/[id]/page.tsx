@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { MatchAnalysisOnDemand } from '@/components/match/MatchAnalysisOnDemand';
 import { MatchFormSection } from '@/components/match/MatchFormSection';
 import {
@@ -50,7 +50,7 @@ import { getVideoClips } from '@/lib/data/video-clips';
 import { VideoClipsSection } from '@/components/video/VideoClipsSection';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { teamHref } from '@/lib/url';
+import { matchHref, parseEntityId, teamHref } from '@/lib/url';
 import type {
   DeepPreMatchAnalysis,
   PostMatchAnalysis,
@@ -175,7 +175,12 @@ export async function generateMetadata({
   params,
 }: MatchPageParams): Promise<Metadata> {
   const { id } = await params;
-  const match = await getMatch(Number(id));
+  // L'URL accepte l'ancienne forme numérique (`564647`) comme la nouvelle
+  // (`real-betis-real-sociedad-2026-564647`) : parseEntityId lit les
+  // chiffres finaux dans les deux cas.
+  const parsedId = parseEntityId(id);
+  if (parsedId == null) return { title: "Match introuvable" };
+  const match = await getMatch(parsedId);
   if (!match) return { title: 'Match introuvable' };
   const home = match.home_team?.name ?? 'Équipe à venir';
   const away = match.away_team?.name ?? 'Équipe à venir';
@@ -183,17 +188,35 @@ export async function generateMetadata({
   return {
     title: `${home} vs ${away}`,
     description: `${home} contre ${away} en ${competition}. Compositions, score, analyse tactique IA.`,
-    alternates: { canonical: `/matches/${id}` },
+    alternates: {
+      canonical: matchHref(
+        parsedId,
+        match.home_team?.name,
+        match.away_team?.name,
+        match.kickoff_at,
+      ),
+    },
   };
 }
 
 export default async function MatchPage({ params }: MatchPageParams) {
   const { id } = await params;
-  const matchId = Number(id);
-  if (!Number.isFinite(matchId)) notFound();
+  const matchId = parseEntityId(id);
+  if (matchId == null) notFound();
 
   const match = await getMatch(matchId);
   if (!match) notFound();
+
+  // 301 vers la forme canonique si l'URL demandée diffère : évite le
+  // contenu dupliqué entre `/matches/564647` et la version avec slug, et
+  // fait remonter la version lisible dans les résultats de recherche.
+  const canonicalPath = matchHref(
+    matchId,
+    match.home_team?.name,
+    match.away_team?.name,
+    match.kickoff_at,
+  );
+  if (canonicalPath !== `/matches/${id}`) redirect(canonicalPath);
 
   const lineupRows = await getLineups(matchId);
   const anyConfirmed = lineupRows.some((r) => r.is_confirmed);
@@ -448,6 +471,15 @@ export default async function MatchPage({ params }: MatchPageParams) {
           status: match.status,
         })}
       />
+      {/* H1 unique de la page. Rendu pour les lecteurs d’écran et les
+          moteurs : le titre visuel est porté par les blocs d’équipe du
+          header, qui ne peuvent pas être un titre sans casser la mise en
+          page. Le texte reprend exactement ce qui est affiché. */}
+      <h1 className="sr-only">
+        {match.home_team?.name ?? 'À déterminer'} contre{' '}
+        {match.away_team?.name ?? 'À déterminer'}
+        {match.competition?.name ? ` — ${match.competition.name}` : ''}
+      </h1>
       <MatchHeader
         id={match.id}
         kickoff_at={match.kickoff_at}

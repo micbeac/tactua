@@ -50,3 +50,32 @@ export function isCanonicalSlug(
 ): boolean {
   return `${base}/${slug}` === expectedHref;
 }
+
+/**
+ * URL canonique d'une fiche match : `equipe1-equipe2-annee-id`.
+ *
+ * Exemple : `/matches/real-betis-real-sociedad-2026-564647`
+ *
+ * ⚠️ L'identifiant reste en suffixe, comme pour les équipes et les joueurs.
+ * Un slug purement lisible ne suffirait pas : deux équipes se rencontrent
+ * deux fois par saison (aller et retour), et `betis-sociedad-2026`
+ * désignerait alors deux matchs différents. L'année seule ne lève pas
+ * l'ambiguïté.
+ *
+ * `parseEntityId` retrouve l'id en lisant les chiffres finaux, donc les
+ * anciennes URL purement numériques continuent de fonctionner et sont
+ * redirigées en 301 vers cette forme.
+ */
+export function matchHref(
+  id: number,
+  homeName: string | null | undefined,
+  awayName: string | null | undefined,
+  kickoffIso?: string | null,
+): string {
+  const home = slugify(homeName);
+  const away = slugify(awayName);
+  if (!home || !away) return `/matches/${id}`;
+  const year = kickoffIso ? kickoffIso.slice(0, 4) : '';
+  const parts = [home, away, year, String(id)].filter(Boolean);
+  return `/matches/${parts.join('-')}`;
+}

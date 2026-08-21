@@ -97,27 +97,84 @@ export function MatchAnalysisOnDemand({
   }
 
   // === État : utilisateur non connecté ===
+  // Visiteur non connecté.
+  //
+  // L'analyse déjà générée est LISIBLE : c'est le contenu le plus
+  // différenciant du site, et le masquer le rendait invisible à Google, qui
+  // n'indexait que les compositions et le score. Le mur ne convertissait
+  // personne — on ne crée pas un compte pour un texte qu'on n'a pas lu.
+  //
+  // Le compte reste requis pour GÉNÉRER une analyse : c'est là qu'est le coût
+  // et donc la contrepartie légitime.
   if (!is_logged_in) {
+    if (!analysis) {
+      return (
+        <section className="bg-card border-border rounded-2xl border p-6">
+          <header className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold">{heading}</h2>
+            <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+              <Sparkles className="size-3" aria-hidden />
+              Analyse IA
+            </span>
+          </header>
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4 text-sm">
+              Aucune analyse n&rsquo;a encore été générée pour ce match.
+            </p>
+            <Link href={`/login?redirect=/matches/${match_id}`}>
+              <Button variant="default" size="sm">
+                Se connecter pour la générer
+              </Button>
+            </Link>
+          </div>
+        </section>
+      );
+    }
+
     return (
-      <section className="bg-card border-border rounded-2xl border p-6">
-        <header className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">{heading}</h2>
-          <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-            <Sparkles className="size-3" aria-hidden />
-            Analyse IA
-          </span>
-        </header>
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4 text-sm">
-            Connecte-toi pour générer l’analyse IA de ce match.
-          </p>
+      <div className="space-y-3">
+        <div className="bg-card/60 border-border/60 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 backdrop-blur">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+              <Sparkles className="size-3" aria-hidden />
+              Analyse IA
+            </span>
+            {generatedAt && (
+              <span className="text-muted-foreground">
+                · Générée le {DATE_FMT.format(new Date(generatedAt))}
+              </span>
+            )}
+          </div>
           <Link href={`/login?redirect=/matches/${match_id}`}>
-            <Button variant="default" size="sm">
-              Se connecter
+            <Button variant="outline" size="sm">
+              Créer un compte
             </Button>
           </Link>
         </div>
-      </section>
+
+        {type === 'pre_match' ? (
+          <PreMatchAnalysisSection
+            analysis={analysis as PreMatchAnalysis | DeepPreMatchAnalysis}
+            home_team_name={home_team_name}
+            away_team_name={away_team_name}
+            generated_at={generatedAt ?? undefined}
+            ai_model={aiModel ?? undefined}
+          />
+        ) : (
+          <PostMatchAnalysisSection
+            analysis={analysis as PostMatchAnalysis}
+            home_team_name={home_team_name}
+            away_team_name={away_team_name}
+            generated_at={generatedAt ?? undefined}
+            ai_model={aiModel ?? undefined}
+          />
+        )}
+
+        <p className="text-muted-foreground/70 text-center text-xs">
+          Crée un compte pour générer tes propres analyses, simuler une absence
+          et suivre tes équipes.
+        </p>
+      </div>
     );
   }
 
