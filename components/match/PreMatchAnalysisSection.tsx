@@ -826,6 +826,18 @@ export function PreMatchAnalysisSection({
         </p>
       </div>
 
+      {/* Comparaison au marché — placée juste sous la prédiction : c'est
+          la mise en perspective du chiffre qu'on vient d'annoncer, elle
+          perdait tout son sens reléguée en bas de page. */}
+      {rich && isDeep(analysis) && (
+        <RichMarketComparison
+          rich={rich}
+          prediction={analysis.prediction}
+          home_team_name={home_team_name}
+          away_team_name={away_team_name}
+        />
+      )}
+
       {/* Scénarios (IA, deep only) */}
       {deep && analysis.scenarios.length > 0 && (
         <div>
@@ -1026,16 +1038,6 @@ export function PreMatchAnalysisSection({
       {rich && (
         <RichGoalDistribution
           rich={rich}
-          home_team_name={home_team_name}
-          away_team_name={away_team_name}
-        />
-      )}
-
-      {/* Notre lecture face au marché */}
-      {rich && isDeep(analysis) && (
-        <RichMarketComparison
-          rich={rich}
-          prediction={analysis.prediction}
           home_team_name={home_team_name}
           away_team_name={away_team_name}
         />
