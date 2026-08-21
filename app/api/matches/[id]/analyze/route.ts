@@ -762,6 +762,17 @@ export async function POST(
         // Enrichissement déterministe (chiffres exacts, pas d'IA) calculé
         // depuis les données API-Football. Permet d'afficher tableau comparatif,
         // radar, forme, joueurs avec stats détaillées, indispos, etc.
+        // Trace de complétude : le bloc « Notre lecture face au marché »
+        // dépend de trois maillons (identifiant du match, cotes publiées,
+        // probabilités du modèle tiers) qui échouent chacun en silence.
+        // Sans cette ligne, un tableau absent oblige à tout ré-instrumenter.
+        console.log(
+          `[analyze ${m.id}] fixture=${afFixtureId ?? 'non résolu'} ` +
+            `cotes=${marketConsensus ? 'ok' : 'absentes'} ` +
+            `modèle=${afPrediction?.percent ? 'ok' : 'absent'} ` +
+            `joueurs_mappés=${afToDbPlayerId.size}`,
+        );
+
         const richData = buildRichData(deepCtx, afToDbPlayerId);
         const enrichedAnalysis = { ...analysis, rich_data: richData };
 
