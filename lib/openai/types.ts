@@ -138,6 +138,14 @@ export type MatchRichData = {
    * chiffres périmés comme ceux du moment.
    */
   season_source?: { used_previous: boolean; label: string | null } | null;
+  /** Notre estimation calculée (Poisson), indépendante du marché. */
+  own_model?: {
+    home_win: number;
+    draw: number;
+    away_win: number;
+    lambda_home: number;
+    lambda_away: number;
+  } | null;
   model_percent?: { home: number; draw: number; away: number } | null;
   market?: {
     source_count: number;

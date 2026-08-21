@@ -19,6 +19,7 @@ import {
   fetchMatchPrediction,
   resolveFixtureId,
 } from '@/lib/api-football/deep-stats';
+import { computeOutcomeProbabilities } from '@/lib/stats/poisson';
 import { getAnalysis, upsertAnalysis } from '@/lib/data/analysis';
 import { getHeadToHead, getTeamForm } from '@/lib/data/match';
 import {
@@ -721,6 +722,32 @@ export async function POST(
               }
             : null;
 
+        // Estimation maison, calculée AVANT que le modèle de langage ne
+        // voie le marché. C'est elle qui rend la comparaison honnête : une
+        // probabilité demandée au modèle après lui avoir montré le
+        // consensus revenait à lui demander de recopier.
+        //
+        // En début de saison les moyennes sont à zéro : on prend celles de
+        // la saison précédente, sans quoi le modèle donnerait 0 but attendu.
+        const scoringProfile = (t: typeof homeCtx) => {
+          const cur = Number(t.goals_for_avg.total);
+          const curAgainst = Number(t.goals_against_avg.total);
+          const usable = t.played.total > 0 && Number.isFinite(cur);
+          const prev = t.previous_season;
+          return {
+            goals_for_avg: usable
+              ? cur
+              : Number(prev?.goals_for_avg ?? 0) || 1.2,
+            goals_against_avg: usable
+              ? curAgainst
+              : Number(prev?.goals_against_avg ?? 0) || 1.2,
+          };
+        };
+        const ownModel = computeOutcomeProbabilities(
+          scoringProfile(homeCtx),
+          scoringProfile(awayCtx),
+        );
+
         const deepCtx: DeepPreMatchContext = {
           competition: m.competition?.name ?? 'Compétition',
           stage_or_matchday:
@@ -736,6 +763,7 @@ export async function POST(
             score_home: h.score_home,
             score_away: h.score_away,
           })),
+          own_model: ownModel,
           h2h_summary: h2hSummary,
           referee: m.referee ?? null,
           recent_narratives:

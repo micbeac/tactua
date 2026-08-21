@@ -364,6 +364,21 @@ export type DeepPreMatchContext = {
    * de valeur pour le lecteur. Restent interdits : la cote décimale brute,
    * le nom d'un bookmaker, et tout conseil de mise.
    */
+  /**
+   * Estimation probabiliste maison, calculée par un modèle de Poisson à
+   * partir des moyennes de buts. Indépendante du marché, donc comparable
+   * à lui — contrairement à une estimation demandée au modèle de langage,
+   * qui recopiait le consensus qu'on venait de lui montrer.
+   */
+  own_model?: {
+    home_win: number;
+    draw: number;
+    away_win: number;
+    lambda_home: number;
+    lambda_away: number;
+    btts_yes: number;
+    over_2_5: number;
+  } | null;
   market_consensus?: {
     source_count: number;
     match_winner: {
@@ -455,6 +470,7 @@ Règles :
 - CONFRONTATIONS DIRECTES — Un bilan agrégé est fourni sous la liste des matchs. Sers-t'en plutôt que de recompter, et privilégie le bilan « quand cette équipe reçoit » : une domination à l'extérieur ne se transpose pas à domicile. Un historique déséquilibré est un angle fort, mais rappelle qu'il porte sur des effectifs et des entraîneurs qui ont pu changer.
 - ARBITRE — Si un arbitre est nommé, tu peux le citer comme élément de contexte. N'invente aucune statistique à son sujet : sans chiffres fournis, contente-toi de le nommer.
 - MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est un modèle externe, indépendant du nôtre et du consensus des marchés. Tu disposes donc de TROIS estimations. Croise-les pour calibrer "prediction" et pour régler "prediction.confidence" : trois sources convergentes justifient "high", trois sources qui divergent imposent "medium" ou "low". Si l'écart entre le modèle tiers et le marché est net, c'est en soi un signal — dis-le dans "data_insight". Ne le nomme jamais (donnée interne) : parle d'« un modèle statistique indépendant ».
+- NOTRE MODÈLE STATISTIQUE — Quand un bloc « NOTRE MODÈLE STATISTIQUE » est fourni, c'est LUI ton point de départ pour "prediction.probabilities", pas le marché. Tu peux t'en écarter, mais uniquement pour une raison chiffrée tirée du contexte (absence d'un cadre, fraîcheur, dynamique récente) — et tu dois alors dire laquelle dans "data_insight". Reproduire le consensus des marchés à l'identique est une FAUTE : le lecteur veut savoir ce que disent NOS chiffres, sinon la comparaison ne compare rien.
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue des marchés, la référence la plus fiable dont tu disposes pour calibrer tes prédictions.
   * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
@@ -736,6 +752,21 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   }
 
   // Bloc prédiction statistique AF (interne, calibrage)
+  let ownBlock = '';
+  const om = ctx.own_model;
+  if (om) {
+    ownBlock =
+      `
+NOTRE MODÈLE STATISTIQUE (Poisson sur les moyennes de buts) :
+` +
+      `- Issue : ${om.home_win}% ${ctx.home.name} · ${om.draw}% nul · ${om.away_win}% ${ctx.away.name}
+` +
+      `- Buts attendus : ${om.lambda_home} pour ${ctx.home.name}, ${om.lambda_away} pour ${ctx.away.name}
+` +
+      `- Les deux marquent : ${om.btts_yes}% · Plus de 2,5 buts : ${om.over_2_5}%
+`;
+  }
+
   let afPredBlock = '';
   const ap = ctx.af_prediction;
   if (ap) {
@@ -783,7 +814,7 @@ ${fmtTeam(ctx.away, 'Extérieur')}
 Confrontations directes récentes :${fmtH2HSummary(ctx)}${fmtReferee(ctx)}
 ${h2hLines}
 ${narratives}
-${consensusBlock}${afPredBlock}
+${ownBlock}${consensusBlock}${afPredBlock}
 Génère l'analyse pré-match enrichie en JSON selon le schéma fourni.`;
 }
 

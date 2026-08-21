@@ -16,6 +16,8 @@ Le positionnement a été élargi le 20/08/2026. L'ancienne règle « pas une ap
 - Citer le **consensus des marchés** (cotes agrégées) comme source, au lieu de le masquer
 - Traiter les marchés classiques : 1N2, **BTTS**, over/under, handicaps, scores exacts
 - Signaler un **écart entre notre lecture statistique et le marché** — c'est là qu'un modèle apporte de la valeur
+
+⚠️ **Cet écart doit être réel.** Fournir le consensus des marchés au modèle de langage en lui demandant sa propre estimation ne marche pas : il recopie le consensus à l’identique (constaté le 21/08/2026 — 45/28/27 en face de 45/28/27, écart nul). Notre probabilité vient donc d’un calcul déterministe (), fait AVANT que le modèle ne voie le marché. Ne pas revenir à une probabilité rédigée par l’IA : la comparaison ne comparerait plus rien.
 - Employer le vocabulaire du pronostic : favori, outsider, valeur, confiance
 
 **Les limites qui restent :**

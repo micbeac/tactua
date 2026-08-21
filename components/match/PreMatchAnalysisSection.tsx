@@ -602,15 +602,27 @@ function RichMarketComparison({
     return null;
   }
   const md = rich.model_percent;
+  const own = rich.own_model;
+  // L’écart se mesure entre NOTRE modèle et le marché : c’est le seul
+  // couple réellement indépendant. Comparer la synthèse rédigée au marché
+  // ne disait rien, le modèle de langage recopiant le consensus.
+  const baseline = (k: 'home' | 'draw' | 'away') =>
+    own
+      ? k === 'home'
+        ? own.home_win
+        : k === 'draw'
+          ? own.draw
+          : own.away_win
+      : null;
   const rows: Array<{
     label: string;
     ours: number;
     market: number;
     model: number | null;
   }> = [
-    { label: home_team_name, ours: prediction.probabilities.home_win, market: mk.home_pct, model: md?.home ?? null },
-    { label: 'Match nul', ours: prediction.probabilities.draw, market: mk.draw_pct, model: md?.draw ?? null },
-    { label: away_team_name, ours: prediction.probabilities.away_win, market: mk.away_pct, model: md?.away ?? null },
+    { label: home_team_name, ours: baseline('home') ?? prediction.probabilities.home_win, market: mk.home_pct, model: md?.home ?? null },
+    { label: 'Match nul', ours: baseline('draw') ?? prediction.probabilities.draw, market: mk.draw_pct, model: md?.draw ?? null },
+    { label: away_team_name, ours: baseline('away') ?? prediction.probabilities.away_win, market: mk.away_pct, model: md?.away ?? null },
   ];
   return (
     <div>
@@ -653,6 +665,13 @@ function RichMarketComparison({
         })}
       </div>
       <p className="text-muted-foreground/70 mt-2 text-[10px]">
+        {own ? (
+          <>
+            Notre estimation vient d’un modèle de Poisson : {own.lambda_home} but(s)
+            attendu(s) pour {home_team_name}, {own.lambda_away} pour{' '}
+            {away_team_name}.{' '}
+          </>
+        ) : null}
         Consensus agrégé sur {mk.source_count} source(s). Une probabilité
         n&rsquo;est pas une prédiction : un favori à 60 % perd 4 fois sur 10.
       </p>

@@ -335,6 +335,15 @@ export function buildRichData(
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     goal_distribution: buildGoalDistribution(ctx),
     radar: buildRadar(ctx.home, ctx.away),
+    own_model: ctx.own_model
+      ? {
+          home_win: ctx.own_model.home_win,
+          draw: ctx.own_model.draw,
+          away_win: ctx.own_model.away_win,
+          lambda_home: ctx.own_model.lambda_home,
+          lambda_away: ctx.own_model.lambda_away,
+        }
+      : null,
     model_percent: ctx.af_prediction?.percent ?? null,
     market: ctx.market_consensus
       ? {
