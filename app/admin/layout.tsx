@@ -8,6 +8,7 @@ const NAV = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/users', label: 'Utilisateurs' },
   { href: '/admin/cdm', label: 'CDM 2026' },
+  { href: '/admin/news', label: 'Actu clubs' },
   { href: '/admin/wc-news', label: 'Actu CDM' },
   { href: '/admin/contenu', label: 'Contenu' },
   { href: '/admin/partners', label: 'Partenaires' },
