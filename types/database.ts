@@ -1320,6 +1320,12 @@ export type Database = {
       }
       team_narratives: {
         Row: {
+          category: string | null
+          edited_at: string | null
+          meta_description: string | null
+          source_name: string | null
+          status: string
+          video_youtube_id: string | null
           id: number
           published_at: string | null
           scraped_at: string
@@ -1337,6 +1343,12 @@ export type Database = {
           ai_model: string | null
         }
         Insert: {
+          category?: string | null
+          edited_at?: string | null
+          meta_description?: string | null
+          source_name?: string | null
+          status?: string
+          video_youtube_id?: string | null
           id?: number
           published_at?: string | null
           scraped_at?: string
@@ -1354,6 +1366,12 @@ export type Database = {
           ai_model?: string | null
         }
         Update: {
+          category?: string | null
+          edited_at?: string | null
+          meta_description?: string | null
+          source_name?: string | null
+          status?: string
+          video_youtube_id?: string | null
           id?: number
           published_at?: string | null
           scraped_at?: string
