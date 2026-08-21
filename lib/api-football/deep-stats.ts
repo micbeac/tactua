@@ -1284,10 +1284,15 @@ export async function resolveFixtureId(
   afHomeId: number,
   afAwayId: number,
   kickoffIso: string,
+  season: number,
 ): Promise<number | null> {
+  // ⚠️ `season` est obligatoire dès que la requête filtre par équipe :
+  // sans lui, API-Football renvoie une erreur au lieu d'un résultat.
+  // C'est ce qui faisait échouer la résolution en silence, et privait
+  // toutes les analyses des cotes et du modèle tiers.
   const date = kickoffIso.slice(0, 10);
   const d = await af<FixtureByDateResponse>(
-    `/fixtures?date=${date}&team=${afHomeId}`,
+    `/fixtures?date=${date}&team=${afHomeId}&season=${season}`,
   );
   const hit = d.response.find(
     (f) => f.teams.home.id === afHomeId && f.teams.away.id === afAwayId,

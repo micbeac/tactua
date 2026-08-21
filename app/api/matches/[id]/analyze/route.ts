@@ -276,7 +276,16 @@ export async function POST(
             afHomeId!,
             afAwayId!,
             m.kickoff_at,
-          ).catch(() => null);
+            season,
+          ).catch((err) => {
+            // Un échec ici coûte les cotes et le modèle tiers : on le dit,
+            // au lieu de le laisser disparaître.
+            console.warn(
+              `[analyze ${m.id}] résolution fixture échouée:`,
+              err instanceof Error ? err.message : String(err),
+            );
+            return null;
+          });
           if (afFixtureId != null) {
             await supabase
               .from('matches')
