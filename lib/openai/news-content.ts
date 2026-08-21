@@ -13,11 +13,16 @@ import { DEEP_MODEL, getOpenAI, isReasoningModel } from './client.ts';
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['summary', 'content', 'perspective'],
+  required: ['summary', 'content', 'perspective', 'category', 'headline'],
   properties: {
     summary: { type: 'string' },
     content: { type: 'string' },
     perspective: { type: 'string' },
+    category: {
+      type: 'string',
+      enum: ['mercato', 'avant_match', 'blessure', 'resultat', 'club'],
+    },
+    headline: { type: 'string' },
   },
 } as const;
 
@@ -25,6 +30,18 @@ export type NewsContent = {
   summary: string;
   content: string;
   perspective: string;
+  /**
+   * Catégorie éditoriale, choisie par le modèle. Alimente les filtres du
+   * fil public : mercato, avant-match, blessure, résultat, vie du club.
+   */
+  category: 'mercato' | 'avant_match' | 'blessure' | 'resultat' | 'club';
+  /**
+   * Titre réécrit pour le site.
+   *
+   * Le titre d'origine vient du média source : souvent racoleur, tronqué,
+   * ou portant le nom du média. Celui-ci sert de H1 et d'objet de partage.
+   */
+  headline: string;
 };
 
 export type NewsContext = {
@@ -60,6 +77,14 @@ Trois sorties strictement séparées :
 - summary : 1 à 2 phrases (≤ 280 caractères, pour la méta description et les cards)
 - content : 400-500 mots en Markdown propre (## sous-titres OK, pas d'image, pas de tableau)
 - perspective : 2-3 phrases sur "pourquoi cette info compte pour l'équipe maintenant", angle Tactuo
+- headline : réécris un titre clair et factuel en français (60-90 caractères), sans nom de média, sans point final, sans majuscule d'emphase. C'est le H1 de la page.
+- category : range l'article dans UNE seule catégorie.
+  * mercato : transfert, rumeur, prolongation, départ, arrivée
+  * avant_match : composition probable, enjeu, préparation d'une rencontre à venir
+  * blessure : forfait, retour de blessure, suspension, infirmerie
+  * resultat : compte rendu d'un match joué, réaction d'après-match
+  * club : tout le reste — direction, stade, finances, centre de formation, entraîneur
+  En cas d'hésitation, choisis la catégorie qui décrit le FAIT principal, pas son contexte.
 
 Style content : 3-4 sections courtes avec sous-titres ##. Inclus le contexte Tactuo (chiffres fournis) naturellement, pas comme un encart séparé. Termine par une phrase ouverte sur l'avenir (prochain match, mercato, etc.). Pas de signature, pas de "selon nos sources", pas d'opinion personnelle.`;
 }

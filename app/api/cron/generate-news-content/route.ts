@@ -137,13 +137,20 @@ export async function GET(request: Request) {
         recent_form: ctx.recent_form,
         next_match: ctx.next_match,
       });
-      const slug = buildNewsSlug(row.title, row.id);
+      // Slug construit sur le titre RÉÉCRIT, pas sur celui du média source :
+      // c’est lui que le lecteur voit, et une URL doit correspondre à son titre.
+      const slug = buildNewsSlug(content.headline?.trim() || row.title, row.id);
       await supabase
         .from('team_narratives')
         .update({
           slug,
           ai_summary: content.summary.slice(0, 500),
           ai_content: content.content,
+          category: content.category,
+          // Le titre du média source sert de repli : mieux vaut un titre
+          // racoleur qu'aucun titre si la réécriture revient vide.
+          title: content.headline?.trim() || undefined,
+          meta_description: content.summary.slice(0, 300),
           ai_perspective: content.perspective,
           ai_generated_at: new Date().toISOString(),
           ai_model: model,
