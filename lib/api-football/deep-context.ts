@@ -49,11 +49,10 @@ export async function buildDeepTeamContext(
   // La saison précédente est récupérée systématiquement (1 appel de plus par
   // équipe, sans incidence sur le plan Ultra) mais n'est transmise au modèle
   // que si la saison en cours est trop jeune — voir EARLY_SEASON_THRESHOLD.
-  const [stats, top, injuries, prevStats, recent] = await Promise.all([
+  const [stats, top, injuries, recent] = await Promise.all([
     fetchTeamStats(af_team_id, af_league_id, season),
     fetchTopPerformers(af_team_id, af_league_id, season, 30),
     fetchActiveInjuries(af_team_id, season, input.match_date),
-    fetchTeamStats(af_team_id, af_league_id, season - 1).catch(() => null),
     // Toutes compétitions confondues : une élimination en coupe ou un gros
     // déplacement européen explique souvent une contre-performance en ligue.
     fetchRecentFixtures(af_team_id, 6).catch(() => []),
@@ -81,13 +80,25 @@ export async function buildDeepTeamContext(
     goals: { for: { home: 0, away: 0 }, against: { home: 0, away: 0 } },
   };
 
+  // Saison précédente : récupérée UNIQUEMENT si la saison en cours est trop
+  // jeune. La chercher systématiquement coûtait deux appels par analyse
+  // toute la saison, pour une donnée alors inutilisée — et ces appels
+  // comptent dans la limite par minute qui faisait échouer les
+  // régénérations.
+  const needsPreviousSeason = fx.played.total < EARLY_SEASON_THRESHOLD;
+  const prevStats = needsPreviousSeason
+    ? await fetchTeamStats(af_team_id, af_league_id, season - 1).catch(
+        () => null,
+      )
+    : null;
+
   // Repli sur la saison précédente quand la saison en cours ne renvoie
   // encore aucun joueur : à la 1re journée, l'API ne connaît personne, et
   // la section « Top joueurs » restait vide au lieu de montrer les cadres.
   const performers =
     top.length > 0
       ? top
-      : await fetchTopPerformers(af_team_id, af_league_id, season - 1, 30).catch(
+      : await fetchTopPerformers(af_team_id, af_league_id, season - 1, 30, 2).catch(
           () => [],
         );
 

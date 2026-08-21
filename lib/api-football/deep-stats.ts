@@ -45,43 +45,70 @@ function releaseSlot() {
  * (import Jupiler Pro League notamment) partagent le même contrôle de débit
  * plutôt que d'ouvrir un second canal non throttlé vers l'API.
  */
+/**
+ * Attentes successives avant d'abandonner sur une limite de débit.
+ *
+ * Une analyse deep enchaîne une quinzaine d'appels ; il suffit que l'un
+ * d'eux tape la limite par minute pour que toute la génération échoue et
+ * que l'utilisateur reçoive « Service de données saturé ». Deux reprises
+ * espacées suffisent à absorber ces pics, et tiennent dans les 60 s de la
+ * fonction. Au-delà, on laisse remonter : mieux vaut une erreur explicite
+ * qu'une analyse construite sur des données partielles.
+ */
+const RATE_LIMIT_BACKOFF_MS = [1_500, 4_000];
+
+/** Vrai si l’erreur traduit une limite de débit passagère, pas un quota épuisé. */
+function isTransientRateLimit(message: string): boolean {
+  return /[(rateLimit|Time)]/.test(message);
+}
+
 export async function af<T>(path: string): Promise<T> {
-  await acquireSlot();
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      headers: { 'x-apisports-key': apiKey(), Accept: 'application/json' },
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(
-        `API-Football ${res.status} on ${path}: ${body.slice(0, 200)}`,
-      );
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= RATE_LIMIT_BACKOFF_MS.length; attempt++) {
+    await acquireSlot();
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        headers: { 'x-apisports-key': apiKey(), Accept: 'application/json' },
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(
+          `API-Football ${res.status} on ${path}: ${body.slice(0, 200)}`,
+        );
+      }
+      const json = (await res.json()) as T & { errors?: unknown };
+      // API-Football renvoie HTTP 200 même en cas d’erreur quota /
+      // ratelimit : le détail est dans `errors` (objet non vide). On le
+      // traite comme une vraie erreur — sinon on génèrerait (et mettrait en
+      // cache) une analyse dégradée silencieusement.
+      const errs = json.errors;
+      if (
+        errs != null &&
+        !Array.isArray(errs) &&
+        typeof errs === 'object' &&
+        Object.keys(errs).length > 0
+      ) {
+        const firstKey = Object.keys(errs as Record<string, unknown>)[0];
+        throw new Error(
+          `API-Football error [${firstKey}] on ${path}: ${JSON.stringify(errs).slice(0, 200)}`,
+        );
+      }
+      return json as T;
+    } catch (e) {
+      lastError = e;
+      const message = e instanceof Error ? e.message : String(e);
+      const wait = RATE_LIMIT_BACKOFF_MS[attempt];
+      // On ne réessaie que les limites de débit : un quota journalier épuisé
+      // ou un token invalide ne se règlera pas en attendant deux secondes.
+      if (wait === undefined || !isTransientRateLimit(message)) throw e;
+      await new Promise((r) => setTimeout(r, wait));
+    } finally {
+      releaseSlot();
     }
-    const json = (await res.json()) as T & { errors?: unknown };
-    // API-Football renvoie HTTP 200 même en cas d'erreur quota / ratelimit :
-    // le détail est dans `errors` (objet non vide). On le traite comme une
-    // vraie erreur — sinon on génèrerait (et mettrait en cache) une analyse
-    // dégradée silencieusement.
-    //
-    // On inclut la 1re clé d'erreur (rateLimit / requests / Time / token /
-    // plan) dans le message — ça permet à la route de distinguer la limite
-    // par-minute (réessai 1-2 min) du quota journalier (réessai demain).
-    const errs = json.errors;
-    if (
-      errs != null &&
-      !Array.isArray(errs) &&
-      typeof errs === 'object' &&
-      Object.keys(errs).length > 0
-    ) {
-      const firstKey = Object.keys(errs as Record<string, unknown>)[0];
-      throw new Error(
-        `API-Football error [${firstKey}] on ${path}: ${JSON.stringify(errs).slice(0, 200)}`,
-      );
-    }
-    return json as T;
-  } finally {
-    releaseSlot();
   }
+
+  throw lastError;
 }
 
 // ============================================================================
@@ -973,13 +1000,16 @@ export async function fetchTopPerformers(
   leagueId: number,
   season: number,
   topN = 7,
+  maxPages = 5,
 ): Promise<SquadPerformer[]> {
   const performers: SquadPerformer[] = [];
   let page = 1;
   let totalPages = 1;
 
-  // Limite de sécurité : 5 pages max (= 100 joueurs, largement plus qu'un squad)
-  while (page <= totalPages && page <= 5) {
+  // Plafond de pages : chaque page est un appel. Le repli sur la saison
+  // précédente n'a pas besoin de l'effectif complet, deux pages suffisent
+  // à couvrir les cadres — et évitent de doubler le coût en début de saison.
+  while (page <= totalPages && page <= maxPages) {
     const d = await af<PlayerSeasonResponse>(
       `/players?team=${teamId}&season=${season}&page=${page}`,
     );
