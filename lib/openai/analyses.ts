@@ -303,6 +303,8 @@ export type DeepTeamContext = {
     goals_against_total: number;
     failed_to_score: number;
     biggest_win_streak: number;
+    /** Discipline de la saison passée, pour le repli de début de saison. */
+    discipline: { yellow: number; red: number } | null;
   } | null;
 };
 

@@ -182,6 +182,9 @@ function withSeasonFallback(t: DeepTeamContext): {
       clean_sheets: prev.clean_sheets,
       failed_to_score: prev.failed_to_score,
       biggest_streak: { wins: prev.biggest_win_streak, loses: 0 },
+      // La discipline suit le même repli : sans elle le bloc « Discipline
+      // et arbitrage » restait vide toute la première moitié d'août.
+      discipline: prev.discipline ?? t.discipline,
     },
   };
 }

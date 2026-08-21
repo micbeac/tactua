@@ -1269,7 +1269,7 @@ export async function fetchAggregatedTeamPerformers(
 
 type FixtureByDateResponse = {
   response: Array<{
-    fixture: { id: number };
+    fixture: { id: number; referee: string | null };
     teams: { home: { id: number }; away: { id: number } };
   }>;
 };
@@ -1286,16 +1286,20 @@ type FixtureByDateResponse = {
  * Le rapprochement se fait sur les identifiants d'équipes, pas sur les noms :
  * aucune ambiguïté possible.
  */
+export type ResolvedFixture = {
+  id: number;
+  /** Arbitre désigné. Voyage dans la même réponse : autant le prendre. */
+  referee: string | null;
+};
+
 export async function resolveFixtureId(
   afHomeId: number,
   afAwayId: number,
   kickoffIso: string,
   season: number,
-): Promise<number | null> {
+): Promise<ResolvedFixture | null> {
   // ⚠️ `season` est obligatoire dès que la requête filtre par équipe :
   // sans lui, API-Football renvoie une erreur au lieu d'un résultat.
-  // C'est ce qui faisait échouer la résolution en silence, et privait
-  // toutes les analyses des cotes et du modèle tiers.
   const date = kickoffIso.slice(0, 10);
   const d = await af<FixtureByDateResponse>(
     `/fixtures?date=${date}&team=${afHomeId}&season=${season}`,
@@ -1303,5 +1307,5 @@ export async function resolveFixtureId(
   const hit = d.response.find(
     (f) => f.teams.home.id === afHomeId && f.teams.away.id === afAwayId,
   );
-  return hit?.fixture.id ?? null;
+  return hit ? { id: hit.fixture.id, referee: hit.fixture.referee } : null;
 }

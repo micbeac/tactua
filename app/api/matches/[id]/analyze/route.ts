@@ -272,8 +272,12 @@ export async function POST(
         // tiers, toutes deux conditionnées à sa présence. On le résout à la
         // demande, et on le persiste pour ne pas recommencer.
         let afFixtureId = m.api_football_fixture_id;
+        // L'arbitre n'est presque jamais renseigné par Football-Data avant
+        // le match ; API-Football le donne dans la réponse qui sert déjà à
+        // résoudre la rencontre.
+        let resolvedReferee: string | null = m.referee;
         if (afFixtureId == null) {
-          afFixtureId = await resolveFixtureId(
+          const resolved = await resolveFixtureId(
             afHomeId!,
             afAwayId!,
             m.kickoff_at,
@@ -287,6 +291,8 @@ export async function POST(
             );
             return null;
           });
+          afFixtureId = resolved?.id ?? null;
+          resolvedReferee = resolvedReferee ?? resolved?.referee ?? null;
           if (afFixtureId != null) {
             await supabase
               .from('matches')
@@ -765,7 +771,7 @@ export async function POST(
           })),
           own_model: ownModel,
           h2h_summary: h2hSummary,
-          referee: m.referee ?? null,
+          referee: resolvedReferee,
           recent_narratives:
             homeNarrs.length > 0 || awayNarrs.length > 0
               ? { home: homeNarrs, away: awayNarrs }

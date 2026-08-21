@@ -180,6 +180,11 @@ export async function buildDeepTeamContext(
 
   // Bilan de la saison précédente, uniquement si la saison en cours est trop
   // jeune pour être exploitable.
+  // Discipline : l'API ventile les cartons par tranche de 15 minutes ;
+  // on agrège, le détail temporel n'apporte rien à l'analyse.
+  const sumCards = (b?: Record<string, { total: number | null }>) =>
+    b ? Object.values(b).reduce((acc, v) => acc + (v?.total ?? 0), 0) : 0;
+
   const prevFx = prevStats?.fixtures;
   const previousSeason =
     fx.played.total < EARLY_SEASON_THRESHOLD &&
@@ -206,13 +211,14 @@ export async function buildDeepTeamContext(
           goals_against_total: prevStats?.goals?.against?.total?.total ?? 0,
           failed_to_score: prevStats?.failed_to_score?.total ?? 0,
           biggest_win_streak: prevStats?.biggest?.streak?.wins ?? 0,
+          discipline: (() => {
+            const y = sumCards(prevStats?.cards?.yellow);
+            const r = sumCards(prevStats?.cards?.red);
+            return y + r > 0 ? { yellow: y, red: r } : null;
+          })(),
         }
       : null;
 
-  // Discipline : l'API ventile les cartons par tranche de 15 minutes ;
-  // on agrège, le détail temporel n'apporte rien à l'analyse.
-  const sumCards = (b?: Record<string, { total: number | null }>) =>
-    b ? Object.values(b).reduce((acc, v) => acc + (v?.total ?? 0), 0) : 0;
   const yellow = sumCards(safeStats.cards?.yellow);
   const red = sumCards(safeStats.cards?.red);
   const discipline = yellow + red > 0 ? { yellow, red } : null;
