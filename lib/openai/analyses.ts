@@ -375,7 +375,15 @@ export type DeepPreMatchContext = {
     attack: { home: number; away: number };
     defense: { home: number; away: number };
     poisson: { home: number; away: number };
+    h2h: { home: number; away: number };
+    goals: { home: number; away: number };
     overall: { home: number; away: number };
+    /** Probabilités propres du modèle tiers : 3e avis indépendant. */
+    percent: { home: number; draw: number; away: number } | null;
+    last_5: {
+      home: { played: number; form: number; attack: number; defense: number } | null;
+      away: { played: number; form: number; attack: number; defense: number } | null;
+    };
   };
 };
 
@@ -438,7 +446,7 @@ Règles :
 - MENACE DE SUSPENSION — Si des joueurs sont signalés sous menace, c'est un angle concret et rarement traité ailleurs. Un cadre à un carton du seuil joue plus prudemment, peut être ménagé, ou manquera la journée suivante. Utilise-le dans "x_factor" ou "things_to_watch", jamais comme une absence pour CE match : le joueur est bien disponible aujourd'hui.
 - CONFRONTATIONS DIRECTES — Un bilan agrégé est fourni sous la liste des matchs. Sers-t'en plutôt que de recompter, et privilégie le bilan « quand cette équipe reçoit » : une domination à l'extérieur ne se transpose pas à domicile. Un historique déséquilibré est un angle fort, mais rappelle qu'il porte sur des effectifs et des entraîneurs qui ont pu changer.
 - ARBITRE — Si un arbitre est nommé, tu peux le citer comme élément de contexte. N'invente aucune statistique à son sujet : sans chiffres fournis, contente-toi de le nommer.
-- MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est une comparaison de forces (forme/attaque/défense/projection) d'un modèle externe. Croise-le avec le consensus probabiliste et tes propres lectures pour calibrer "prediction". Ne le cite jamais nommément dans le texte (donnée interne).
+- MODÈLE STATISTIQUE TIERS — Si un bloc "Modèle statistique tiers" est fourni : c'est un modèle externe, indépendant du nôtre et du consensus des marchés. Tu disposes donc de TROIS estimations. Croise-les pour calibrer "prediction" et pour régler "prediction.confidence" : trois sources convergentes justifient "high", trois sources qui divergent imposent "medium" ou "low". Si l'écart entre le modèle tiers et le marché est net, c'est en soi un signal — dis-le dans "data_insight". Ne le nomme jamais (donnée interne) : parle d'« un modèle statistique indépendant ».
 - CONSENSUS DES MARCHÉS — Si un bloc "Consensus probabiliste" est fourni :
   * C'est une probabilité agrégée issue des marchés, la référence la plus fiable dont tu disposes pour calibrer tes prédictions.
   * Utilise-la pour ajuster "prediction.probabilities", "prediction.btts" et "prediction.over_2_5" — pondère-la avec ta propre lecture statistique (ne la recopie pas aveuglément, mais ne t'en éloigne pas sans raison chiffrée).
@@ -725,12 +733,34 @@ function buildDeepPrompt(ctx: DeepPreMatchContext): string {
   if (ap) {
     const h = ctx.home.name;
     const a = ctx.away.name;
+    const lines = [
+      `- Projection globale : ${ap.overall.home}% / ${ap.overall.away}%`,
+      `- Forme : ${ap.form.home}% / ${ap.form.away}%`,
+      `- Attaque : ${ap.attack.home}% / ${ap.attack.away}%`,
+      `- Défense : ${ap.defense.home}% / ${ap.defense.away}%`,
+      `- Historique des confrontations : ${ap.h2h.home}% / ${ap.h2h.away}%`,
+      `- Rendement offensif comparé : ${ap.goals.home}% / ${ap.goals.away}%`,
+    ];
+    if (ap.percent) {
+      lines.push(
+        `- Probabilités du modèle tiers : ${ap.percent.home}% victoire ${h}, ${ap.percent.draw}% nul, ${ap.percent.away}% victoire ${a}`,
+      );
+    }
+    const l5 = (side: 'home' | 'away', name: string) => {
+      const v = ap.last_5[side];
+      return v && v.played > 0
+        ? `- 5 derniers matchs ${name} : forme ${v.form}%, attaque ${v.attack}%, défense ${v.defense}%`
+        : null;
+    };
+    for (const line of [l5('home', h), l5('away', a)]) {
+      if (line) lines.push(line);
+    }
     afPredBlock =
-      `\nModèle statistique tiers — comparaison ${h} / ${a} (donnée interne de calibrage) :\n` +
-      `- Projection globale : ${ap.overall.home}% / ${ap.overall.away}%\n` +
-      `- Forme : ${ap.form.home}% / ${ap.form.away}%\n` +
-      `- Attaque : ${ap.attack.home}% / ${ap.attack.away}%\n` +
-      `- Défense : ${ap.defense.home}% / ${ap.defense.away}%\n`;
+      `
+Modèle statistique tiers — comparaison ${h} / ${a} :
+` +
+      lines.join(String.fromCharCode(10)) +
+      String.fromCharCode(10);
   }
 
   return `Contexte du match à venir :

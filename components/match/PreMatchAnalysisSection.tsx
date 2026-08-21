@@ -601,10 +601,16 @@ function RichMarketComparison({
   if (!mk || mk.home_pct == null || mk.draw_pct == null || mk.away_pct == null) {
     return null;
   }
-  const rows: Array<{ label: string; ours: number; market: number }> = [
-    { label: home_team_name, ours: prediction.probabilities.home_win, market: mk.home_pct },
-    { label: 'Match nul', ours: prediction.probabilities.draw, market: mk.draw_pct },
-    { label: away_team_name, ours: prediction.probabilities.away_win, market: mk.away_pct },
+  const md = rich.model_percent;
+  const rows: Array<{
+    label: string;
+    ours: number;
+    market: number;
+    model: number | null;
+  }> = [
+    { label: home_team_name, ours: prediction.probabilities.home_win, market: mk.home_pct, model: md?.home ?? null },
+    { label: 'Match nul', ours: prediction.probabilities.draw, market: mk.draw_pct, model: md?.draw ?? null },
+    { label: away_team_name, ours: prediction.probabilities.away_win, market: mk.away_pct, model: md?.away ?? null },
   ];
   return (
     <div>
@@ -613,10 +619,11 @@ function RichMarketComparison({
         Notre lecture face au marché
       </div>
       <div className="border-border overflow-hidden rounded-lg border">
-        <div className="text-muted-foreground bg-muted/30 grid grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 text-[10px] tracking-wide uppercase">
+        <div className={`text-muted-foreground bg-muted/30 grid ${md ? 'grid-cols-[1fr_auto_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto_auto]'} gap-2 px-3 py-2 text-[10px] tracking-wide uppercase`}>
           <span>Issue</span>
           <span className="w-12 text-right">Tactuo</span>
           <span className="w-12 text-right">Marché</span>
+          {md ? <span className="w-12 text-right">Modèle</span> : null}
           <span className="w-12 text-right">Écart</span>
         </div>
         {rows.map((r) => {
@@ -625,11 +632,16 @@ function RichMarketComparison({
           return (
             <div
               key={r.label}
-              className="border-border grid grid-cols-[1fr_auto_auto_auto] gap-2 border-t px-3 py-2 text-sm"
+              className={`border-border grid ${md ? 'grid-cols-[1fr_auto_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto_auto]'} gap-2 border-t px-3 py-2 text-sm`}
             >
               <span className="truncate">{r.label}</span>
               <span className="w-12 text-right font-semibold tabular-nums">{r.ours}%</span>
               <span className="text-muted-foreground w-12 text-right tabular-nums">{r.market}%</span>
+              {r.model != null ? (
+                <span className="text-muted-foreground w-12 text-right tabular-nums">
+                  {r.model}%
+                </span>
+              ) : null}
               <span
                 className={`w-12 text-right tabular-nums ${notable ? 'text-primary font-semibold' : 'text-muted-foreground'}`}
               >

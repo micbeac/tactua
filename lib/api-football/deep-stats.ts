@@ -369,8 +369,25 @@ export async function fetchMatchOdds(
 // une comparaison domicile/extérieur (en %) sur plusieurs dimensions.
 // Signal de calibrage interne, indépendant du consensus des cotes.
 
+// Constaté le 21/08/2026 via une route de diagnostic : /predictions renvoie
+// bien plus que le bloc `comparison` qu'on modélisait. Il contient les
+// probabilités propres d'API-Football, un conseil rédigé, la forme sur 5
+// matchs, ET la totalité des statistiques saison des deux équipes — soit
+// exactement ce que /teams/statistics fournit, en double.
 type PredictionResponse = {
   response: Array<{
+    predictions?: {
+      winner?: { id: number | null; name: string | null; comment: string | null };
+      win_or_draw?: boolean | null;
+      under_over?: string | null;
+      goals?: { home: string | null; away: string | null };
+      advice?: string | null;
+      percent?: { home: string; draw: string; away: string };
+    };
+    teams?: {
+      home?: { last_5?: PredictionLast5 };
+      away?: { last_5?: PredictionLast5 };
+    };
     comparison?: {
       form?: { home: string; away: string };
       att?: { home: string; away: string };
@@ -383,14 +400,37 @@ type PredictionResponse = {
   }>;
 };
 
+type PredictionLast5 = {
+  played?: number;
+  form?: string;
+  att?: string;
+  def?: string;
+};
+
 export type AFPrediction = {
   /** Chaque dimension : poids domicile vs extérieur (somme ≈ 100) */
   form: { home: number; away: number };
   attack: { home: number; away: number };
   defense: { home: number; away: number };
   poisson: { home: number; away: number };
+  /** Poids de l’historique des confrontations directes. */
+  h2h: { home: number; away: number };
+  /** Poids du rendement offensif comparé. */
+  goals: { home: number; away: number };
   /** Projection globale du modèle AF */
   overall: { home: number; away: number };
+  /**
+   * Probabilités propres du modèle API-Football.
+   *
+   * Troisième avis indépendant, à côté du nôtre et du consensus des
+   * marchés. Quand les trois divergent, il y a une histoire à raconter.
+   */
+  percent: { home: number; draw: number; away: number } | null;
+  /** Forme des 5 derniers matchs, telle que calculée par AF (en %). */
+  last_5: {
+    home: { played: number; form: number; attack: number; defense: number } | null;
+    away: { played: number; form: number; attack: number; defense: number } | null;
+  };
 };
 
 function parsePct(s: string | null | undefined): number {
@@ -402,11 +442,22 @@ function parsePct(s: string | null | undefined): number {
 export async function fetchMatchPrediction(
   fixtureId: number,
 ): Promise<AFPrediction | null> {
-  const d = await af<PredictionResponse>(
-    `/predictions?fixture=${fixtureId}`,
-  );
-  const c = d.response[0]?.comparison;
+  const d = await af<PredictionResponse>(`/predictions?fixture=${fixtureId}`);
+  const r = d.response[0];
+  const c = r?.comparison;
   if (!c) return null;
+
+  const pct = r?.predictions?.percent;
+  const last5 = (v?: PredictionLast5) =>
+    v
+      ? {
+          played: v.played ?? 0,
+          form: parsePct(v.form),
+          attack: parsePct(v.att),
+          defense: parsePct(v.def),
+        }
+      : null;
+
   return {
     form: { home: parsePct(c.form?.home), away: parsePct(c.form?.away) },
     attack: { home: parsePct(c.att?.home), away: parsePct(c.att?.away) },
@@ -415,7 +466,17 @@ export async function fetchMatchPrediction(
       home: parsePct(c.poisson_distribution?.home),
       away: parsePct(c.poisson_distribution?.away),
     },
+    h2h: { home: parsePct(c.h2h?.home), away: parsePct(c.h2h?.away) },
+    goals: { home: parsePct(c.goals?.home), away: parsePct(c.goals?.away) },
     overall: { home: parsePct(c.total?.home), away: parsePct(c.total?.away) },
+    percent: pct
+      ? {
+          home: parsePct(pct.home),
+          draw: parsePct(pct.draw),
+          away: parsePct(pct.away),
+        }
+      : null,
+    last_5: { home: last5(r?.teams?.home?.last_5), away: last5(r?.teams?.away?.last_5) },
   };
 }
 

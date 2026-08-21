@@ -283,6 +283,7 @@ export function buildRichData(
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     goal_distribution: buildGoalDistribution(ctx),
     radar: buildRadar(ctx.home, ctx.away),
+    model_percent: ctx.af_prediction?.percent ?? null,
     market: ctx.market_consensus
       ? {
           source_count: ctx.market_consensus.source_count,

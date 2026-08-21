@@ -128,6 +128,8 @@ export type MatchRichData = {
    * ligne éditoriale. Confronté aux probabilités du modèle : l'écart entre
    * les deux est ce qu'aucun agrégateur gratuit ne montre.
    */
+  /** Probabilités d’un modèle statistique indépendant : 3e avis. */
+  model_percent?: { home: number; draw: number; away: number } | null;
   market?: {
     source_count: number;
     home_pct: number | null;
