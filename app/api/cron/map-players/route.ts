@@ -25,6 +25,8 @@ export const dynamic = 'force-dynamic';
 const TIME_BUDGET_MS = 45_000;
 /** Plafond d'équipes par run, pour rester loin de la limite par minute. */
 const MAX_TEAMS = 12;
+/** Fenêtre de matchs à venir définissant les équipes à mapper en priorité. */
+const UPCOMING_WINDOW_DAYS = 14;
 
 export async function GET(request: Request) {
   const unauthorized = requireCronAuth(request);
@@ -54,8 +56,32 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, results: [], note: 'aucune équipe éligible' });
   }
 
-  // Compte les joueurs non mappés par équipe, pour traiter d'abord celles qui
-  // en ont le plus — typiquement les promus, jamais mappés.
+  // Priorité aux équipes qui JOUENT BIENTÔT.
+  //
+  // Trier par « le plus de joueurs non mappés » paraissait logique mais
+  // visait à côté : ce sont les sélections nationales de la Coupe du Monde
+  // qui remontaient en tête, alors que leurs effectifs ne servent plus à
+  // aucune analyse. Ce qu'on veut mapper, c'est ce qui va être analysé.
+  const horizon = new Date(
+    Date.now() + UPCOMING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const { data: upcoming } = await supabase
+    .from('matches')
+    .select('home_team_id, away_team_id')
+    .eq('status', 'scheduled')
+    .gte('kickoff_at', new Date().toISOString())
+    .lte('kickoff_at', horizon);
+
+  const playingSoon = new Set<number>();
+  for (const m of (upcoming ?? []) as Array<{
+    home_team_id: number | null;
+    away_team_id: number | null;
+  }>) {
+    if (m.home_team_id) playingSoon.add(m.home_team_id);
+    if (m.away_team_id) playingSoon.add(m.away_team_id);
+  }
+
+  // Parmi elles, celles qui ont le plus de joueurs non résolus.
   const { data: unmapped } = await supabase
     .from('players')
     .select('current_team_id')
@@ -64,13 +90,18 @@ export async function GET(request: Request) {
 
   const gapByTeam = new Map<number, number>();
   for (const p of (unmapped ?? []) as Array<{ current_team_id: number }>) {
-    gapByTeam.set(p.current_team_id, (gapByTeam.get(p.current_team_id) ?? 0) + 1);
+    gapByTeam.set(
+      p.current_team_id,
+      (gapByTeam.get(p.current_team_id) ?? 0) + 1,
+    );
   }
 
   const ordered = teamFilter
     ? candidates
     : candidates
-        .filter((t) => (gapByTeam.get(t.id) ?? 0) > 0)
+        .filter(
+          (t) => playingSoon.has(t.id) && (gapByTeam.get(t.id) ?? 0) > 0,
+        )
         .sort((a, b) => (gapByTeam.get(b.id) ?? 0) - (gapByTeam.get(a.id) ?? 0))
         .slice(0, MAX_TEAMS);
 
