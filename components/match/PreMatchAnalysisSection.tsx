@@ -951,6 +951,12 @@ export function PreMatchAnalysisSection({
         <p className="text-muted-foreground/60 -mb-1 text-center text-[10px] tracking-widest uppercase">
           ◆ Données détaillées ◆
         </p>
+        {rich?.season_source?.used_previous ? (
+          <p className="text-muted-foreground/70 mt-1 text-center text-[10px]">
+            Chiffres de la saison {rich.season_source.label} — la saison en
+            cours vient de commencer
+          </p>
+        ) : null}
       </div>
 
       {/* ============================================ */}

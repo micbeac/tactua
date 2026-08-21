@@ -129,6 +129,15 @@ export type MatchRichData = {
    * les deux est ce qu'aucun agrégateur gratuit ne montre.
    */
   /** Probabilités d’un modèle statistique indépendant : 3e avis. */
+  /**
+   * Saison d’où proviennent les chiffres affichés.
+   *
+   * En début de saison l'API ne renvoie que des zéros : le bloc entier se
+   * masquait, laissant le lecteur sans rien. On bascule alors sur la saison
+   * précédente, mais il faut le DIRE — sans quoi on présenterait des
+   * chiffres périmés comme ceux du moment.
+   */
+  season_source?: { used_previous: boolean; label: string | null } | null;
   model_percent?: { home: number; draw: number; away: number } | null;
   market?: {
     source_count: number;

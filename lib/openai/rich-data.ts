@@ -143,6 +143,49 @@ function advInverse(home: number, away: number): 'home' | 'away' | 'equal' {
   return home < away ? 'home' : 'away';
 }
 
+/**
+ * Substitue les chiffres de la saison précédente quand la saison en cours
+ * n'a encore rien produit.
+ *
+ * À la 1re journée, /teams/statistics ne renvoie que des zéros. Tous les
+ * blocs visuels se masquaient alors — le lecteur voyait le texte de
+ * l'analyse sans aucune donnée en face. Le repli n'est appliqué qu'à zéro
+ * match joué : dès la 1re rencontre, la saison en cours reprend la main,
+ * même sur un petit échantillon (le radar, lui, régresse vers 50).
+ *
+ * Les splits domicile/extérieur ne sont pas repris : previous_season ne
+ * porte que des totaux, et inventer un 0V-0N-0D serait pire que rien.
+ */
+function withSeasonFallback(t: DeepTeamContext): {
+  ctx: DeepTeamContext;
+  usedPrevious: boolean;
+  label: string | null;
+} {
+  const prev = t.previous_season;
+  if (t.played.total > 0 || !prev) {
+    return { ctx: t, usedPrevious: false, label: null };
+  }
+  const zero = { home: 0, away: 0, total: 0 };
+  return {
+    usedPrevious: true,
+    label: prev.label,
+    ctx: {
+      ...t,
+      form_long: prev.form_long,
+      primary_formation: prev.primary_formation,
+      played: { ...zero, total: prev.played },
+      wins: { ...zero, total: prev.wins },
+      draws: { ...zero, total: prev.draws },
+      loses: { ...zero, total: prev.loses },
+      goals_for_avg: { home: '0', away: '0', total: prev.goals_for_avg },
+      goals_against_avg: { home: '0', away: '0', total: prev.goals_against_avg },
+      clean_sheets: prev.clean_sheets,
+      failed_to_score: prev.failed_to_score,
+      biggest_streak: { wins: prev.biggest_win_streak, loses: 0 },
+    },
+  };
+}
+
 function buildStatsCompare(
   home: DeepTeamContext,
   away: DeepTeamContext,
@@ -279,7 +322,16 @@ export function buildRichData(
   ctx: DeepPreMatchContext,
   afToDbPlayerId: Map<number, number> = new Map(),
 ): MatchRichData {
+  const h = withSeasonFallback(ctx.home);
+  const a = withSeasonFallback(ctx.away);
+  const projected: DeepPreMatchContext = { ...ctx, home: h.ctx, away: a.ctx };
+  ctx = projected;
+
   return {
+    season_source: {
+      used_previous: h.usedPrevious || a.usedPrevious,
+      label: h.label ?? a.label,
+    },
     stats_compare: buildStatsCompare(ctx.home, ctx.away),
     goal_distribution: buildGoalDistribution(ctx),
     radar: buildRadar(ctx.home, ctx.away),

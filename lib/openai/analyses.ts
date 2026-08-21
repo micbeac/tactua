@@ -295,6 +295,14 @@ export type DeepTeamContext = {
     goals_against_avg: string;
     clean_sheets: number;
     form_tail: string;
+    /** Forme complète de la saison passée, pour alimenter l’affichage. */
+    form_long: string;
+    /** Formation la plus utilisée la saison passée. */
+    primary_formation: string | null;
+    goals_for_total: number;
+    goals_against_total: number;
+    failed_to_score: number;
+    biggest_win_streak: number;
   } | null;
 };
 

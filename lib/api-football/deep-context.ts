@@ -81,6 +81,16 @@ export async function buildDeepTeamContext(
     goals: { for: { home: 0, away: 0 }, against: { home: 0, away: 0 } },
   };
 
+  // Repli sur la saison précédente quand la saison en cours ne renvoie
+  // encore aucun joueur : à la 1re journée, l'API ne connaît personne, et
+  // la section « Top joueurs » restait vide au lieu de montrer les cadres.
+  const performers =
+    top.length > 0
+      ? top
+      : await fetchTopPerformers(af_team_id, af_league_id, season - 1, 30).catch(
+          () => [],
+        );
+
   const primaryFormation =
     safeStats.lineups && safeStats.lineups.length > 0
       ? safeStats.lineups[0].formation
@@ -165,6 +175,15 @@ export async function buildDeepTeamContext(
           // Les 10 derniers résultats de la saison passée : plus parlant que
           // la séquence complète, et évite de noyer le prompt.
           form_tail: (prevStats?.form ?? '').slice(-10),
+          form_long: prevStats?.form ?? '',
+          primary_formation:
+            prevStats?.lineups && prevStats.lineups.length > 0
+              ? prevStats.lineups[0].formation
+              : null,
+          goals_for_total: prevStats?.goals?.for?.total?.total ?? 0,
+          goals_against_total: prevStats?.goals?.against?.total?.total ?? 0,
+          failed_to_score: prevStats?.failed_to_score?.total ?? 0,
+          biggest_win_streak: prevStats?.biggest?.streak?.wins ?? 0,
         }
       : null;
 
@@ -203,7 +222,7 @@ export async function buildDeepTeamContext(
       loses: big.streak.loses,
     },
     primary_formation: primaryFormation,
-    top_performers: top.slice(0, 7).map((p) => ({
+    top_performers: performers.slice(0, 7).map((p) => ({
       af_player_id: p.player_id,
       photo: p.photo,
       name: p.player_name,
